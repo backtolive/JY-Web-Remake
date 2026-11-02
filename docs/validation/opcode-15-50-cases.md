@@ -1,0 +1,50 @@
+# 指令 15／50 的原版驗證案例
+
+Status: Pending Original Execution。2026-11-02。這是待執行案例規格，不是已通過的原版測試。
+
+## 來源與本輪更正
+
+Pascal kys-jedisdl commit `4d225cb9b7b9a3ac46a796ecb0acde525ef72acc` 的 kys_event.pas:1266–1286 同時支援物品條件與擴充分派：首參數大於 128 或 MODVersion=11 時檢查五個物品 ID，否則進入 instruct_50e。617–629 的 instruct_18 只檢查槽位 ID，不檢查數量。前輪只看上層分派，將其概括為「動態版本」不夠完整；本機首參數 138 應進入物品路徑。
+
+同來源的指令 15（575–587）設定 where、繪製失敗畫面並等待按鍵；上層 CallEvent 會結束。它沒有讀取本機布局中的附帶值，無法用其證明 83 的 DOS 用途。
+
+FishEdit 文件中的五物品描述與 Pascal 的物品路徑相互支持，但不能視為兩份來源完全獨立或原版已確認。C-version 的 cmd.c:1036 等相似邏輯位於未完成移植區域／條件編譯段，不能用作成功執行證據。
+
+## 結構證據
+
+`probe_opcode_behavior.py` 依已通過的 FishEdit 布局檢查全部事件：114 條指令 15 的附帶值全部為 83。唯一指令 50 在事件 676 的 word offset 0；兩個候選相對跳轉落在 word offset 14 與 8，均為合法指令邊界。此檢查獨立於 FishEdit 關閉的分支標註，不修改原設定表。
+
+```powershell
+.\.venv\Scripts\python.exe tools/analyzer/probe_opcode_behavior.py original/dos references/kys-tools > docs/research/opcode-behavior.local.json
+```
+
+## 執行前置
+
+已配置本機 DOSBox-X 2026.10.01 portable，並記錄隔離副本執行 Z.COM／LOGO.SCR；詳見 dosbox-x-setup.md。桌面驗證受存取拒絕阻擋，尚未確認遊戲選單或執行本頁案例。只在 `assets/generated` 的隔離副本執行，不能直接掛載原始目錄為可寫。
+
+每次測試記錄：LEGENDX／KDEF／TALK 與存檔的 SHA256、模擬器版本、完整設定、輸入重播、前置背包與事件狀態、執行 trace／截圖及結果。原版無法建立的狀態標記為不可達，不捏造原版結果；人工編輯的測試存檔須另標 Synthetic State。
+
+## 指令 50 案例矩陣
+
+所有測試先驗證能到達事件 676 並確認當前指令位置。原版結果欄目前全部 Unknown。表中預期僅是已檢查的 Pascal 物品路徑，不是 DOS 斷言。
+
+| Case ID | 前置條件 | 社群候選預期 | 原版狀態 |
+|---|---|---|---|
+| OP50-ALL | 五個所需 ID 均在背包槽、數量正值 | yes 偏移 6，下一位置 14 | 未執行 |
+| OP50-NONE | 五個 ID 均不在槽中 | no 偏移 0，下一位置 8 | 未執行 |
+| OP50-MISSING-EACH | 分別移除每一個 ID，其餘保留，共五案 | 每案 no | 未執行 |
+| OP50-ZERO-COUNT | 保留其中一個所需 ID 的槽位但數量為 0 | 仍 yes，因來源未查數量；狀態可能無法自然產生 | 未執行 |
+| OP50-EXTRA | 五個 ID 齊全，另有無關物品 | yes，背包不應改變 | 未執行 |
+| OP50-ORDER | 五個 ID 齊全，改變背包槽順序 | yes，背包不應改變 | 未執行 |
+
+比較前後背包、選擇的跳轉與對話／事件旗標，避免只看畫面文字推論。零數量與移除物品的存檔表示方式必須先查證。
+
+## 指令 15 案例
+
+- OP15-LOSS：選定可重現敗北流程，觸發帶 83 的指令 15。記錄畫面、等待輸入、返回選單或其他狀態、後續指令是否執行，以及存檔有無改變。
+- OP15-REPEAT：從同一隔離存檔重播，確認可觀察結果一致。
+- 附帶值 83 的其他值測試僅可放在明確標示的修改副本，不能當成未修改原版結果。本輪不修改 EXE／KDEF，也不宣稱 83 是圖片、對話或指令編號。
+
+## 完成條件
+
+必須有原版可重播證據才能升為 Verified Original；單靠靜態資料、Mock、社群原始碼或來源文件均不足。原版測試阻礙不影響其他唯讀研究，完整 Runtime／轉換實作仍依主計畫前置驗收執行。
