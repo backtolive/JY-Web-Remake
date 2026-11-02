@@ -1,6 +1,12 @@
 # 來源與建置紀錄
 
+固定組態的必要／可選依賴及目前缺口見 [候選依賴矩陣](candidate-dependency-matrix.md)。特別注意 B 的音效後端條件與 Windows x64 明列連結清單不同；尚未執行前處理或連結，不能把靜態差異當作已證明的建置錯誤。
+
 ## 本輪更新
+
+2026-11-02 後續核對：B 還有 `src/CMakeLists.txt`。它要求 CMake 3.22、C++23，產物為 `jysdl` shared library，vcpkg 根路徑硬編碼為 `D:/project/vcpkg/installed/arm64-android-dynamic`，並連結明確 `.so`／`.a` 檔案。這是另一路 Android ARM64 配置，不能視為現成的 Windows 建置方案。未修改來源或自動替換路徑。
+
+本輪 PATH 查詢：cmake、make、gcc、g++、msbuild、clang、cl 均 NOT_FOUND。這是工具探索結果，不是完整磁碟搜尋或已安裝產品盤點。仍未進入編譯；不新增「來源編譯失敗」結論。B 的 Audio.cpp:10–17 顯示 BASSMODE／TSFMODE 條件路徑，外部依賴應按實際建置組態審查，不能把所有替代後端都視為同時使用。
 
 2026-11-02：A 缺失 blob 已藉 fetch --refetch --no-filter 補回，指定 checkout 成功。Makefile 確認需 make、gcc／g++、sdl-config、SDL_image、SDL_mixer、SDL_ttf 與 Lua 5.1；smpeg 為註解中的可選項。
 

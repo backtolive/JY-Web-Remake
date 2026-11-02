@@ -6,7 +6,7 @@
 
 | 候選 | 已確認 | 未確認 |
 |---|---|---|
-| [jinyong-legend](https://github.com/ZhanruiLiang/jinyong-legend) | 公開 C／Lua 檔案樹，含 Makefile、事件及轉換腳本路徑 | 授權、實作內容、DOS 相容性；取得與建置受阻 |
-| [jysdl-bh](https://github.com/scarsty/jysdl-bh/blob/master/README.md) | README 描述 C++、SDL3，首頁列出 solution | 未固定 commit、未編譯、授權及規則完整性待查 |
+| [jinyong-legend](https://github.com/ZhanruiLiang/jinyong-legend) | 指定來源已取得並固定 commit；定位 C／Lua、Makefile、事件與轉換路徑；src 10 檔聲明盤點 | 工具鏈缺少，未編譯；授權覆蓋、DOS 相容性未驗證 |
+| [jysdl-bh](https://github.com/scarsty/jysdl-bh/blob/master/README.md) | 已固定 commit；C++／SDL3、VS 專案與 Android ARM64 CMake；src 29 檔聲明盤點 | 未編譯；Windows／Android 依賴組態、授權及規則相容性待查 |
 
 第一候選固定 commit：89962d7fc2837c143e176c306d83b4e38dab6e77。不能由名稱判定完整上游。沒有已確認可直接採用的遊戲模組。

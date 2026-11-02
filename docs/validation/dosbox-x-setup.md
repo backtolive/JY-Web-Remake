@@ -1,6 +1,6 @@
 # DOSBox-X 隔離環境 — 2026-11-02
 
-Status: Portable runtime prepared; original startup execution logged. 遊戲選單、操作、聲音及指令 15／50 尚未驗證。
+Status: 使用者已確認可執行；本輪已直接觀察主選單並成功載入進度一至大地圖。詳見 [啟動與載入驗證](original-boot-load-smoke.md)。移動、功能選單、聲音及指令 15／50 仍待驗證。
 
 ## 下載與完整性
 
@@ -13,6 +13,14 @@ Status: Portable runtime prepared; original startup execution logged. 遊戲選�
 解壓位置：`assets/generated/dosbox-x/runtime-2026.10.01`。選用 `mingw-build/mingw-sdl2/dosbox-x.exe`。下載、完整依賴與附帶授權保留在本機忽略提交的目錄，不將 binary 放入產品。
 
 ## 啟動與隔離
+
+已準備好的本機環境，建議直接使用 CMD 啟動器開啟可見視窗：
+
+```powershell
+.\scripts\Start-OriginalGame.cmd
+```
+
+此啟動器直接執行 DOSBox-X 與既有隔離設定，不載入 PowerShell 腳本、不調整執行原則；若缺模擬器、設定或隔離副本會停止。設定由下方 PowerShell 準備流程產生。若環境要求數位簽章，未簽署的 ps1 可能無法執行；本次工作區已完成準備，不需要重新執行 ps1。
 
 ```powershell
 # 僅建立設定與首次隔離副本
@@ -28,6 +36,8 @@ Status: Portable runtime prepared; original startup execution logged. 遊戲選�
 固定設定：svga_s3、32 MiB、normal core、fixed 20000 cycles、surface output、sbpro2 220／IRQ7／DMA1、MIDI 關閉。音效設定參照原 DIG.INI 的候選配置，但可聽性未驗證。官方[命令列說明](https://github.com/joncampbell123/dosbox-x/wiki/DOSBox%E2%80%90X%E2%80%99s-Command%E2%80%90Line-Options)記載 -conf 與 -nopromptfolder，已用於避免首次工作目錄提示。
 
 ## 本次驗證與限制
+
+後續更新：已恢復可用的桌面觀察，成功載入進度一並由模擬器保存原生截圖。下列存取拒絕屬前次歷史，不再代表完全無法觀察畫面。新結果與證據範圍見 original-boot-load-smoke.md。
 
 起初啟動被首次工作目錄選擇框阻擋；後以明確設定與 -nopromptfolder 排除。日誌記錄 DOS 內執行 z.com，繼而執行 LOGO.SCR；記錄頁面模式切換為 640×400。這證明啟動程式有執行，尚不證明遊戲選單或遊戲功能正常。
 
