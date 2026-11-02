@@ -1,5 +1,13 @@
 # GitHub Pages 建置與發布流程
 
+## 首輪遠端結果更新
+
+使用者已設定 Public 與 Source=GitHub Actions，connector 也已確認 visibility=public。`4fc68e4` 已提交／推送 develop，觸發 [checks run 41469850559](https://github.com/backtolive/JY-Web-Remake/actions/runs/41469850559)。
+
+Ubuntu 24.04 的 check job 全部成功：19 Node、4 Python、Schema／typecheck／正式 build／artifact、4 Chromium E2E（19.5 秒）及 Pages artifact 上傳。部署 job 在開始前因 github-pages environment 不允許 develop 而遭拒，非建置或遊戲錯誤。已請管理者在環境允許清單加入 develop，保留其他保護；尚未宣稱上線。下列初始設定／未執行描述屬前次準備紀錄，以本節為最新狀態。
+
+管理者已回覆設定完成；重跑 API 因 integration 缺少 Actions write 回傳 403，因此透過既有 SSH 推送正式網址 E2E 設定與更新紀錄，觸發新 workflow。正式 E2E 支援 PLAYWRIGHT_TEST_BASE_URL（HTTPS 且末尾有 /），使用 ./ 導航保留專案子目錄；有正式網址時不啟動本機測試伺服器。
+
 2026-11-02。Phase 12 的靜態發布子集。Status: workflow 已完成並通過本機語法／建置驗證；GitHub hosted runner 與正式網址尚未驗證。
 
 使用者已選 GitHub Pages，沿用 backtolive/JY-Web-Remake，發布分支為既有 develop。沒有建立其他託管帳號、改變倉庫可見性或加入 Token。

@@ -4,6 +4,10 @@
 
 使用者已確認 Public 與 Pages Source=GitHub Actions；connector get_repo 已回傳 public 與倉庫中繼資料，先前 404 阻礙解除。本輪準備提交目前 E2E／CI／Pages 變更並推送 develop，追蹤實際 hosted runner 與部署結果；在取得成功結果前保持未上線狀態。
 
+遠端結果：4fc68e4 已成功推送，checks run 41469850559 的 Ubuntu check 全部通過（19 Node＋4 Python＋4 真實 Chromium E2E，E2E 19.5 秒），網站／報告／Pages artifact 上傳成功。deploy job 在執行前被 environment protection 拒絕，註記為 develop 不在 github-pages 允許分支，已向管理者提出具體設定需求並等待完成；不改寫或移除保護繞過限制。另準備正式 HTTPS 子目錄 E2E base URL 支援，尚未執行正式站台測試。
+
+使用者隨後確認已允許 develop。僅重跑失敗 job 的 GitHub API 因 integration 缺少 Actions write 回傳 403；改以既有已授權 SSH git 流程提交正式 HTTPS E2E base URL 支援與結果紀錄，觸發新 workflow。此為測試設定的實際變更，不用空提交偽造新版本。
+
 ## GitHub Pages／CI 工作流程準備
 
 Phase: 12 靜態發布子集。Status: 工作流程與本機檢查完成，正式站台未上線。使用者選定 GitHub Pages，沿用目前倉庫／develop。

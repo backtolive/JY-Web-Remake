@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async({page})=>{
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('heading',{name:'練功房',exact:true})).toBeVisible();
   await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready');
 });
