@@ -5,7 +5,7 @@
 - [x] 使用者已將倉庫改為 Public 並設定 Pages Source=GitHub Actions；GitHub connector 已確認 visibility=public 且可讀取倉庫。
 - [x] 4fc68e4 已提交／推送，Ubuntu hosted runner 所有核心／Schema／build／E2E 通過並上傳成品。
 - [x] 管理者已確認將 develop 加入 github-pages 允許清單。
-- [ ] 重跑 API Actions write 受限，改由 SSH 推送正式網址測試設定觸發新 run；取得部署 URL 後完成正式子目錄操作驗證。
+- [x] SSH 推送 d4e8dca 觸發 run 41470850061，check／deploy 成功；正式 HTTPS 網址 HTTP 200，4 項 E2E 通過（16.2 秒）。
 
 - [x] 提交 daa02ae 並推送 origin/develop，保存 Web MVP 與鏡頭控制修正。
 - [x] 新增可重跑 Playwright E2E：真正 WebGL 渲染方向、快速組合鍵／出口、對話／選項／備份、下載回匯／不相容拒絕及窄版觸控；4 案通過。

@@ -1,5 +1,19 @@
 # 進度 — 2026-11-02
 
+## 正式發布驗收完成（最新）
+
+Phase: 12 靜態發布子集。Status: GitHub Pages 已上線。
+
+- 正式網址：https://backtolive.github.io/JY-Web-Remake/ （HTTP 200）。
+- 發布版本：d4e8dca927b8c5cbcfb9c9506c5d36348b552c10，已推送 origin/develop。
+- [Actions run 41470850061](https://github.com/backtolive/JY-Web-Remake/actions/runs/41470850061)：Ubuntu check 125363698046 與 deploy 125364535721 均成功；部署工作回傳上述 environment URL。
+- CI 通過核心 19 Node、4 Python、Schema、typecheck、build、artifact 與 4 Chromium E2E。
+- 對正式 HTTPS 子目錄執行隔離 Chromium E2E：4 passed（16.2 秒），包含實際 WebGL 畫面移動／碰撞／出口、對話續行與備份、真正下載回匯及不相容拒絕、390×844 觸控與溢出檢查。
+- 重跑命令（PowerShell）：`$env:PLAYWRIGHT_TEST_BASE_URL='https://backtolive.github.io/JY-Web-Remake/'; node tools/validator/run-browser-tests.mjs`。報告與桌面／手機截圖保留於忽略的 assets/generated/e2e-report、e2e-results。
+- 管理者已允許 develop 部署，其他環境保護保留。公開輸出僅含 Mock，原版資源未發布；本機選檔匯入仍由玩家自行提供。
+
+Known Limitations: 此為 Mock 場景 MVP，非完整原版遊戲；尚未驗證實體手機、其他瀏覽器與長時間遊玩。Next Recommended Tasks: 依既有證據擴充原版事件／圖像，戰鬥與完整編輯器仍按 MASTER_PLAN 推進。下列「尚未發布」段落為歷史準備紀錄，以本節為準。
+
 ## GitHub Pages 首輪發布
 
 使用者已確認 Public 與 Pages Source=GitHub Actions；connector get_repo 已回傳 public 與倉庫中繼資料，先前 404 阻礙解除。本輪準備提交目前 E2E／CI／Pages 變更並推送 develop，追蹤實際 hosted runner 與部署結果；在取得成功結果前保持未上線狀態。

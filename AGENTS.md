@@ -6,7 +6,7 @@ MASTER_PLAN v1.3 保留「通用武俠 RPG 引擎＋金庸群俠傳內容包」�
 
 使用者已要求持續推進至可開始 MVP：允許實作首個 3D 場景所需的 Phase 3／5／6 最小子集，包含資料讀取、內容驗證、受控對話／選項／條件／狀態、移動碰撞、切圖、MOD 與安全存讀檔；戰鬥公式、完整事件轉換與編輯器不在此前置切片內。不得把此局部就緒寫成完整 Phase 3／6 或原版規則驗收通過。
 
-使用者後續已要求 commit／push 後進行下一步，因此 Phase 7 的 apps/web 首個可操作切片亦在範圍內。網站打包目錄為 apps/web/dist；預設僅含 Mock，原版包由玩家本機選檔。公開部署與特定託管設定尚未執行，不把本機預覽當成正式上線。
+使用者後續已要求 commit／push 後進行下一步，因此 Phase 7 的 apps/web 首個可操作切片亦在範圍內。網站打包目錄為 apps/web/dist；預設僅含 Mock，原版包由玩家本機選檔。GitHub Pages 已由 develop 成功部署，正式網址 https://backtolive.github.io/JY-Web-Remake/ 的四項 E2E 通過；證據見 docs/validation/github-pages-pipeline.md，不把 Mock 上線當成完整原版完成。
 
 - 邏輯不得依賴 React 或 Babylon.js；UI、渲染與資料轉換分層。
 - 引擎不得硬編碼金庸人物、場景、事件或結局；原版 ID 與指令由內容轉接器映射，未知指令不得直接成為通用腳本規格。

@@ -4,13 +4,13 @@
 
 開發：Node.js 24+、pnpm 11.25.0。執行 pnpm install --frozen-lockfile、pnpm run build、pnpm run typecheck、pnpm run test。
 
-試玩：`pnpm run dev` 後開啟 http://127.0.0.1:5173/；方向鍵／WASD 移動，E 互動，金色圓環切換場景。`pnpm run build` 產生完整靜態網站於 **apps/web/dist**，`pnpm run preview` 可在 http://127.0.0.1:4173/ 驗證正式輸出。尚未部署公開網址；原版切片僅支援玩家本機選檔載入。
+試玩：`pnpm run dev` 後開啟 http://127.0.0.1:5173/；方向鍵／WASD 移動，E 互動，金色圓環切換場景。`pnpm run build` 產生完整靜態網站於 **apps/web/dist**，`pnpm run preview` 可在 http://127.0.0.1:4173/ 驗證正式輸出。公開 Mock 網址見下方；原版切片僅支援玩家本機選檔載入。
 
 移動採畫面相對方向：↑／W 就是畫面向上，兩個方向鍵可組合斜走（如 W＋D 往右上），亦提供八方向按鈕；正交斜角鏡頭維持方向一致，斜走不穿過牆角。
 
 瀏覽器回歸：首次執行 `pnpm run test:e2e:install` 安裝隔離 Chromium，之後 `pnpm run test:e2e` 會建置網站並以獨立 4273 連接埠驗證畫面方向、對話存讀與下載回匯。結果見 [E2E 驗證紀錄](docs/validation/browser-regression.md)，不需要原版資源。
 
-正式託管已選 GitHub Pages：checks workflow 會先完成測試，再僅由 develop 發布網站成品；PR 不部署。尚需倉庫 Settings → Pages 將 Source 設為 GitHub Actions，並提交推送本輪變更。見 [發布流程](docs/validation/github-pages-pipeline.md)，目前尚未正式上線。
+正式試玩：[GitHub Pages](https://backtolive.github.io/JY-Web-Remake/)。develop 的 checks 與部署已成功，正式 HTTPS 站台的四項瀏覽器測試通過；PR 不部署。公開內容僅含 Mock，詳見 [發布流程與驗證](docs/validation/github-pages-pipeline.md)。
 
 唯讀檢視資源邊界：`node tools/extractor/inspect-idx-grp.mjs original/dos/TALK.IDX original/dos/TALK.GRP`。只輸出 metadata，不匯出商業資源；適用範圍與驗證見 [解析器報告](docs/validation/idx-grp-parser.md)。
 
