@@ -1,5 +1,27 @@
 # 進度 — 2026-11-02
 
+## 第一個場景 MVP 前置就緒（MASTER_PLAN v1.3）
+
+Phase: 3／5／6 必要子集；Status: Ready to start scoped Phase 7 MVP，尚無可玩網頁、整體階段未驗收。依使用者「繼續直到可以進行 MVP」持續實作至就緒門檻，見 ADR 0009 與 mvp-readiness.md。
+
+Completed Tasks: 自行實作 TALK／場景／純對話事件解析，通用內容／存檔 Schema 與 Ajv、跨包引用、精確依賴／確定排序／文字 patch 衝突、純 TypeScript 移動／事件／選項／條件／旗標／物品／切圖、步數限制與錯誤原子性、固定 seed／座標轉接、內容組合檢查及暫停續行。新增 Mock 原創包與 MOD，及本機原版 scene 1／slot 2／event 668 的只讀切片與六層呈現資料。
+
+Files Changed: game-data/original.ts 與 exports；game-core types/schema/content/runtime；共用 schemas；extractor prepare-mvp；validator schema 匯出與 readiness；Mock fixtures／core 與 original tests；Ajv 固定版本／lock、tsconfig、package scripts、MASTER_PLAN／AGENTS／README、ADR 0009、readiness、TODO／PROGRESS。
+
+Tests Executed / Test Results: build、typecheck、13 項 Node 測試及 4 項 Python Mock；schema 同步、mvp:prepare 可重跑同路徑、mvp:check（Mock 全流程＋原版載入／對話存讀／結束）通過。2,977 TALK 全部 WHATWG Big5 成功、未知控制碼 0，逐筆 UTF-8 SHA256 與 CP950 相同；84 場景保留 100 容量；627 原始檔與基準相同。商業切片與本機研究 JSON 皆受 Git 忽略。
+
+Research Findings: 首個無戰鬥場景的必要路徑不需等待完整 DOS VM 或參考引擎建置。Known Limitations / Unverified Assumptions: 原版切片為社群候選規則，預覽入口／軸向非 DOS 驗證，其他事件格保守阻擋；未轉原版傳送／戰鬥／未知 opcode，無圖片或聲音重建。MOD 只支援最小文字 patch；存檔變更拒絕而非遷移。Next Recommended Tasks: Phase 7 Web 3D／操作 UI 與瀏覽器存讀檔，實際畫面驗收。所有本輪實作尚未新增 commit／push。
+
+## MASTER_PLAN v1.2／Phase 3 首個索引模組
+
+Phase: 1／2 未解研究持續，3 局部交付。Status: IDX／GRP 邊界模組完成，無可玩 MVP。依使用者要求先提交 35c3f4d 並成功推送 origin/develop（15 檔），其後才進行本節工作。
+
+Completed Tasks: 調整為按功能證據驗收、參考引擎按需建置；自行實作純 TS uint32 LE 結束偏移解析與獨立 bytes 切片、metadata CLI、三項 Mock 測試。Files Changed: MASTER_PLAN、AGENTS、README、ADR 0008、game-data 索引與 exports、extractor CLI、idx-grp tests、解析報告、格式狀態、TODO／PROGRESS。
+
+Tests Executed / Test Results: build、typecheck、4 項 Node 測試通過；實際 118 組 strict 稽核，117 相容、MMAP resourceId 3731 明確拒絕；TALK 2,977 邊界重跑一致；完整 627 檔前後與既有基準雜湊相同。研究 JSON 保留本機並檢查 Git 排除。
+
+Research Findings: 共用容器讀取可獨立推進，不必等待 15／50 或整個參考引擎建置。Known Limitations / Unverified Assumptions: 容器相容不證明內容語意，MMAP 不自動修補；原版控制符號、事件規則、精確版本及授權未解，Phase 1／2／3 整體均未驗收。Next Recommended Tasks: TALK 的 bytes／文字候選解讀與控制碼保留。本節改動為推送後續的新工作，尚未另行 commit／push。
+
 ## Phase 2：依賴組態核對
 
 Status: 靜態矩陣完成，整體未驗收。Completed Tasks / Files Changed: 新增 validation/candidate-dependency-matrix.md，audit_source_notices.py 0.2.0 增加三個建置檔雜湊與 MSBuild XML 各組態明載值，連結 engine-build，更新 TODO／PROGRESS。Research Findings: B 預設來源走 SDL3_mixer，但 x64 專案明列 BASS／BASSMIDI／smallpot；iconv／libzip 的 Windows 外部設定待查，Android stub 存在不代表被引用。Tests Executed: 固定來源重跑一致性、XML 組態與依賴斷言、版本防護及四項 Mock、Git 排除與 diff。Results: 通過。Known Limitations: 不展開 MSBuild 繼承或執行前處理；未編譯、未安裝工具鏈、未變更第三方來源，依賴版本／授權未結案。Unverified Assumptions: 各組態可建置性與原版相容性。Next Recommended Tasks: 固定單一研究目標與依賴版本，補上游鏈後配置工具鏈；15／50 原版證據另行處理。

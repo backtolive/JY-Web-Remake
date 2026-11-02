@@ -1,0 +1,26 @@
+{
+  "manifest": {"id":"mock.wuxia","version":"0.1.0","schemaVersion":1,"runtimeVersion":"0.1.0","kind":"base","classification":"mock","license":"Project-authored Mock fixture; no original game content.","ruleset":"mock-grid-v1","priority":0,"dependencies":[]},
+  "entry":{"mapId":"mock.wuxia:map/room","x":1,"y":1},
+  "maps":[
+    {"id":"mock.wuxia:map/room","name":"Mock 練功房","width":5,"height":5,"blocked":[0,1,2,3,4],"npcs":[{"id":"mock.wuxia:npc/guide","x":2,"y":1,"eventId":"mock.wuxia:event/welcome"}],"portals":[{"x":1,"y":2,"mapId":"mock.wuxia:map/yard","toX":1,"toY":1}]},
+    {"id":"mock.wuxia:map/yard","name":"Mock 庭院","width":4,"height":4,"blocked":[0],"npcs":[],"portals":[{"x":1,"y":2,"mapId":"mock.wuxia:map/room","toX":1,"toY":1}]}
+  ],
+  "dialogues":[
+    {"id":"mock.wuxia:talk/welcome","speaker":"Mock 引路人","text":"這是獨立的原創測試場景。要領取練習道具嗎？"},
+    {"id":"mock.wuxia:talk/reward","speaker":"Mock 引路人","text":"你獲得一枚練習銅錢。"},
+    {"id":"mock.wuxia:talk/bye","speaker":"Mock 引路人","text":"隨時可以再來。"}
+  ],
+  "events":[{"id":"mock.wuxia:event/welcome","steps":[
+    {"op":"say","dialogueId":"mock.wuxia:talk/welcome"},
+    {"op":"choice","options":[{"text":"領取","target":2},{"text":"暫時不用","target":7}]},
+    {"op":"if","condition":{"op":"flag","key":"mock.wuxia:flag/rewarded","equals":true},"onTrue":6,"onFalse":3},
+    {"op":"giveItem","itemId":"mock.wuxia:item/coin","amount":1},
+    {"op":"setFlag","key":"mock.wuxia:flag/rewarded","value":true},
+    {"op":"say","dialogueId":"mock.wuxia:talk/reward"},
+    {"op":"end"},
+    {"op":"say","dialogueId":"mock.wuxia:talk/bye"},
+    {"op":"end"}
+  ]}],
+  "items":[{"id":"mock.wuxia:item/coin","name":"Mock 練習銅錢"}],
+  "patches":[]
+}

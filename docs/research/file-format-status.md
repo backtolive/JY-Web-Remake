@@ -1,5 +1,7 @@
 # 格式狀態
 
+最新（MASTER_PLAN v1.2）：已交付首個通用 IDX／GRP strict 邊界解析模組 0.1.0，真實 118 組中 117 組相容、MMAP 明確拒絕；TALK 2,977 邊界可重現。這是容器解析，不包含圖片／文字／事件語意，詳見 validation/idx-grp-parser.md。下列「正式解析器為 0」等文字為歷史紀錄，已由此更新取代；未知項仍保留。
+
 TALK／KDEF 更新：已找到 Pascal 社群引擎直接讀取來源。TALK 共 2,977 筆，按來源 XOR FF 及 NUL 映射後 CP950 全部可嚴格解碼；KDEF 共 1,018 筆，全部偶數長度。正式事件語意、控制符號及 opcode 邊界仍待確認。詳見 talk-kdef-source-analysis.md；沒有建立正式批次解析器。
 
 更新：已完成 118 組索引候選邊界檢查及 5,668 個候選文字欄位的嚴格解碼。Big5／CP950 皆零失敗；MMAP.IDX 有 5,000 個尾端零值例外。詳見 [完整稽核](full-field-index-audit.md)。這不代表完成圖片、對話或事件解析；正式解析器仍為 0。

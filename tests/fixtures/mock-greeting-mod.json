@@ -1,0 +1,5 @@
+{
+  "manifest":{"id":"mock.greeting","version":"0.1.0","schemaVersion":1,"runtimeVersion":"0.1.0","kind":"mod","classification":"mock","license":"Project-authored Mock fixture.","ruleset":"mock-grid-v1","priority":10,"dependencies":[{"id":"mock.wuxia","version":"0.1.0"}]},
+  "maps":[],"dialogues":[],"events":[],"items":[],
+  "patches":[{"target":"mock.wuxia:talk/welcome","expectedText":"這是獨立的原創測試場景。要領取練習道具嗎？","text":"Mock MOD 已載入。要領取練習道具嗎？"}]
+}
