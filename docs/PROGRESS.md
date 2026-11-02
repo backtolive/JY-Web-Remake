@@ -1,5 +1,21 @@
 # 進度 — 2026-11-02
 
+## Phase 7 修正：畫面與輸入方向一致
+
+Status: 程式與自動驗證完成，修正版實際 UI 重測受瀏覽器 API 限制。Completed Tasks: 共享相機角度的 screen-to-grid 適配、正交斜角投影、核心八方向及禁止穿角、八方向畫面按鈕、鍵盤組合／短按／長按與失焦停止。Files Changed: game-core types/runtime、web view-controls／App／renderer／styles、view-controls tests、ADR 0011、web-mvp／TODO／PROGRESS。
+
+Tests Executed / Results: 新增四項測試，包含 Babylon NullEngine 實際投影（中心／偏離中心）、八方向映射、可控時鐘輸入及牆角／NPC／出口整合；全數通過。整體 Node 19 項、Python 4 項、typecheck／build、artifact 檢查通過；4173 HTTP 200，輸出已更新。Known Limitations: 本輪瀏覽器工具回報 browser.user unavailable，嘗試既有分頁及文件指引恢復仍受限，未取得修正版 UI 截圖或實測；不以舊圖當作新證據。Next Recommended Tasks: 玩家刷新預覽確認方向手感，工具恢復後再補實際鍵盤／觸控重測。本輪未另行 commit／push。
+
+## Phase 7：可操作的本機 Web MVP
+
+Status: 第一個占位 3D 場景切片完成，正式站台未部署。先依使用者要求將 e0686a8 成功推送 origin/develop（33 檔），再開始此次 Web 工作；本節網站實作尚未另行 commit／push。
+
+Completed Tasks: 新建 apps/web React／Vite／Babylon.js，純核心命令串接固定斜角 3D、鍵盤與按鈕、鄰格 NPC、對話／選項、原創兩場景切換、行囊；localStorage 內容分槽／備份與匯出入、MOD 切換、原版包只在本機 File API 讀取。建置插件拒絕私人原版／研究／生成資料匯入，根 build 產生可部署 apps/web/dist，相對資產路徑。
+
+Files Changed: apps/web、package／lock／workspace、web-storage tests、check-web-build、README、AGENTS、TODO／PROGRESS、mvp-readiness 更新標記、deployment、validation/web-mvp、ADR 0010。Tests Executed / Results: build、typecheck、15 Node＋4 Python、schema 與原版 readiness、靜態 artifact／HTTP 200；實際瀏覽器開發／正式版 3D ready、碰撞、對話／選項／物品、重新整理後存讀續行、s 切圖往返、MOD 問候、不相容存檔拒絕保持對話、本機河洛客棧包載入／對話；桌面與窄版無水平溢出、測後恢復 viewport。瀏覽器 error／warn 抓取為空。原創畫面截圖保留本機忽略目錄。
+
+Research Findings: 靜態站台建置不需 DOSBox、原版輸入或後端；原版資料可與網站發行隔離。Known Limitations / Unverified Assumptions: 尚未部署、無雲端存檔／帳號；完整戰鬥／原版圖像音效／其他劇情未做；正式硬體手機與完整 E2E／下載回匯尚未驗證。Babylon chunk >500 kB 有建置提示，已採 renderer 動態載入但未全面優化。Next Recommended Tasks: 選定 HTTPS 託管並接部署，再按證據擴充內容；完整 Phase 6 不標通過。
+
 ## 第一個場景 MVP 前置就緒（MASTER_PLAN v1.3）
 
 Phase: 3／5／6 必要子集；Status: Ready to start scoped Phase 7 MVP，尚無可玩網頁、整體階段未驗收。依使用者「繼續直到可以進行 MVP」持續實作至就緒門檻，見 ADR 0009 與 mvp-readiness.md。

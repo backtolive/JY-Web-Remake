@@ -1,5 +1,7 @@
 # 第一個 3D 場景 MVP：前置已就緒
 
+後續狀態更新：已完成本機可操作的占位 Web MVP，見 [Web 驗證](validation/web-mvp.md)。以下保留「前置就緒」時點的範圍與結果；其中尚無可玩網頁的描述已由後續紀錄取代，完整 Phase 6 仍未驗收。
+
 2026-11-02。Status: Ready to start scoped MVP implementation。尚無可玩網頁；這份報告不是完整 Phase 3／6 或 DOS 還原的驗收。
 
 ## 可重跑檢查

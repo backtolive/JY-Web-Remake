@@ -35,7 +35,8 @@ export interface GameState {
   mapId: string; x: number; y: number;
   flags: Record<string, boolean>; inventory: Record<string, number>; cursor: EventCursor | null; rngState: number;
 }
-export type Command = { type: 'MOVE'; direction: 'north' | 'south' | 'east' | 'west' }
+export type MoveDirection = 'north' | 'south' | 'east' | 'west' | 'northeast' | 'northwest' | 'southeast' | 'southwest';
+export type Command = { type: 'MOVE'; direction: MoveDirection }
   | { type: 'INTERACT'; npcId: string } | { type: 'CONTINUE' } | { type: 'CHOOSE'; option: number };
 export interface SaveEnvelope {
   schemaVersion: 1; runtimeVersion: string; content: readonly ContentIdentity[];

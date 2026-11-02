@@ -62,10 +62,14 @@ export function dispatch(content: ResolvedContent, previous: GameState, command:
       switch (command.direction) {
         case 'north': dy = -1; break; case 'south': dy = 1; break;
         case 'west': dx = -1; break; case 'east': dx = 1; break;
+        case 'northeast': dx = 1; dy = -1; break; case 'northwest': dx = -1; dy = -1; break;
+        case 'southeast': dx = 1; dy = 1; break; case 'southwest': dx = -1; dy = 1; break;
         default: fail('INVALID_COMMAND', '/direction', 'Unknown movement direction');
       }
       const map = content.maps[state.mapId]!;
-      if (isBlocked(map, state.x + dx, state.y + dy)) { notifications.push({ type: 'MOVE_BLOCKED' }); break; }
+      const cornerBlocked = dx !== 0 && dy !== 0 &&
+        (isBlocked(map, state.x + dx, state.y) || isBlocked(map, state.x, state.y + dy));
+      if (isBlocked(map, state.x + dx, state.y + dy) || cornerBlocked) { notifications.push({ type: 'MOVE_BLOCKED' }); break; }
       state.x += dx; state.y += dy;
       notifications.push({ type: 'PLAYER_MOVED' });
       const portal = map.portals.find(p => p.x === state.x && p.y === state.y);

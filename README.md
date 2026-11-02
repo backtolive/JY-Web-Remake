@@ -1,8 +1,12 @@
 # JY-Web-Remake
 
-通用武俠 RPG 引擎與《金庸群俠傳》內容包專案，目前已具備第一個 3D 場景 MVP 的資料與無畫面核心前置，尚無可玩網頁。MASTER_PLAN v1.3 按功能證據推進，參考引擎僅按需建置。原版邊界／對話／場景解析、內容 Schema、受控 Runtime、最小 MOD 與精確存讀檔已有測試；完整戰鬥與原版規則尚未驗收。見 [MVP 就緒報告](docs/mvp-readiness.md) 及 [ADR 0009](docs/decisions/0009-first-scene-mvp-readiness.md)。
+通用武俠 RPG 引擎與《金庸群俠傳》內容包專案，已有可在本機瀏覽器操作的 3D 場景 MVP：原創兩場景、移動碰撞、NPC 對話與選項、MOD 及本機存讀檔。預設內容明確標為 Mock；不是完整版原版重製。MASTER_PLAN v1.3 按功能證據推進，參考引擎僅按需建置；完整戰鬥與原版規則尚未驗收。見 [Web MVP 驗證](docs/validation/web-mvp.md) 與 [部署說明](docs/deployment.md)。
 
 開發：Node.js 24+、pnpm 11.25.0。執行 pnpm install --frozen-lockfile、pnpm run build、pnpm run typecheck、pnpm run test。
+
+試玩：`pnpm run dev` 後開啟 http://127.0.0.1:5173/；方向鍵／WASD 移動，E 互動，金色圓環切換場景。`pnpm run build` 產生完整靜態網站於 **apps/web/dist**，`pnpm run preview` 可在 http://127.0.0.1:4173/ 驗證正式輸出。尚未部署公開網址；原版切片僅支援玩家本機選檔載入。
+
+移動採畫面相對方向：↑／W 就是畫面向上，兩個方向鍵可組合斜走（如 W＋D 往右上），亦提供八方向按鈕；正交斜角鏡頭維持方向一致，斜走不穿過牆角。
 
 唯讀檢視資源邊界：`node tools/extractor/inspect-idx-grp.mjs original/dos/TALK.IDX original/dos/TALK.GRP`。只輸出 metadata，不匯出商業資源；適用範圍與驗證見 [解析器報告](docs/validation/idx-grp-parser.md)。
 
