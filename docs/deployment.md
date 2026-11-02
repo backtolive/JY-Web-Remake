@@ -1,5 +1,7 @@
 # 靜態網站建置與部署
 
+目前已選 **GitHub Pages**，沿用既有倉庫與 develop 分支。工作流程及一次性 GitHub 設定見 [Pages 發布紀錄](validation/github-pages-pipeline.md)。程式已準備，尚未啟用 Pages 或驗證正式網址。
+
 此版為瀏覽器單機 MVP，沒有後端、帳號或資料庫；發布預設只包含 Mock 原創內容。原版預覽包由玩家自己在本機選檔載入。
 
 ## 建置
@@ -25,6 +27,6 @@ pnpm run preview
 
 前往顯示的本機預覽網址，測試 3D、移動碰撞、NPC／選項、切圖及存讀檔，再發布同一份輸出。`mvp:prepare`／`mvp:check` 是原版資料研究工具，不是公開網站建置的必要步驟；沒有原版遊戲目錄的部署環境仍可建置站台。
 
-託管平台建置命令為 `pnpm run build`，發布目錄 `apps/web/dist`，Node 版本 24。此輪未建立或變更任何託管網站、網域或自動部署工作流；選定平台後再接 CI／CD。原版資源、references、assets/generated、玩家存檔與密鑰均不應加入發布目錄。
+託管平台建置命令為 `pnpm run build`，發布目錄 `apps/web/dist`，Node 版本 24。既有 checks workflow 已擴充為建置／測試／artifact 與 develop 專用 Pages 發布，GitHub 管理端啟用與首輪遠端驗證仍待完成。原版資源、references、assets/generated、玩家存檔與密鑰均不應加入發布目錄。
 
 初次部署後，使用實際正式網址重做操作測試。本機存檔屬於各自 origin；換網域或連接埠不會自動攜帶存檔，可使用 JSON 匯出／匯入轉移。

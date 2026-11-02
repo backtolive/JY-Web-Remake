@@ -13,7 +13,7 @@ export function MiniMap({map,state}:{map:GameMap;state:GameState}){
     ctx.fillStyle='#b7673c';map.npcs.forEach(n=>ctx.fillRect(n.x*scale,n.y*scale,Math.max(scale,3),Math.max(scale,3)));
     ctx.fillStyle='#123e36';ctx.beginPath();ctx.arc((state.x+0.5)*scale,(state.y+0.5)*scale,Math.max(3,scale*0.23),0,Math.PI*2);ctx.fill();
   },[map,state.x,state.y]);
-  return <canvas ref={ref} className="mini-map" aria-label={`地圖位置：${state.x}, ${state.y}`}/>;
+  return <canvas ref={ref} className="mini-map" role="img" aria-label={`地圖位置：${state.x}, ${state.y}`}/>;
 }
 
 export function SceneView({map,state,onInteract}:{map:GameMap;state:GameState;onInteract:(id:string)=>void}){
@@ -30,7 +30,7 @@ export function SceneView({map,state,onInteract}:{map:GameMap;state:GameState;on
   },[map]);
   useEffect(()=>{renderer.current?.update(state);},[state]);
   return <div className="scene-frame" data-renderer={ready?'ready':error?'fallback':'loading'}>
-    <canvas ref={canvas} className="world-canvas" aria-label="固定斜角 3D 遊戲場景"/>
+    <canvas ref={canvas} className="world-canvas" role="img" aria-label="固定斜角 3D 遊戲場景"/>
     {!ready&&!error&&<div className="scene-loading"><span className="seal">行</span>正在鋪展江湖…</div>}
     {error&&<div className="scene-fallback"><MiniMap map={map} state={state}/><p role="status">{error}</p></div>}
     <div className="scene-caption"><span className="status-dot"/>固定斜角 · 占位美術<span className="coordinates">{state.x.toString().padStart(2,'0')} / {state.y.toString().padStart(2,'0')}</span></div>

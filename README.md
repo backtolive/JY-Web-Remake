@@ -8,6 +8,10 @@
 
 移動採畫面相對方向：↑／W 就是畫面向上，兩個方向鍵可組合斜走（如 W＋D 往右上），亦提供八方向按鈕；正交斜角鏡頭維持方向一致，斜走不穿過牆角。
 
+瀏覽器回歸：首次執行 `pnpm run test:e2e:install` 安裝隔離 Chromium，之後 `pnpm run test:e2e` 會建置網站並以獨立 4273 連接埠驗證畫面方向、對話存讀與下載回匯。結果見 [E2E 驗證紀錄](docs/validation/browser-regression.md)，不需要原版資源。
+
+正式託管已選 GitHub Pages：checks workflow 會先完成測試，再僅由 develop 發布網站成品；PR 不部署。尚需倉庫 Settings → Pages 將 Source 設為 GitHub Actions，並提交推送本輪變更。見 [發布流程](docs/validation/github-pages-pipeline.md)，目前尚未正式上線。
+
 唯讀檢視資源邊界：`node tools/extractor/inspect-idx-grp.mjs original/dos/TALK.IDX original/dos/TALK.GRP`。只輸出 metadata，不匯出商業資源；適用範圍與驗證見 [解析器報告](docs/validation/idx-grp-parser.md)。
 
 `pnpm run schema:check` 檢查共用 JSON Schema；`pnpm run mvp:prepare` 由本機 original/dos 建立受 Git 忽略的原版預覽切片；`pnpm run mvp:check` 執行 Mock 原創與原版切片的無畫面整合驗證。兩種內容使用相同核心；Mock 定義不是原版規則。沒有原版資料的環境仍可執行 build、typecheck、test、schema:check。

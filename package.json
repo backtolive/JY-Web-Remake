@@ -16,9 +16,12 @@
     "mvp:prepare": "node tools/extractor/prepare-mvp.mjs original/dos",
     "mvp:check": "node tools/validator/check-mvp-readiness.mjs --original original/dos",
     "dev": "pnpm --filter @jy/web dev",
-    "preview": "pnpm --filter @jy/web preview"
+    "preview": "pnpm --filter @jy/web preview",
+    "test:e2e": "pnpm run build && node tools/validator/run-browser-tests.mjs",
+    "test:e2e:install": "node tools/validator/run-browser-tests.mjs --install"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "ajv": "8.17.1",
     "typescript": "5.9.3"
   }

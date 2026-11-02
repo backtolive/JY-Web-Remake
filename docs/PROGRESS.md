@@ -1,5 +1,27 @@
 # 進度 — 2026-11-02
 
+## GitHub Pages 首輪發布
+
+使用者已確認 Public 與 Pages Source=GitHub Actions；connector get_repo 已回傳 public 與倉庫中繼資料，先前 404 阻礙解除。本輪準備提交目前 E2E／CI／Pages 變更並推送 develop，追蹤實際 hosted runner 與部署結果；在取得成功結果前保持未上線狀態。
+
+## GitHub Pages／CI 工作流程準備
+
+Phase: 12 靜態發布子集。Status: 工作流程與本機檢查完成，正式站台未上線。使用者選定 GitHub Pages，沿用目前倉庫／develop。
+
+Completed Tasks / Files Changed: 擴充 .github/workflows/ci.yml，加入 Python／Schema／artifact／Linux Chromium E2E、測試報告與網站成品保留；非 PR 的 develop 在 check 成功後以 Pages artifact 發布，部署權限限於 deploy job、使用 github-pages environment。run-browser-tests 支援 --with-deps，更新 README／deployment／github-pages-pipeline／TODO／PROGRESS。
+
+Tests Executed / Results: 官方 actionlint 1.7.12 ZIP 校驗一致、workflow lint 無錯；typecheck、19 Node、4 Python、Schema／artifact、本機 Chromium 4 E2E 通過。未知安裝參數明確拒絕。Known Limitations: Windows 結果不是 hosted Ubuntu 驗證；GitHub connector get_repo 回傳 404，目前無法代改 Pages 管理端設定。本輪未提交推送、未觸發遠端 run、未宣稱預期網址已部署。Next Recommended Tasks: 管理者設定 Pages Source=GitHub Actions，提交推送 develop，驗證部署回傳 URL 與正式站台操作。詳見 validation/github-pages-pipeline.md。
+
+## Phase 7／11：隔離瀏覽器回歸完成
+
+Status: 4 個 E2E 通過。先依要求將 daa02ae 推送 origin/develop（28 檔），才開始本輪下一步；本輪後續修改尚未另行 commit／push。
+
+Completed Tasks / Files Changed: 固定 Playwright 1.56.1 與官方 Chromium、playwright.config.ts、test:e2e／安裝 wrapper、tests/e2e/web-mvp.spec.ts、package／lock、canvas ARIA 角色、快速組合鍵放開修正與單元斷言、browser-regression／README／web-mvp／TODO／PROGRESS。專用 4273 與全新 context 不影響 4173 試玩或玩家存檔。
+
+Tests Executed / Results: 4 passed（13.1s）：實際 WebGL 像素方向與出口／碰撞、對話與選項重整續行／一次性物品／備份、UI 真正下載後用 chooser 回匯／MOD 不符與損壞 JSON 拒絕、390×844 touch 按鈕與無水平溢出。修正後另執行 Node 19 項、Python 4 項、typecheck、schema／artifact 檢查；通過。測試服務正常清理，4173 HTTP 200。HTML report／截圖／Mock 下載檔保留 ignored assets/generated。
+
+Research Findings: 修正並補證快速短按組合鍵的放開順序問題，不再只依單元時鐘或投影數學推定 UI 正確。Known Limitations: 首輪沙箱執行 Windows server 清理停滯，清理自有測試程序後以正常程序權限完整跑通；IAB API 未宣稱恢復。只驗證隔離 Chromium 與 Mock，像素辨識依現有占位美術，未涵蓋真實手機或完整原版。Next Recommended Tasks: 選定 HTTPS 託管／CI 或按證據擴充原版內容；保留原版 15／50、授權與版本待辦。
+
 ## Phase 7 修正：畫面與輸入方向一致
 
 Status: 程式與自動驗證完成，修正版實際 UI 重測受瀏覽器 API 限制。Completed Tasks: 共享相機角度的 screen-to-grid 適配、正交斜角投影、核心八方向及禁止穿角、八方向畫面按鈕、鍵盤組合／短按／長按與失焦停止。Files Changed: game-core types/runtime、web view-controls／App／renderer／styles、view-controls tests、ADR 0011、web-mvp／TODO／PROGRESS。

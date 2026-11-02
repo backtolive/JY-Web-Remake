@@ -56,6 +56,8 @@ test('Camera-relative keyboard: tap, chord, held repeat, aliases, focus loss and
   const clock=fakeClock(),moves=[];let allowed=true;
   const controller=createMovementController(direction=>moves.push(direction),()=>allowed,clock);
   controller.keyDown('W');controller.keyUp('W');assert.deepEqual(moves,['southwest']);
+  moves.length=0;controller.keyDown('w');controller.keyDown('d');controller.keyUp('d');controller.keyUp('w');
+  assert.deepEqual(moves,['south']);clock.advance(1000);assert.equal(moves.length,1);
   moves.length=0;controller.keyDown('w');clock.advance(20);controller.keyDown('d');clock.advance(45);
   assert.deepEqual(moves,['south']); // no spurious first single-key step
   clock.advance(140);assert.deepEqual(moves,['south','south']);

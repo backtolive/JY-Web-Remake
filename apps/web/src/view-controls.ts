@@ -69,11 +69,18 @@ export function createMovementController(move: (direction: MoveDirection) => voi
     keyUp(key: string) {
       const normalized = key.toLowerCase();
       if (!held.has(normalized)) return false;
-      const next = direction(); held.delete(normalized);
-      if (!held.size) {
-        if (!moved && canMove() && next) move(next);
-        clear();
+      const next = direction();
+      // Flush a quick chord before releasing its first key, not after it becomes a single key.
+      if (!moved) {
+        moved = true;
+        if (canMove() && next) move(next);
+        if (timer !== undefined) clock.cancel(timer);
+        timer = undefined;
       }
+      held.delete(normalized);
+      if (!held.size) {
+        clear();
+      } else if (timer === undefined) timer = clock.schedule(tick, 140);
       return true;
     },
     clear,

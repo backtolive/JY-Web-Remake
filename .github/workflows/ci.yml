@@ -1,15 +1,87 @@
 name: checks
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install --global pnpm@11.25.0
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - run: pnpm run typecheck
-      - run: pnpm run test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install pinned dependencies
+        run: |
+          npm install --global pnpm@11.25.0
+          pnpm install --frozen-lockfile
+      - name: Check types and core tests
+        run: |
+          pnpm run typecheck
+          pnpm run test
+          python -m unittest discover -s tests/unit -p 'test_*.py'
+          pnpm run schema:check
+      - name: Build and validate static website
+        run: |
+          pnpm run build
+          node tools/validator/check-web-build.mjs
+      - name: Install Chromium and Linux dependencies
+        run: node tools/validator/run-browser-tests.mjs --install --with-deps
+      - name: Run isolated browser regression
+        run: node tools/validator/run-browser-tests.mjs
+      - name: Keep browser report and evidence
+        if: ${{ always() && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-report-${{ github.sha }}
+          path: |
+            assets/generated/e2e-report/
+            assets/generated/e2e-results/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Keep tested static website
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-mvp-${{ github.sha }}
+          path: apps/web/dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Prepare GitHub Pages artifact
+        if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist/
+          retention-days: 1
+
+  deploy:
+    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' }}
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check Pages configuration
+        uses: actions/configure-pages@v5
+      - name: Publish the tested artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

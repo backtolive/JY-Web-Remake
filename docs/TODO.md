@@ -1,7 +1,16 @@
 # 待辦
 
+- [x] 使用者選定 GitHub Pages；既有 checks workflow 擴充為核心／Schema／build／E2E／artifact，只有 develop 通過才發布。
+- [x] 工作流程通過 actionlint；安裝 wrapper 支援 Linux --with-deps，所有研究／原版輸入不作 CI 需求。
+- [x] 使用者已將倉庫改為 Public 並設定 Pages Source=GitHub Actions；GitHub connector 已確認 visibility=public 且可讀取倉庫。
+- [ ] 提交／推送目前 E2E 與 CI／Pages 變更，完成第一輪 hosted runner 與正式 page_url 驗證；尚未上線。
+
+- [x] 提交 daa02ae 並推送 origin/develop，保存 Web MVP 與鏡頭控制修正。
+- [x] 新增可重跑 Playwright E2E：真正 WebGL 渲染方向、快速組合鍵／出口、對話／選項／備份、下載回匯／不相容拒絕及窄版觸控；4 案通過。
+- [x] 修正短按組合鍵在放開時退回單鍵方向，補上 canvas 的明確無障礙圖像角色。
+
 - [x] 修正 3D 鏡頭與鍵盤方向錯位：鏡頭相對八方向、組合鍵／長按、正交投影與嚴格牆角碰撞。
-- [ ] 本輪瀏覽器 API 受限；以更新後 4173 預覽手動確認方向、手感及觸控八方向。相機矩陣／核心自動測試已通過。
+- [x] 已用獨立 Chromium 補上實際畫面方向與觸控測試；原 IAB API 故障紀錄保留，真實玩家手感仍可繼續回饋。
 
 ## 最新狀態：本機 Web MVP 可操作
 
@@ -10,8 +19,9 @@
 - [x] 本機存讀檔、上一份備份、匯出／匯入 UI、內容組合分槽、MOD 問候切換及不相容存檔拒絕。
 - [x] 本機原版預覽包 File API 匯入；建置拒絕 original／references／assets/generated 直接引入。
 - [x] 開發與正式打包版瀏覽器操作驗證、桌面／窄版配置、15 Node＋4 Python 測試、靜態輸出檢查。
-- [ ] 下一步：選定正式託管平台，接 CI／CD 並驗證真正 HTTPS 網址；此輪尚未部署。
-- [ ] 補齊匯出檔案下載再回匯的瀏覽器測試與可獨立執行 E2E、真實手機／長按操作；逐項擴充原版事件與圖像，戰鬥另按證據推進。
+- [x] 已選 GitHub Pages 並準備 CI／CD；正式 HTTPS 發布驗證仍以上方最新待辦追蹤。
+- [x] 補齊下載回匯瀏覽器測試與可獨立執行 E2E；另保留真實手機／長時間按住操作、其他瀏覽器的驗證。
+- [ ] 逐項擴充原版事件與圖像，戰鬥另按證據推進；原版資料仍不隨網站發行。
 
 詳見 validation/web-mvp.md、deployment.md、ADR 0010。本節取代下列歷史狀態中的「尚無可玩網頁／下一步開始 UI」，不表示完整 Phase 6 或原版還原完成。
 
