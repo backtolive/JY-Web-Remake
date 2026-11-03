@@ -1,5 +1,23 @@
 # 待辦
 
+## 下一階段優先：地圖資源 ID → Mock 3D 最小切片
+
+- [x] 保存 2026-11-03 狀態與下階段提示詞：docs/HANDOFF.md。
+- [ ] 依實際資料選場景 1 的代表性 8×8 區域，保留圖層原值／ID／偏移／雜湊；查證圖像索引映射。
+- [ ] 定義版本化資源映射與場景描述，用明確 Mock 幾何完成可重現自動組裝及未映射診斷。
+- [ ] 遊戲內本機預覽、Mock 測試與瀏覽器呈現驗收；視覺與碰撞分離，原版衍生產物不公開。
+- [ ] 後續再接自動模型生成／檢查／快取；不把本切片當成完整 2D → 3D 生成管線。事件 670 阻礙仍追蹤，但不阻擋此切片。
+
+## 最新：原版事件擴充
+
+- [x] 加入入口可達性／逐 NPC 碰撞及對話存讀門檻；2 項 Mock 與既有原版切片通過。
+- [ ] 事件 670 擴充受阻：槽 3／4 均無法從現有入口抵達，--candidate 明確拒絕且不輸出包。先查連通區邊界及來源碰撞／事件阻擋證據，見 ADR 0013、validation/preview-npc-reachability.md。
+
+- [x] Phase 3／5：全量 1,018 事件支援目錄，264 純對話／23 空／731 拒絕，保留來源偏移／雜湊及目前互動欄位反向引用；見 validation/dialogue-event-catalogue.md、ADR 0012。
+- [x] 2 項新增 Mock 測試與實際重跑一致性；21 Node／4 Python、typecheck／Schema／build／artifact 通過，報告只留本機。
+- [ ] 將場景 1／事件 670／槽 3、4 納入本機原版預覽，逐槽確認可通行鄰格、NPC 位置、對話引用與存讀續行，再補瀏覽器實測。
+- [ ] 研究被拒絕的 10 筆對話參數差異；取得證據前不放寬解析器。未知指令、原版可達性與 Phase 1／2 未解事項持續獨立追蹤。
+
 - [x] 使用者選定 GitHub Pages；既有 checks workflow 擴充為核心／Schema／build／E2E／artifact，只有 develop 通過才發布。
 - [x] 工作流程通過 actionlint；安裝 wrapper 支援 Linux --with-deps，所有研究／原版輸入不作 CI 需求。
 - [x] 使用者已將倉庫改為 Public 並設定 Pages Source=GitHub Actions；GitHub connector 已確認 visibility=public 且可讀取倉庫。

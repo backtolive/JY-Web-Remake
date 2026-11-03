@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolveContent, canonical } from '../../packages/game-core/src/content.ts';
 import { createGame, dispatch, serializeSave, restoreSave, gridToWorld } from '../../packages/game-core/src/runtime.ts';
 import { prepareOriginalSlice } from '../extractor/prepare-mvp.mjs';
+import { checkSliceNpcs } from './check-slice-npcs.mjs';
 
 const read=async name=>JSON.parse(await readFile(new URL(`../../tests/fixtures/${name}`,import.meta.url),'utf8'));
 const base=await read('mock-wuxia-package.json'),mod=await read('mock-greeting-mod.json');
@@ -30,6 +31,7 @@ if(originalIndex>=0){
   const bundle=await prepareOriginalSlice(root);
   assert.equal(canonical(bundle),canonical(await prepareOriginalSlice(root)));
   const original=await resolveContent([bundle.package]);
+  const npcChecks=checkSliceNpcs(original);
   let originalState=createGame(original);
   const npc=original.maps[originalState.mapId].npcs[0];
   originalState=dispatch(original,originalState,{type:'INTERACT',npcId:npc.id}).state;
@@ -41,7 +43,8 @@ if(originalIndex>=0){
   }
   report.original={sceneId:bundle.provenance.sceneId,eventId:bundle.provenance.eventId,
     inputCount:bundle.provenance.sources.length,dialogueCount:bundle.package.dialogues.length,
-    confidence:bundle.provenance.confidence,readOnlySlice:true,saveContinuation:true};
+    confidence:bundle.provenance.confidence,readOnlySlice:true,saveContinuation:true,
+    npcs:npcChecks.map(({path,...check})=>({...check,walkingSteps:path.length}))};
 }
 report.ready=report.original!==null;
 console.log(JSON.stringify(report,null,2));

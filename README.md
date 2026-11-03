@@ -14,6 +14,10 @@
 
 唯讀檢視資源邊界：`node tools/extractor/inspect-idx-grp.mjs original/dos/TALK.IDX original/dos/TALK.GRP`。只輸出 metadata，不匯出商業資源；適用範圍與驗證見 [解析器報告](docs/validation/idx-grp-parser.md)。
 
+原版事件支援目錄：`node tools/analyzer/catalogue-dialogue-events.mjs original/dos`，將純對話候選、拒絕原因與場景互動引用寫至本機忽略目錄；不代表原版可達性驗證。見 [目錄驗證](docs/validation/dialogue-event-catalogue.md)。
+
+預覽準備工具會先檢查每個 NPC 從入口可達並驗證對話續行；`node tools/extractor/prepare-mvp.mjs original/dos --candidate` 嘗試事件 670，目前因槽 3／4 不可達而拒絕，不產出候選包。既有單 NPC 預覽仍可使用，見 [可達性紀錄](docs/validation/preview-npc-reachability.md)。
+
 `pnpm run schema:check` 檢查共用 JSON Schema；`pnpm run mvp:prepare` 由本機 original/dos 建立受 Git 忽略的原版預覽切片；`pnpm run mvp:check` 執行 Mock 原創與原版切片的無畫面整合驗證。兩種內容使用相同核心；Mock 定義不是原版規則。沒有原版資料的環境仍可執行 build、typecheck、test、schema:check。
 
 Python 3.14.7 已驗收，專案虛擬環境為 `.venv`。可直接執行 `.\.venv\Scripts\python.exe`，或以 `.\.venv\Scripts\Activate.ps1` 啟用。PATH 修正後，既有終端與 Codex 需重新啟動。資料匯入見 original/README.md；進度與待辦見 docs/PROGRESS.md、docs/TODO.md。測試資料均為 Mock。

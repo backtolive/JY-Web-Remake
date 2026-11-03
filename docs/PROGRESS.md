@@ -1,4 +1,30 @@
-# 進度 — 2026-11-02
+# 進度 — 2026-11-03
+
+## 交接保存：codex-break（最新）
+
+Phase: 現有 3／5／7 局部成果；下一階段為地圖視覺轉換切片。Status: 依使用者要求保存成果與交接，不開始新切片實作。Completed Tasks / Files Changed: 新增 docs/HANDOFF.md，記錄目前功能、事件 670 阻礙、驗證限制及可直接使用的下階段提示詞；更新 TODO／PROGRESS。Tests Executed / Results: 本輪檢查 Git 狀態及文件差異；最近程式驗證與 E2E 收尾限制見交接及下節，沒有新程式修改。Research Findings: 使用者下一目標為全自動素材轉換管線，先以 8×8 原版區域 ID 對照及 Mock 3D 組裝驗證。Known Limitations / Unverified Assumptions: 該切片尚未實作；圖像 ID 映射及 3D 推測不能視為原版驗證，Phase 1／2 未解項保留。Next Recommended Tasks: 依 HANDOFF 提示詞開始；本輪執行 commit、codex-break tag 及 push，實際結果以 Git 與回覆為準。
+
+## 原版事件 670：可達性門檻發現阻礙（最新）
+
+Phase: 3／5／7 局部。Status: 門檻完成；候選擴充停止。開始前重讀計畫／進度／待辦並檢查 Git；保留上一輪未提交變更。
+
+Completed Tasks / Files Changed: prepare-mvp 支援明確 --candidate、逐槽 NPC／事件映射與來源 provenance；新增 check-slice-npcs，準備包寫入前必須從入口實際 MOVE 搜尋並驗證碰撞／對話／存讀續行。readiness 納入逐 NPC 結果；2 項 Mock、ADR 0013、validation/preview-npc-reachability、README／TODO／PROGRESS 更新。
+
+Tests Executed / Test Results: 23 Node、4 Python、typecheck、Schema、build、artifact 通過；既有 mvp:prepare／mvp:check 通過且原版輸入讀取前後雜湊相同。--candidate 拒絕槽 3／4 為實際驗收失敗，已停止開放；開發暫存候選包已刪除。四個 Chromium 案例均 ok，但 Windows webServer 收尾停滯，以 Ctrl+C 結束（exit 1），不宣稱整輪 E2E 正常通過；其後 4273 無監聽。詳見 validation/preview-npc-reachability。
+
+Research Findings: 既有入口四方向可達 602 格，兩個候選 NPC 雖有可站立鄰格，皆無從入口到達的路徑。Known Limitations / Unverified Assumptions: 此為現有保守碰撞模型結果，不能推定 DOS 不可達；原因可能涉及通行判定、事件阻擋或缺少切圖／動態狀態，尚未確認。原版 Phase 1／2 未解研究與完整階段驗收保持未完成。Next Recommended Tasks: 唯讀追查連通區邊界及固定來源碰撞證據，再恢復事件 670 擴充。本輪尚未 commit／push。
+
+## Phase 3／5：原版事件全量支援目錄（最新）
+
+Status: 本輪靜態切片完成，完整階段未驗收。開始前已讀主計畫／進度／待辦並確認 develop 工作目錄乾淨；沿正式發布後的原版內容擴充方向推進。
+
+Completed Tasks / Files Changed: 新增 catalogue-dialogue-events.mjs 與 2 項 Mock 測試；逐筆記錄事件接受／空／拒絕、TALK 引用、場景目前互動欄位反向引用及來源偏移／SHA256。新增 ADR 0012、validation/dialogue-event-catalogue，更新 README／TODO／PROGRESS。原版衍生報告僅留 assets/generated，不含文字或 payload，不進網站。
+
+Tests Executed / Test Results: 21 Node、4 Python、typecheck、Schema 同步、build、靜態 artifact 檢查通過；實際原版重跑結果相同，八份輸入前後 SHA256 不變，報告確認 Git 忽略。無 UI 變更，未重跑 E2E；既有 Babylon chunk 提示保留。
+
+Research Findings: 1,018 事件中 264 純對話、23 空、731 拒絕；72 個純對話事件有目前場景互動引用，84 場景該欄位無越界引用。場景 1 的事件 670（槽 3／4）可作下一個候選。來源沿用固定 Pascal commit，等級 Community Implementation，未新增 Verified Original 結論。
+
+Known Limitations / Unverified Assumptions: 未新增可玩事件、不驗證可達性／動態改寫／自動與物品觸發；10 筆對話參數差異持續拒絕。Phase 1／2 版本／授權／15／50 未解項持續追蹤，未宣告完整 Phase 3／5／6 完成。Next Recommended Tasks: 擴充本機事件 670，逐槽驗證位置、碰撞、互動、存讀及實際畫面。本輪尚未 commit／push。
 
 ## 正式發布驗收完成（最新）
 
