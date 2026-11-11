@@ -4,7 +4,9 @@ param(
     [string]$Key,
 
     [Parameter(Mandatory = $true)]
-    [string]$WindowTitle
+    [string]$WindowTitle,
+
+    [long]$WindowHandle = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,7 +37,7 @@ $callback = [DosBoxKeyMessage_20261111+EnumWindowsCallback] {
     param($hWnd, $lParam)
     $titleBuilder = [System.Text.StringBuilder]::new(512)
     [void][DosBoxKeyMessage_20261111]::GetWindowText($hWnd, $titleBuilder, $titleBuilder.Capacity)
-    if ($titleBuilder.ToString() -ceq $WindowTitle) {
+    if ($titleBuilder.ToString() -ceq $WindowTitle -and ($WindowHandle -eq 0 -or $hWnd.ToInt64() -eq $WindowHandle)) {
         [uint32]$ownerPid = 0
         [void][DosBoxKeyMessage_20261111]::GetWindowThreadProcessId($hWnd, [ref]$ownerPid)
         $windows.Add([pscustomobject]@{ Hwnd = $hWnd; Pid = $ownerPid; Title = $titleBuilder.ToString() })
@@ -45,7 +47,8 @@ $callback = [DosBoxKeyMessage_20261111+EnumWindowsCallback] {
 [void][DosBoxKeyMessage_20261111]::EnumWindows($callback, [IntPtr]::Zero)
 
 if ($windows.Count -ne 1) {
-    throw "Expected one exact DOSBox-X window '$WindowTitle'; found $($windows.Count). No key was sent."
+    $selector = if ($WindowHandle -ne 0) { "HWND 0x$('{0:X}' -f $WindowHandle) and title '$WindowTitle'" } else { "exact window title '$WindowTitle'" }
+    throw "Expected one DOSBox-X $selector; found $($windows.Count). No key was sent."
 }
 
 $keyInfo = @{
