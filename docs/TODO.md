@@ -6,7 +6,8 @@
 - [x] 建立隔離 `session-002` 及存檔相關檔案 SHA-256 基線；session-001 保留為基準。
 - [x] 建立 DOSBox-X loopback debugger 橋與可重現啟動器、協定單元測試；見 `docs/validation/dosbox-x-debugger-and-sampling.md` 及 ADR0036。
 - [x] 建立 0–67 opcode 覆蓋表：候選參數字數、出現次數、FishEdit文件描述、社群 Pascal dispatcher 及本專案 Runtime 支援狀態；見 `docs/research/event-opcode-coverage.md`。
-- [ ] 透過桌面正常啟動 session-002，逐一錄製並驗證上／下／左／右／Esc／Enter按鍵能控制遊戲。
+- [x] 使用 `scripts/Send-DOSBoxX-Key.ps1` 對唯一精確標題的 DOSBox-X 遊戲視窗送 `WM_KEYDOWN/UP`；方向鍵、Enter 均在遊戲中產生可見反應。此輪測於 session-001 的隔離副本；Esc 收到後轉黑，語意仍待確認。詳見 `docs/validation/dosbox-x-debugger-and-sampling.md`。
+- [ ] 在 session-002 重跑六鍵並保存前後畫面證據；調查 Esc 黑畫面狀態，再執行 15／50 案例。
 - [ ] 完成 debugger loopback TCP handshake，實際執行 HELP／CPU／BPLIST 與 breakpoint，保存輸出。
 - [ ] 在 session-002 透過原版 UI 建立並讀回一般存檔；記錄前後 hash 及槽位。
 - [ ] 建立可重播事件前置存檔或可驗證路線，讀檔採樣事件前後狀態；人工編輯存檔一律標註 Synthetic State。
@@ -259,10 +260,10 @@
 - [x] Phase 2：確認 114 條指令 15 均附帶 83，建立原版待執行案例矩陣。
 - [ ] Phase 1／2：配置隔離的 DOSBox-X 執行與重播環境，執行 opcode-15-50-cases.md；原始資料不得作為可寫掛載。
 - [x] Phase 1／2：下載官方 DOSBox-X 2026.10.01 portable，核對官方 SHA256、驗證 627 檔隔離副本，建立啟動腳本與日誌設定。
-- [ ] Phase 1／2：在可見桌面確認選單、操作與聲音，再執行 15／50 案例；本次 computer-use 回報桌面存取拒絕。
+- [ ] Phase 1／2：確認遊戲聲音，並用 session-002 執行 15／50 案例；聲音及 opcode 的 DOS 執行效果仍待驗證。
 - [x] 修正本機啟動指引：提供直接執行 DOSBox-X 的 CMD 啟動器，避免依賴未簽章的 PowerShell 腳本；既有隔離設定不變。
 - [x] 使用者確認 CMD 可啟動；直接觀察原版主選單、成功載入進度一至大地圖，保存原生截圖與 17 檔證據快照。
-- [ ] 確認可靠移動／功能選單輸入與進度一測試路線，再執行 15／50；聲音及自動輸入重播仍未驗證。
+- [x] 確認可靠方向鍵及 Enter 輸入；以既有進度一載入地圖。新增存檔及事件測試路線仍待 session-002 驗收。
 - [ ] Phase 2：追查 sfe-kdef 缺少的核心原始碼與授權，不能以附帶 binary 視為完整來源。
 
 

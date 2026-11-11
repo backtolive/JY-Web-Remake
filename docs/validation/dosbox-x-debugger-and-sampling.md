@@ -4,14 +4,22 @@ Date: 2026-11-11
 
 ## Current verification
 
-- DOSBox-X 2026.10.01 opened the original game and reached its title screen. The log shows `Z.COM` loading `Z.DAT`, launching `DOS4GW.EXE`, and reading the game's resource files. This confirms boot and resource access, not that the five requested keys work.
+- DOSBox-X 2026.10.01 opened the isolated game copy and reached its title screen. The log shows `Z.COM` loading `Z.DAT`, launching `DOS4GW.EXE`, and reading the game's resource files.
+- All six requested keys now have visible game-response evidence in session-001: Up/Down changed title/load-menu selection; Enter opened the load-slot menu and loaded the existing progress-1 save; Left/Right moved the map relative to the centered character; Up/Down moved the map vertically. Escape was received, after which the game area stayed black. Escape's game meaning is still unknown, so this does not count as confirmed return/quit behavior. No new save was created.
+- The working route is direct `WM_KEYDOWN` + `WM_KEYUP` `PostMessage` to the exact DOSBox-X game HWND, using `scripts/Send-DOSBoxX-Key.ps1`. Elevated PowerShell was required in this environment: the ordinary shell got Win32 error 5 for `PostMessage`; elevated delivery returned success and visible game movement/selection. The script matches one exact window title and refuses zero or multiple matches. It reports that messages were queued; only the visual game response is evidence that the game consumed them.
+- The desktop controller's own `click`/`pressKey` APIs still report `GetCursorPos failed: Access denied`; `SendInput` also could not safely acquire foreground focus. These are not blockers for the direct elevated `PostMessage` route. Do not use global key broadcast.
 - The Debug menu exposes **Start DOSBox-X Debugger**, **Run debugger**, **Run normal**, and **Run watch**. The debugger window displayed EAX–EIP, CS:IP disassembly, data view and file-open log rows. This confirms the debugger build is present.
-- Automated key input could not be verified: the current Windows UI control session returns `GetCursorPos failed: Access denied` when activating the DOSBox-X window. Do not report Up, Down, Left, Right, Escape or Enter as passed until a repeatable input trace and visible game response are captured.
 - A separate local copy was made at ignored path `assets/generated/dosbox-x/session-002/game`. Twenty root-level save-slot files (RANGER, R1–R3, S1–S3, D1–D3, including IDX/GRP where present) had identical SHA-256 values between session-001 and session-002 immediately after copying. No save was written in this session yet.
 
 ## Interactive launch
 
-Use `scripts/Start-DOSBox-X-Session-002.cmd`. It mounts only the session-002 game copy and uses `session-002/dosbox-x.conf`; save writes therefore cannot touch `original/dos` or session-001. Keep the DOSBox-X title/game window focused before testing the required keys. For auditable input tests, record the before/after screen and DOSBox-X `-keydbg` log; a cursor movement alone is not a game response.
+Use `scripts/Start-DOSBox-X-Session-002.cmd`. It mounts only the session-002 game copy and uses `session-002/dosbox-x.conf`; save writes therefore cannot touch `original/dos` or session-001. To send one key to a visible game window, run PowerShell elevated and pass its exact current title:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Send-DOSBoxX-Key.ps1 -Key Right -WindowTitle "DOSBox-X 2026.10.01: Z - 20000 cycles/ms"
+```
+
+Supported `-Key` values are `Up`, `Down`, `Left`, `Right`, `Escape`, and `Enter`. The script refuses ambiguous title matches. Verify the resulting game screen; a successful `PostMessage` call by itself only proves that Windows accepted the message. A cursor movement alone is not a game response.
 
 The game's original save files are root-level files in this distribution (`RANGER.GRP/IDX`, `R1–R3`, `S1–S3`, `D1–D3`). A community Pascal implementation instead opens `AppPath + 'save/...'`; that directory disagreement means its path layout must not be imposed on the DOS original. Create a normal in-game save in session-002 first, then hash the changed slot set and use that as the replay baseline.
 
@@ -45,4 +53,4 @@ The Pascal `LoadR`/`SaveR` code is a useful candidate layout, but it reads an ei
 
 ## Status
 
-Boot/title display: passed. Debugger UI: passed. Five-key control: blocked on desktop input access. Debugger command over TCP: documented and bridge implemented, end-to-end not yet passed. Actual in-game save/load: not yet exercised. Event jump/replay: not yet implemented or verified.
+Boot/title display: passed. Debugger UI: passed. Six-key input: visibly passed in session-001 (Escape produced a black game area, semantics unknown); repeat against isolated session-002 remains useful for a clean reproducible capture. Existing progress-1 save load: passed; creating a new save and checking hashes: pending. Debugger command over TCP: documented and bridge implemented, end-to-end not yet passed. Event jump/replay: not yet implemented or verified.
