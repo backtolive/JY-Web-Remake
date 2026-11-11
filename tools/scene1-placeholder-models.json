@@ -1,0 +1,14 @@
+{
+  "version":1,
+  "classification":"mock",
+  "sceneId":1,
+  "entries":[
+    {"tileValue":2288,"resourceId":1144,"kind":"grass","scale":{"x":0.6,"y":0.3,"z":0.6}},
+    {"tileValue":2304,"resourceId":1152,"kind":"grass","scale":{"x":0.7,"y":0.35,"z":0.7}},
+    {"tileValue":2362,"resourceId":1181,"kind":"grass","scale":{"x":0.7,"y":0.65,"z":0.7}},
+    {"tileValue":2792,"resourceId":1396,"kind":"tree","scale":{"x":1.8,"y":2.5,"z":1.8}},
+    {"tileValue":2794,"resourceId":1397,"kind":"tree","scale":{"x":1.6,"y":2.3,"z":1.6}},
+    {"tileValue":2984,"resourceId":1492,"kind":"rock","scale":{"x":0.7,"y":0.4,"z":0.6}},
+    {"tileValue":3002,"resourceId":1501,"kind":"rock","scale":{"x":0.4,"y":0.22,"z":0.35}}
+  ]
+}

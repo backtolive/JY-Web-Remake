@@ -1,0 +1,34 @@
+import {test,expect} from '@playwright/test';
+import {buildingDemo} from '../../tools/extractor/prepare-building-demo.mjs';
+test('Mock door and roof cutaway change visibility while walls and furniture remain blocked',async({page},info)=>{
+  await page.goto('./');await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready');
+  await page.getByText('內容與測試設定',{exact:true}).click();
+  const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'匯入本機地圖區域預覽',exact:true}).click();
+  await(await chooser).setFiles({name:'mock-building.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(buildingDemo()))});
+  await expect(page.getByRole('heading',{name:'建築剖視測試',exact:true})).toBeVisible();
+  await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready');
+  const roofPixels=()=>page.locator('.world-canvas').evaluate((source:HTMLCanvasElement)=>{
+    const c=document.createElement('canvas');c.width=source.width;c.height=source.height;
+    const ctx=c.getContext('2d')!;ctx.drawImage(source,0,0);const p=ctx.getImageData(0,0,c.width,c.height).data;
+    let blue=0;for(let i=0;i<p.length;i+=4)if(p[i+2]!>70&&p[i+2]!>p[i+1]!*1.07&&p[i+1]!>p[i]!*1.05)blue++;
+    return blue;
+  });
+  await expect.poll(roofPixels).toBeGreaterThan(1000);
+  await page.screenshot({path:info.outputPath('roof-visible.png'),fullPage:true});
+  await page.getByRole('button',{name:'向左下移動',exact:true}).click();
+  await expect(page.getByRole('img',{name:'地圖位置：3, 4',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'向左下移動',exact:true}).click();
+  await expect(page.getByRole('img',{name:'地圖位置：3, 3',exact:true})).toBeVisible();
+  const toggle=page.getByRole('checkbox',{name:'隱藏屋頂與遮擋牆面（僅改顯示）',exact:true});await toggle.check();
+  await expect.poll(roofPixels).toBeLessThan(50);
+  await expect(page.getByRole('img',{name:'地圖位置：3, 3',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'向左上移動',exact:true}).click();
+  await expect(page.getByRole('img',{name:'地圖位置：2, 3',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'向左下移動',exact:true}).click();
+  await expect(page.getByRole('status')).toContainText('前方無法通行');
+  await page.getByRole('button',{name:'向左上移動',exact:true}).click();
+  await expect(page.getByRole('status')).toContainText('前方無法通行');
+  await expect(page.getByRole('img',{name:'地圖位置：2, 3',exact:true})).toBeVisible();
+  await page.screenshot({path:info.outputPath('roof-hidden.png'),fullPage:true});
+  await toggle.uncheck();await expect.poll(roofPixels).toBeGreaterThan(1000);
+});

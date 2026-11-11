@@ -42,7 +42,18 @@ async function playerPixels(page:Page){
     return largest;
   });
 }
+async function miniPlayerPixels(page:Page){
+  return page.locator('.map-card .mini-map').evaluate((canvas:HTMLCanvasElement)=>{
+    const {data}=canvas.getContext('2d')!.getImageData(0,0,canvas.width,canvas.height);
+    let x=0,y=0,count=0;
+    for(let i=0;i<data.length;i+=4)if(data[i]!<40&&data[i+1]!>40&&data[i+1]!<90&&data[i+2]!>35&&data[i+2]!<90){
+      x+=(i/4)%canvas.width;y+=Math.floor(i/4/canvas.width);count++;
+    }
+    return {x:x/count,y:y/count,count};
+  });
+}
 async function screenStep(page:Page,key:string,dx:number,dy:number){
+  const miniBefore=await miniPlayerPixels(page);expect(miniBefore.count).toBeGreaterThan(0);
   const before=await playerPixels(page);expect(before.count).toBeGreaterThan(20);
   await page.keyboard.press(key);
   let last=before,stable=0;
@@ -53,6 +64,10 @@ async function screenStep(page:Page,key:string,dx:number,dy:number){
     stable=correct&&Math.abs(current.x-last.x)<0.6&&Math.abs(current.y-last.y)<0.6?stable+1:0;last=current;
     return stable>=2;
   },{intervals:[60,80,100],message:`${key} must move the rendered player in screen direction ${dx},${dy}`}).toBe(true);
+  const miniAfter=await miniPlayerPixels(page);expect(miniAfter.count).toBeGreaterThan(0);
+  const mx=miniAfter.x-miniBefore.x,my=miniAfter.y-miniBefore.y;
+  expect(dx===0?Math.abs(mx)<2:mx*dx>2,`${key}: minimap horizontal direction matches WebGL`).toBe(true);
+  expect(dy===0?Math.abs(my)<2:my*dy>2,`${key}: minimap vertical direction matches WebGL`).toBe(true);
 }
 
 test('actual rendered movement follows arrows; collision, quick chord and exits stay correct',async({page},info)=>{

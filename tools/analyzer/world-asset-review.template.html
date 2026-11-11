@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8"><title>世界圖片與占格圖錄</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eeece4;color:#213b33;font:14px system-ui}header{padding:24px 30px 16px;background:#faf9f3;position:sticky;top:0;z-index:2;border-bottom:1px solid #c8cdc3}h1{font-size:23px;margin:0 0 8px}p{line-height:1.6;margin:7px 0}.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}input,select,button{font:inherit;padding:7px;border:1px solid #9da99a;border-radius:4px;background:white;color:inherit}main{padding:22px 30px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}.card{display:block;background:#fbfaf5;border:1px solid #c8cdc3;text-align:left;padding:10px;cursor:pointer}.image{height:135px;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#deded4 0% 25%,#eeeee4 0% 50%) 0 0/16px 16px;margin:8px 0}.image img{image-rendering:pixelated;max-height:130px;object-fit:contain}small{display:block;color:#536759;line-height:1.6}.badge{display:inline-block;border:1px solid #c3ccbd;padding:2px 5px;font-size:11px;margin:4px 3px 0 0}dialog{width:min(1050px,95vw);max-height:94vh;border:1px solid #8d9c88;padding:24px;background:#faf9f3;color:inherit}dialog::backdrop{background:#123a2c77}dialog img.large{image-rendering:pixelated;max-width:100%;height:260px;object-fit:contain}pre{font-size:13px;white-space:pre-wrap}table{border-collapse:collapse}td,th{border:1px solid #b9c4b3;padding:6px;text-align:left}code{overflow-wrap:anywhere}.row{display:flex;gap:24px;flex-wrap:wrap}.muted{color:#61705b}.candidate{background:#fff8df}svg{max-width:100%;height:auto;background:#e9e5da;image-rendering:pixelated}.close{float:right}.hint{font-size:12px;max-width:1100px}
+</style>
+<header><h1>世界圖片與占格圖錄</h1><p id="summary"></p><p class="hint">每個ID獨立保留。原始圖層是繪製用途，不能直接當植被／房屋／山體分類。占格來自BUILDX／BUILDY引用；圖片像素高不是3D高度。多圖相鄰僅列候選，尚未批准合併。</p><div class="tools"><input id="query" placeholder="圖片ID或資源索引" aria-label="搜尋ID"><select id="layer" aria-label="原始圖層"><option value="">全部原始圖層</option><option>earth</option><option>surface</option><option>building</option></select><select id="shape" aria-label="占格資料"><option value="">全部占格資料</option><option value="single">有單格錨點</option><option value="multi">有多格錨點</option><option value="vary">同ID有不同占格</option><option value="none">沒有建築占格引用</option></select><button id="show-assets">逐ID原圖</button><button id="show-groups">多圖相鄰候選</button><span id="count"></span></div></header>
+<main><div id="cards" class="grid"></div></main><dialog id="detail"><button class="close" onclick="document.querySelector('dialog').close()">關閉</button><div id="content"></div></dialog>
+<script>
+const data=__REVIEW_DATA__;
+const byId=new Map(data.assets.map(a=>[a.tileValue,a])),instances=new Map(data.instances.map(i=>[i.id,i]));
+const cards=document.querySelector('#cards'),detail=document.querySelector('#detail'),content=document.querySelector('#content');let mode='assets';
+document.querySelector('#summary').textContent=`${data.summary.independentImages}個獨立圖片ID · ${data.summary.singleCellAnchors}個單格／${data.summary.multiCellAnchors}個多格非空錨點 · ${data.summary.assetsWithVariableFootprints}個ID有不同占格遮罩`;
+function showAsset(a){
+ content.innerHTML=`<h2>ID ${a.tileValue} / 圖片索引 ${a.resourceId}</h2><div class="row"><div><img class="large" src="${a.dataUri}"><p>${a.width}×${a.height}px；錨點偏移 (${a.xOffset}, ${a.yOffset})</p></div><div><p>外觀類別：待人工核對</p><p>是否突起：Unknown；3D高度：未決定</p><p>原始圖層：${a.roles.map(r=>r.role+'（'+r.placements+'次放置）').join('、')}</p><p>來源 MMAP.GRP offset ${a.sourceOffset} / ${a.sourceByteLength} bytes</p><p class="hint"><code>PNG SHA256 ${a.sha256}</code></p><p>${a.anchorInstances}個建築引用錨點；${a.footprintVariants.length}種占格遮罩</p></div></div>`;
+ if(a.footprintVariants.length){const h=document.createElement('h3');h.textContent='來源占格遮罩（1=引用到此圖片錨點；0=未引用）';content.append(h);for(const v of a.footprintVariants){const p=document.createElement('pre');p.textContent=`${v.width}×${v.depth}格 / 實占${v.occupiedCells}格 / ${v.instances}次
+`+v.mask.join(String.fromCharCode(10));content.append(p);}}
+ else{const p=document.createElement('p');p.textContent='一格放置一張圖，不代表實體必為1×1或必定可穿透；尚無建築占格證據。';content.append(p);}
+ if(a.examples.length){const p=document.createElement('pre');p.textContent='實例錨點：'+a.examples.map(i=>`(${i.anchor.x},${i.anchor.y})`).join('、');content.append(p);}
+ detail.showModal();
+}
+function showCandidate(c){
+ const members=c.memberIds.map(id=>instances.get(id));
+ const placed=members.map(i=>{const a=byId.get(i.tileValue);return {i,a,x:(i.anchor.x-i.anchor.y)*18-a.xOffset,y:(i.anchor.x+i.anchor.y)*9-a.yOffset};});
+ const left=Math.min(...placed.map(p=>p.x)),top=Math.min(...placed.map(p=>p.y)),right=Math.max(...placed.map(p=>p.x+p.a.width)),bottom=Math.max(...placed.map(p=>p.y+p.a.height));
+ content.innerHTML=`<h2>相鄰候選 ${c.id}</h2><p>此為占格相接，尚未證明同一棟建築或同一山體；mergeApproved=false。</p><p>${members.length}個錨點／${c.imageIds.length}張不同圖片，聯集外框${c.gridWidth}×${c.gridDepth}格，實占${c.occupiedCells}格；高度未決定。</p><p class="hint">下圖僅疊加候選成員，不含周圍其他圖層；原始公式screenX=(x-y)*18、screenY=(x+y)*9。</p>`;
+ const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`${left-10} ${top-10} ${right-left+20} ${bottom-top+20}`);svg.setAttribute('width','800');svg.setAttribute('height',String(Math.min(600,800*(bottom-top+20)/(right-left+20))));
+ for(const p of placed.sort((a,b)=>a.i.anchor.x+a.i.anchor.y-b.i.anchor.x-b.i.anchor.y)){const im=document.createElementNS(ns,'image');im.setAttribute('href',p.a.dataUri);for(const [k,v] of Object.entries({x:p.x,y:p.y,width:p.a.width,height:p.a.height}))im.setAttribute(k,v);svg.append(im);}content.append(svg);
+ const pre=document.createElement('pre');pre.textContent=members.map(i=>`${i.id} → ID ${i.tileValue} / ${i.gridWidth}×${i.gridDepth} / 實占${i.occupiedCells}格`).join(String.fromCharCode(10));content.append(pre);detail.showModal();
+}
+function render(){
+ document.querySelector('#layer').disabled=mode==='groups';document.querySelector('#shape').disabled=mode==='groups';
+ const q=document.querySelector('#query').value.trim(),layer=document.querySelector('#layer').value,shape=document.querySelector('#shape').value;cards.replaceChildren();
+ if(mode==='groups'){
+  const list=data.candidates.filter(c=>(!q||c.imageIds.some(id=>String(id).includes(q)))&&c.imageIds.length>1).sort((a,b)=>(a.memberIds.length>20)-(b.memberIds.length>20)||a.memberIds.length-b.memberIds.length);
+  document.querySelector('#count').textContent=`${list.length}組多ID相鄰候選（未合併）`;
+  for(const c of list){const b=document.createElement('button');b.className='card candidate';b.innerHTML=`<b>${c.gridWidth}×${c.gridDepth}格，實占${c.occupiedCells}</b><p>${c.memberIds.length}錨點／${c.imageIds.length}圖片</p><small>${c.id}<br>ID ${c.imageIds.slice(0,10).join(', ')}${c.imageIds.length>10?'…':''}<br>僅相接，待人工判斷</small>`;b.onclick=()=>showCandidate(c);cards.append(b);}return;
+ }
+ const list=data.assets.filter(a=>(!q||String(a.tileValue).includes(q)||String(a.resourceId)===q)&&(!layer||a.roles.some(r=>r.role===layer))&&(!shape||(shape==='single'&&a.footprintVariants.some(v=>v.occupiedCells===1))||(shape==='multi'&&a.footprintVariants.some(v=>v.occupiedCells>1))||(shape==='vary'&&a.footprintVariants.length>1)||(shape==='none'&&a.anchorInstances===0)));
+ document.querySelector('#count').textContent=`${list.length} / ${data.assets.length}張`;
+ for(const a of list){const b=document.createElement('button');b.className='card';b.dataset.tile=a.tileValue;b.innerHTML=`<b>ID ${a.tileValue} / 圖片 ${a.resourceId}</b><div class="image"><img loading="lazy" src="${a.dataUri}" style="width:${Math.min(165,a.width*3)}px"></div><small>${a.width}×${a.height}px · ${a.roles.map(r=>r.role).join('/')}<br>${a.anchorInstances}錨點 · ${a.footprintVariants.length}種占格<br>類別／高度：待核對</small>`;b.onclick=()=>showAsset(a);cards.append(b);}
+}
+for(const id of ['query','layer','shape'])document.querySelector('#'+id).addEventListener('input',render);
+document.querySelector('#show-assets').onclick=()=>{mode='assets';render();};document.querySelector('#show-groups').onclick=()=>{mode='groups';render();};render();
+</script>

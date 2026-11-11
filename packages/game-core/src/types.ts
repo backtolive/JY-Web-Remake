@@ -19,7 +19,7 @@ export interface ContentPackage {
     ruleset: string; priority: number; dependencies: { id: string; version: string }[] };
   entry?: { mapId: string; x: number; y: number };
   maps: GameMap[]; dialogues: Dialogue[]; events: GameEvent[];
-  items: { id: string; name: string }[];
+  items: { id: string; name: string; description?: string }[];
   patches: { target: string; expectedText: string; text: string }[];
 }
 export interface ContentIdentity { id: string; version: string; sha256: string; kind: 'base' | 'mod'; priority: number }
@@ -27,7 +27,7 @@ export interface ResolvedContent {
   identities: readonly ContentIdentity[];
   settings: Readonly<Record<string, string | boolean | number>>;
   maps: Readonly<Record<string, GameMap>>; dialogues: Readonly<Record<string, Dialogue>>;
-  events: Readonly<Record<string, GameEvent>>; items: Readonly<Record<string, { id: string; name: string }>>;
+  events: Readonly<Record<string, GameEvent>>; items: Readonly<Record<string, { id: string; name: string; description?: string }>>;
   entry: { mapId: string; x: number; y: number };
 }
 export interface EventCursor { eventId: string; pc: number; waiting: 'dialogue' | 'choice' | null }

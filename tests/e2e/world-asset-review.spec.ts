@@ -1,0 +1,25 @@
+import {test,expect} from '@playwright/test';
+import {existsSync,readFileSync} from 'node:fs';
+test('Local world asset catalogue filters raw roles and shows exact footprint without assigning semantics',async({page})=>{
+  const dir='assets/generated/world-asset-review';test.skip(!existsSync(dir+'/index.local.html'),'Local source catalogue stays outside CI.');
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.setViewportSize({width:1250,height:1000});await page.setContent(readFileSync(dir+'/index.local.html','utf8'));
+  await expect(page.locator('.card')).toHaveCount(958);
+  await page.getByRole('combobox',{name:'原始圖層'}).selectOption('earth');await expect(page.locator('.card')).toHaveCount(460);
+  await page.getByRole('combobox',{name:'原始圖層'}).selectOption('surface');await expect(page.locator('.card')).toHaveCount(180);
+  await page.screenshot({path:dir+'/surface-catalogue.png'});
+  await page.getByRole('combobox',{name:'原始圖層'}).selectOption('building');await expect(page.locator('.card')).toHaveCount(318);
+  await page.screenshot({path:dir+'/building-catalogue.png'});
+  await page.getByRole('textbox',{name:'搜尋ID'}).fill('2354');await page.locator('.card[data-tile="2354"]').click();
+  await expect(page.locator('dialog')).toBeVisible();await expect(page.locator('#content')).toContainText('5×7格 / 實占17格');
+  await expect(page.locator('#content')).toContainText('外觀類別：待人工核對');
+  await expect(page.locator('#content')).not.toContainText('nullpx');
+  await page.locator('dialog').screenshot({path:dir+'/sparse-footprint-example.png'});
+  await page.getByRole('button',{name:'關閉',exact:true}).click();await page.getByRole('textbox',{name:'搜尋ID'}).fill('');
+  await page.getByRole('button',{name:'多圖相鄰候選'}).click();expect(await page.locator('.candidate').count()).toBeGreaterThan(0);
+  await page.locator('.candidate').first().click();await expect(page.locator('#content')).toContainText('尚未證明同一棟建築或同一山體');
+  expect(Number(await page.locator('svg image').first().getAttribute('height'))).toBeGreaterThan(0);
+  await page.locator('svg').evaluate(svg=>Promise.all(Array.from(svg.querySelectorAll('image')).map(el=>{const im=new Image();im.src=el.getAttribute('href')!;return im.decode();})));
+  await page.locator('dialog').screenshot({path:dir+'/multiple-image-candidate.png'});
+  expect(errors).toEqual([]);
+});

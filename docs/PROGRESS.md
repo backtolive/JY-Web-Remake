@@ -1,4 +1,359 @@
-# 進度 — 2026-11-03
+# 進度 — 2026-11-11
+
+## DOSBox-X 自動驗證前置與 Opcode 覆蓋盤點（最新）
+
+Phase: Phase 3／6 局部研究與 Phase 7 本機驗證準備；整體未驗收。Status: 原版已由 DOSBox-X 到達標題畫面，debugger 視窗與記憶體／反組譯／檔案日誌區可見；隔離 session-002 與 68-opcode 覆蓋表已建立。鍵盤自動控制、debugger TCP 實際命令、遊戲內存檔／載入／事件跳轉均未通過，因此尚未開始宣稱全指令可玩。
+
+Completed Tasks: 建立 `session-002` 原版資料副本，核對 20 個 root-level RANGER/R1–R3/S1–S3/D1–D3 存檔檔案 SHA-256 與 session-001 初始副本一致；產生 ignored baseline manifest。新增 DOSBox-X loopback debugger 控制橋、session-002 啟動器、protocol 單元測試。新增 opcode 覆蓋產生器及來源標籤表，盤點 68 個 opcode 的候選字數、FishEdit描述、社群 Pascal dispatcher、出現次數與目前 Runtime 覆蓋。修正文檔先前錯稱 Pascal dispatcher 沒有 opcode 15 的結論。
+
+Files Changed: `tools/validator/dosbox-x-debugger-control.mjs`、`tools/validator/dosbox-x-debugger-protocol.mjs`、`tools/analyzer/build_event_opcode_catalog.py`、`scripts/Start-DOSBox-X-Session-002.cmd`、`tests/unit/dosbox-x-debugger-protocol.test.mjs`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/research/event-opcode-coverage.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0036-dosbox-x-event-sampling.md`、本進度及 TODO。`assets/generated/dosbox-x/session-002` 只為 ignored 本機資料，未加入版控。
+
+Tests Executed: debugger protocol Node unit tests；完整 Node unit suite；Python unit suite；shared JSON Schema 匯出同步；session-001/session-002存檔檔案雜湊對照；FishEdit 0.72 指令表形狀及全部事件記錄統計；git diff whitespace check。
+
+Test Results: protocol Node 2/2 通過；完整 Node unit suite 66/66 通過。執行 `tools/validator/export-schemas.mjs` 將現有 `description` 欄位同步至 JSON Schema 後，原 shared-schema 測試通過。Python 14/14 通過（將 TMP/TEMP 指向工作區暫存目錄後）。68 條候選 opcode 切分覆蓋 1,018 events、13,315 opcode 指令和 1,018 個 `-1` 結尾記錄。DOSBox-X loopback mock TCP 測試被環境以 `EACCES` 阻擋；啟動子 GUI 程序自 shell 退出，桌面控制器亦回報 `GetCursorPos failed: Access denied`。因此按鍵、TCP、save/load 沒有 E2E 通過證據。嘗試 `pnpm run typecheck`／`pnpm run build` 時，pnpm 對工作區 `realpath` 回報 `EPERM` 並中止，兩者皆未跑完。
+
+Research Findings: DOSBox-X 2026.10.01 官方 debugger README 提供 `BP`、`BPINT`、`BPLIST`、`RUN`、`MEMREAD` 與 loopback 控制協定。遊戲原始 DOS 副本把 RANGER/R1–R3/S1–S3/D1–D3 存檔檔案放遊戲根目錄；社群 Pascal `LoadR`/`SaveR` 使用 `save/` 目錄，路徑差異不可直接混用。Opcode parser 只做結構/對話引用；通用 game-core IR 也不等於原版 opcode adapter。FishEdit文件只提供 43 條語意描述，全部 DOS 執行效果仍未知。Opcode 7 在645處後面還接其他候選記錄共643處，不能把整個線性資料尾端都丟棄；完整Runtime要保留尾碼並建模分支可達性。
+
+Known Limitations: session-002 尚無本輪正常遊戲存檔；社群引擎存檔 offset 不能直接當 DOS 原版已驗證規格。桌面輸入被 access denied 阻止。dialogue-only parser 只讀Opcode 0/1，且僅容許 7 或 -1 是末字，並不建模 Opcode 7 在事件中間的 control flow；其餘Opcode效果未接入Runtime。Opcode 15／50 的原版行為仍未知。
+
+Unverified Assumptions: `mcp_server` 在 session-002 啟動後可連到 Node bridge，尚未握手；遊戲標題／地圖畫面所需鍵盤焦點與五按鍵結果尚未確認；存檔可否透過合法狀態複製出特定事件前置尚未確認。
+
+Next Recommended Tasks: 先從桌面正常啟動 session-002，完成上／下／左／右／Esc／Enter的畫面反應及 key trace；接著完成 debugger TCP handshake，執行 HELP／CPU／BPLIST／一個 breakpoint；在 session-002 透過遊戲 UI 寫入／讀回獨立 slot，再建立事件前置採樣副本。逐 opcode 補足參數語意、state effects、跳轉公式、失敗行為與證據等級，再實作受控 adapter；未知指令必須停止事件且不提交部分狀態。未commit／push。
+
+# 進度 — 2026-11-04
+
+## 全量原版劇情與事件轉換（2026-11-09，結構資料已產生）
+
+Phase: 3 局部；Phase 3／6 整體未驗收。Status: 全量 KDEF／TALK 已轉成只供本機稽核的中間資料；尚未接入 Runtime，也不能用來驗證事件後狀態。
+
+Completed Tasks / Files Changed: 新增 `tools/extractor/convert_original_event_corpus.py`，以固定 FishEdit 0.72 候選長度表轉換 1,018 個事件及 2,977 段對話；每個來源保留原 bytes、偏移、長度、SHA-256，對話 token 保留 CP950 文字與控制碼。輸出 `assets/generated/event-corpus/all-events-ce00ac1ebede9e7e.local.json` 為 Git 忽略的本機資料。新增 `tests/unit/test_original_event_conversion.py`、`docs/validation/full-original-event-corpus.md`，並把 FishEdit audit 的來源表讀取抽成可重用函式。
+
+Tests Executed / Test Results: 轉換 1,018／1,018 events、2,977／2,977 talks，CP950 解碼失敗 0；3,561 對話引用、16,061 目前互動欄位引用均有效；候選分支目標 0 個無效，來源 hash／offset 0 個不符。全 Python 單元測試 14/14 通過；原版資料 Node 測試 3/3 通過。完整 Node 單元測試 63/64，既有 shared-schema 同步測試因 `description` 與匯出 schema 不一致而失敗。`pnpm run build`／`typecheck` 在 pnpm 啟動時遇 workspace `realpath` EPERM；直接跑 `tsc -b` 則因 node_modules 缺 `fast-uri` 而停止，故本輪沒有成功完成 TypeScript build/typecheck。
+
+Research Findings: 所有事件結構均可由 FishEdit 候選表切分，但這是 Community Implementation 證據。Opcode 15 出現114次，後續欄位全為83；FishEdit描述為死亡返回選單(5300)，Pascal／Lua社群引擎作停止／Game Over類處理。使用者已排除「15為比較條件分支」的未驗證假結論。全部1,018事件以-1結尾；Pascal將7標為Break the event、負數作讀取終止。使用者假設7為死亡結局、-1為破關結局，尚無本機證據支持。Opcode 50出現1次（事件676），社群來源在五物品條件／動態分支及事件資料改寫上不一致；其餘opcode語意未逐項以DOS原版驗證。Known Limitations / Unverified Assumptions: 原始opcode參數尚未映射為可執行狀態效果；事件可達性、自動／物品觸發、人物／背包／旗標／戰鬥／切圖變更和事件後狀態均未驗證。不能把本次全量資料轉換稱為劇情已可玩。Next Recommended Tasks: 建立有來源等級的opcode→Runtime效果矩陣，先實作有來源支持且可隔離驗證的指令；未解指令必須使事件停下且state不提交，然後新增事件前後狀態差異檢視。用隔離DOSBox案例先觀察OP15，並分別確認7與-1的遊戲結果；再進行opcode 50案例。未commit／push。
+
+## 2388尺寸校準嘗試與管線能力釐清（最新，未作新模型交付）
+
+Phase: 8局部。Status: 本機GLB包裝變換實驗，不是重新送入管線推論；使用者指出未見管線重產，已停止將本機拉伸當成新模型方案。
+
+Completed Tasks / Files Changed: footprint-model-calibration、bake-model-calibration及prepare-world-model選填尺寸規則；model-inspection可測水平主軸。以最大完整4×3引用範圍、108×102圖像與原始2:1投影算得高2.5402格距，包裝GLB及世界實驗包保留ignored目錄。
+
+Tests Executed / Test Results: 本機尺寸公式2項Node、局部Chromium1項（5.8秒）、typecheck／build／artifact通過；實際GLB bbox為4×3×2.5402，但view_image仍見斜薄片外型，數值外框符合不等於山體重建成功。
+
+Research Findings: 已讀既有服務openapi快照；PNG輸入進SPAR3D、GLB輸入只後處理，現API僅files／asset_type／asset_id／max_attempts／seed／texture_resolution，沒有占位尺寸或體積約束。這輪未向POST /api/jobs提交新工作。Known Limitations: 拉伸既有網格未補足山體結構，不能聲稱重新生成成功；尚無管線尺寸契約。Next Recommended Tasks: 先釐清／補足管線尺寸與體積重建能力，再依使用者指定流程重產2388；本機實驗檔不作已核准模型。未commit／push。
+
+
+## Building限定轉換，首個2388模型（最新）
+
+Phase: 8局部。Status: 使用者人工核定只有building轉模型，earth／surface最後處理；2388生成及世界接入完成，但模型偏薄，非美術定稿。開始前讀主計畫／進度／TODO、檢查opencode並保留既有變更。
+
+Completed Tasks / Files Changed: ProjectedMap新增選填layer／ID模型綁定及hash驗證；投影renderer以AssetContainer共用模型、按可見錨點實例化，僅替換指定圖片；新增prepare-world-model、局部E2E／綁定單元測試、ADR0035／validation/building-model-2388.md。使用既有LAN服務Job bfee967703174d92856307cc5ed4580e succeeded，LOD0／Job／manifest／quality與預覽只在ignored目錄。
+
+Tests Executed / Test Results: typecheck／build／artifact／diff通過；4項相關Node、局部Chromium1 passed（6.3秒），確認package及三層原始資料完全不變、2388單一綁定ready無alert／pageerror，view_image檢視實景；接合重跑同bytes／hash。未做全圖檢查或完整回歸。
+
+Research Findings: 2388為山體圖，93放置錨點／10種格位引用排列，不是10模型尺寸；同ID共用尺度，各位置原mask保持不變。LOD0 1.14MB／7998三角形，源推論深度僅約0.112、寬約1.055，薄體問題存在於推論階段。Known Limitations / Unverified Assumptions: 單圖模型體積不足、背面／朝向與綠色底緣待調整；候選等比視覺fit尺寸非原版高度，不擅自拉厚。Next Recommended Tasks: 先修整及驗收2388體積與朝向，再轉下一個building；earth／surface保持原圖。未commit／push。
+
+
+## 世界資產結構圖錄（最新）
+
+Phase: 3／8局部。Status: 使用者人工操作回報正常；依要求先完成958圖的結構、疊加與占格盤點，語意及3D高度待逐圖核對，不修改Runtime或阻擋。開始前讀主計畫／進度／TODO、確認opencode並保留全部既有變更。
+
+Completed Tasks / Files Changed: 新增prepare-world-asset-review.py及獨立HTML模板；輸出本機圖錄、完整JSON、空白決策模板、逐錨點mask及相鄰多圖疊合預覽。新增圖錄局部E2E、ADR0034／research/world-asset-structure.md／TODO；全部原圖及衍生資料只在ignored assets/generated/world-asset-review。
+
+Tests Executed / Test Results: 來源及958張payload／PNG SHA逐一核對、前後來源hash不變、重跑catalogue hash一致；圖錄Chromium 1 passed（3.8秒），篩選460／180／318及5×7實占17格mask、SVG組合圖、類別保持待核對；view_image檢視圖錄與組合。typecheck／build／artifact／diff通過，公開107檔商業資源0；未跑世界路徑／全圖連通或完整遊戲回歸。
+
+Research Findings: 同格earth後surface再依錨點排序疊加building；building層也含樹、岩石、坡壁及院落。7832個非空錨點中6966單格、866多格；50個圖片ID有不同占格mask；762個相鄰候選含740組多ID，全部未核准合併。Known Limitations / Unverified Assumptions: 相鄰不是同一物件的證據；像素高不是3D高度；外框不等於填滿遮罩。Next Recommended Tasks: 逐ID確認外觀／突起與原創高度，按實例mask決定占位；人工指定多圖成員後再合併，不自動套整個相鄰群。未commit／push。
+
+
+## 完整世界座標軸修正（最新）
+
+Phase: 7／8局部。Status: 原版世界X／Y與render統一，使用者後續回報人工操作正常；不宣稱完整碰撞還原。開始前讀MASTER_PLAN／PROGRESS／TODO、檢查opencode並保留既有變更。
+
+Completed Tasks / Files Changed: view-controls新增projectedWorldPoint／projectedImageOffset與gridYSign；renderer統一世界玩家／錨點／跟隨目標，projected-map-renderer修正地面／立面基底；App鍵盤與按鈕、SceneView小地圖共用-1軸向。新增局部world-axis E2E、方向單元案例、ADR0033／validation/world-axis-alignment.md。
+
+Tests Executed / Test Results: 6項相關Node、typecheck／build／artifact／diff通過；Chromium局部1 passed（9.8秒），從(358,229)驗證X+、Y+及已知blocked(358,228)。view_image檢視實景。依使用者要求未跑全圖連通／完整回歸。
+
+Research Findings: 來源screenX=(x-y)*18／screenY=(x+y)*9要求X+右下、Y+左下；舊render Y→+Z讓Y+右上，並造成ground與billboard像素基底不一致。新render=(x,0,-y)，相機角度及原始blocked資料不改。Known Limitations / Unverified Assumptions: 每棟建築占格／船隻／場景入口尚未驗收，通行仍為Community Implementation；舊8×8 GLB包未重轉。Next Recommended Tasks: 玩家同一建築附近試走，若有具體格位落差再局部查證；不修改阻擋表遷就顯示。未commit／push。
+
+## 前次完整世界實作補記（中斷後整理）
+
+已交付480×480完整三層格網及958個獨立圖片ID，MMAP圖片全部嚴格RLE解碼；預覽包world-fa9af52a0d2428da.local.json及獨立PNG只在本機ignored。通用schema支援512邊長，附近投影隨移動建立／釋放。原版BUILDX／BUILDY支援占格規則及建築引用錨點，未自行依圖片類別分類。前次已做全圖連通檢查，但使用者已明確要求這類驗收延後，後續不擴大。來源檔與來源規則證據見ADR0033／validation/world-axis-alignment.md；不得把前次能行走當成畫面與阻擋完整吻合。
+
+
+## 地面逐資源獨立核對及原配置還原（最新）
+
+Phase: 8局部。Status: 21原圖／21獨立材質／64格來源對應完成；非高清美術定稿。依使用者明確要求，撤回平均色地表分類與共用草土方案。
+
+Completed Tasks / Files Changed: 新增prepare-ground-review／independent-ground-resources／prepare-independent-ground、21筆外觀註記；保留每ID的PNG／payload hash、SMP001偏移、尺寸與錨點、逐格位置，玩法屬性與地表類別皆Unknown、mergeWith=null。新Mock／實際WebGL核對、ADR0032／validation／TODO；舊共用工具預設停用，舊紀錄明確標為撤回實驗。
+
+Tests Executed / Test Results: 57 Node、typecheck／build／artifact通過；本輪Chromium 2 passed（6.7秒），21材質及64格ID對照完全相同、ready無pageerror／alert；view_image檢視21原圖及實景。輸出重跑同hash／bytes，圖片與原版衍生包只留ignored assets/generated。
+
+Research Findings: 多個來源ID本身已含不同方向的黃褐／綠色交界，平均色與單張草圖會抹去原圖差異；1182為36×22含厚邊，其他20張36×18。Known Limitations / Unverified Assumptions: 本輪用完整原圖逆投影，不生成高清替代，不推定1182高度；低解析縮放仍有像素條紋；相機比例／光照不是DOS畫面驗收。Next Recommended Tasks: 逐ID原圖作為各自高清製作依據，保留原內部圖案及交界；不擅自合併或新增跨ID混色。未commit／push。
+
+
+## 共用地面材質與成功LOD0（最新）
+
+Phase: 8局部。Status: 64格共用草土base-color已呈現，樹木最新Job確認succeeded並改用LOD0。
+
+Completed Tasks / Files Changed: 新增shared-ground-material／prepare-ground-material、GLB大小分析工具、新實景E2E、ADR0031／validation與生成提示詞紀錄；本機生成PNG、GLB及9.53MB預覽包均ignored。無Runtime或鏡頭操作變更。
+
+Tests Executed / Test Results: 55 Node、typecheck／build／artifact、新Chromium實景1 passed（5.9秒）、重跑同bytes／hash；view_image檢視共用材質實景。公開107檔商業資源0，既有chunk提示保留。
+
+Research Findings: 樹／石LOD0面數下降，但內嵌貼圖由JPEG組合變成含較大PNG，幾何節省被圖片抵銷；查證數字見validation/shared-ground-material.md。64格128三角形共用一張圖／一個材質，world UV與平滑頂點色減少格線。Known Limitations / Unverified Assumptions: 只有base color，無normal／height／roughness maps；原創地面色族非原版地形證據；未完成近景平鋪邊界／大型區域重複感及壓縮效能驗收。Next Recommended Tasks: 地面色調及重複尺度確認後製作路面／石板與欄杆共同材質。未commit／push。
+
+
+## 第一批實際生成美術候選（最新）
+
+Phase: 8局部。Status: 實際生成樹木／岩石已接入原版8×8配置，非最終美術定稿。使用者明確授權兩張PNG送至既有LAN服務；未增加鏡頭旋轉。
+
+Completed Tasks / Files Changed: 新增prepare-art-sample離線接合、來源與輸入輸出hash驗證；model-inspection支援純幾何預檢；本機GLB預算由2MB調整4MB、索引accessor上限對應100k三角形；新增實際生成材質瀏覽器驗收、ADR0030及validation/first-generated-art-sample.md。原圖、GLB與預覽包只在ignored assets/generated。
+
+Tests Executed / Test Results: 55 Node、9 Python、typecheck／Schema／build／artifact通過；完整Chromium 17 passed（47.3秒）、exit0，包含實際帶貼圖GLB呈現；離線接合重跑產生相同hash／bytes，Git忽略及diff檢查通過。已view_image檢視原圖及實景截圖。
+
+Research Findings: SPAR3D樹木生成37,452三角形、2.53MB；岩石LOD0 7,999三角形、1.28MB。樹木推論成功但後處理verify因Triangle count changed on reload失敗，只使用raw_glb視覺候選；岩石工作succeeded。Known Limitations / Unverified Assumptions: 樹冠偏亮、岩石綠底與其他占位仍有風格差異；不宣稱定稿、原版3D形狀或完整量產／LOD／授權驗收。Next Recommended Tasks: 先做實景美術評估及共同地面材質，再擴大生成；不再增加占位置換案例。未commit／push。
+
+
+## 本機模型替換與尺寸原點校正（最新）
+
+Phase: 7／8局部。Status: 替換前置完成，不開放鏡頭旋轉、不呼叫精細模型生成服務。開始前讀主計畫／進度／TODO、確認opencode並保留全部既有變更。
+
+Completed Tasks / Files Changed: 新增純資料model-replacement與exports、動態model-inspection；App新增assetId選擇／GLB替換／還原、樣式；placeholder-rock提供明確Mock變體且預設hash不變；範例生成工具、3項Node／E2E、ADR0029／validation／TODO更新。
+
+Tests Executed / Results: 55 Node、9 Python、typecheck／Schema／build／artifact／diff通過；完整Chromium16 passed（43.7秒）exit0。實際GLB偏移／放大兩倍後校正到原外框與底部；全實例同ID更新，損壞檔案拒絕，遊戲存檔下載bytes相同，裝飾／阻擋格規則及還原後位置不變。view_image檢視藍色替換及還原截圖；範例重跑bytes一致、Git忽略。沒有改寫原版資料，既有Babylon chunk提示保留。
+
+Research Findings: 穩定視覺ID可換新模型bytes但保留每實例原創尺寸；必須考慮bbox原點及Y旋轉，不能直接沿用新檔原始比例。Known Limitations / Unverified Assumptions: 校正為逐軸fit可能變形；只測靜態無貼圖Mock，2MB限制、無正式資產包持久化／精細風格／LOD驗收；替換只留當前預覽，刷新需重匯。Next Recommended Tasks: 一個共同尺寸與材質風格的精細樣本驗收，再決定量產規格；鏡頭旋轉保持暫停。未commit／push。
+
+## 相機／小地圖即時視角同步（最新）
+
+收尾結果：完整Chromium15 passed（38.0秒）、exit0，包含MiniMap／WebGL四方向像素比對及窄版觸控；view_image檢視目前投影後小地圖與3D平面的方向／俯角比例。diff檢查通過，既有Babylon chunk提示保留。此結果取代下文待補記狀態。
+
+Phase: 7顯示與輸入。Status: 同步介面完成，未新增旋轉操作UI。開始前讀主計畫／進度／TODO、確認opencode並保留既有變更。Completed Tasks / Files Changed: view-controls新增CameraView及地面投影，畫面輸入可讀即時alpha；renderer在角度變化時發布視角，SceneView／App轉接到MiniMap與鍵盤／觸控，MiniMap不再固定135度或鏡射；新增實際多角度投影Node測試、ADR0028／validation／TODO更新。
+
+Tests Executed / Results: 52 Node、9 Python、Schema、typecheck、build／artifact通過；完整E2E結果收尾補記。新增5方位×2俯角×8方向與真實Babylon矩陣位移一致，長按中更新視角後方向跟隨。Research Findings: 小地圖可與現用正交相機共用實際投影，不需為每個角度設定獨立補丁。Known Limitations / Unverified Assumptions: 尚未啟用旋轉操作，公式限現用無roll正交相機；自由視角手感／多角度美術待驗收。Next Recommended Tasks: 玩家確認目前對齊；日後旋轉操作走共用視角資料流。核心／碰撞／原版規則未改。未commit／push。
+
+## 小地圖單軸反向修正（最新）
+
+收尾結果：4項Chromium E2E全部通過（13.4秒）、exit0，包含上下左右MiniMap／WebGL雙畫布像素位移比對及390×844觸控；typecheck／build／artifact／diff通過。此結果取代本節待補記狀態。
+
+Phase: 7顯示修正。Status: 保留135度旋轉並補畫面X鏡射。開始前讀主計畫／進度／TODO、檢查opencode並保留既有變更。Completed Tasks / Files Changed: SceneView MiniMap增加水平鏡射；web-mvp E2E在既有四方向WebGL像素測試中加入MiniMap角色點像素位移比對；ADR0027／TODO更新。
+
+Tests Executed / Results: typecheck、build／artifact通過；新增四方向雙畫布比對案例已通過，其餘既有瀏覽器案例結果收尾補記。Research Findings: 先前僅旋轉未處理top-down與相機投影的手性差異，只有裁切與一般操作驗證不足以證明方向一致。Known Limitations / Unverified Assumptions: 固定相機下的顯示轉換，未支援任意旋轉相機；未改核心／來源資料／碰撞。Next Recommended Tasks: 玩家確認相對方向與阻擋配置。未commit／push。
+
+## 行跡小地圖旋轉（最新）
+
+收尾驗證：完整Chromium15 passed（38.6秒）、exit0；view_image實際檢視旋轉後的小地圖，四角留在卡片內，桌面及390×844觸控回歸通過。typecheck／build／artifact／diff通過。此結果取代下文待補記狀態。
+
+Phase: 7顯示修正。Status: 已依使用者指定順時針135度繪製。開始前讀主計畫／進度／TODO、確認opencode並保留既有變更。Completed Tasks / Files Changed: SceneView的MiniMap對背景／阻擋／出口／NPC／角色共用Canvas旋轉，依實際地圖旋轉bounds縮放，192畫布保留8px邊距；ADR0027／TODO／PROGRESS更新。
+
+Tests Executed / Results: typecheck、build／artifact通過；本輪完整Chromium回歸與截圖檢視結果於收尾補記，未另增鏡像實作的單元測試。Research Findings: 此為指定顯示角度，不改來源軸向或原版規則。Known Limitations / Unverified Assumptions: 固定135度，未支援動態鏡頭旋轉；原有未驗證格式／授權／原版規則不變。Next Recommended Tasks: 玩家比對視角方向與阻擋關係；需要時再調整呈現。未commit／push。
+
+## 通行轉接統一與Mock建築剖視（最新）
+
+Phase: 3／6／7／8局部。Status: 社群通行規則共用及獨立建築測試完成，非原版門事件／屋頂驗收。開始前讀計畫／進度／TODO、確認opencode並保留既有變更。
+
+Completed Tasks / Files Changed: 新增scene-passability與exports，map-region parser0.2.0／collisionProfile，prepare-mvp共用同一判定；來源建築包0.2.0允許slot15的flag0格通行。新增prepare-building-demo、cutaway資產選項、renderer／SceneView／App手動剖視與匯入驗證、source wall標記、Node與E2E；ADR0026／validation／TODO更新。
+
+Tests Executed / Results: 51 Node、9 Python、Schema／typecheck／build／artifact／diff及mvp:check通過，完整Chromium15 passed（38.9秒）exit0。來源門口可走過、未執行事件；Mock藍屋頂畫布像素>1000到<50再恢復，隱藏牆與桌子仍阻擋、角色位置不變；view_image檢視屋頂顯隱截圖。原版七份來源前後hash相同、輸出重跑同內容且Git忽略；第一選區仍22個blocked，建築選區20→19。Research Findings: 原始規則分歧源於重複轉接；以共享社群函式消除，但不提升為Verified Original。Known Limitations / Unverified Assumptions: 手動剖視非自動遮擋；原版門口672等腳本／切圖未轉換，沒有原版屋頂證據；Mock屋頂不混入來源包。Next Recommended Tasks: 剖視與尺度使用驗收、必要時角色輪廓／自動淡出，然後共同材質與精細替換。未commit／push。
+
+## 第二來源占位切片：牆與門口（最新）
+
+Phase: 3／7／8局部。Status: 視覺配置完成，門行為／屋頂未驗收。開始前讀主計畫／進度／TODO、確認opencode並保留既有變更。
+
+Completed Tasks / Files Changed: RLE exporter增加可選區域參數／bounds檢查，產生獨立(20,22)8×8來源圖；新增prepare-building-preview、scene1-building-rules、兩項Node／一項Python／來源E2E、ADR0025／validation／TODO更新。牆、紅柱、欄杆映射為原創尺寸，來源offset／hash與門口raw event fields保留。
+
+Tests Executed / Results: 49 Node、9 Python、Schema／typecheck／build／artifact／diff通過，Chromium14 passed（33.4秒）exit0；原圖與遊戲截圖view_image檢視完成。CLI重跑同hash、七份來源前後hash不變，所有原版衍生輸出Git忽略。Research Findings: 12張圖片／85次圖像放置；64地板＋7牆／柱＋6欄杆，家具及桌上器物6類未映射；無已確認屋頂。Known Limitations / Unverified Assumptions: 門口slot15欄位0=0按ADR0015應可通行，但extractMapRegion仍將全部事件阻擋；此次只驗證保守preview，不標原版門不可通過。牆柱部分遮擋角色，未處理屋頂／淡出／門事件。Next Recommended Tasks: 區域通行轉接一致化與門事件查證，獨立Mock測門洞、牆角、屋頂顯隱及遮擋，再進尺寸／材質。未commit／push。
+
+## 選區完整占位覆蓋（最新）
+
+收尾結果：高樹取景修正後，Chromium完整13 passed（28.6秒）、exit0，包含canvas上緣葉片裁切檢查；重新view_image確認兩棵樹完整入鏡。輸出重跑同hash、Git忽略、22個blocked與先前石頭包逐項一致。此結果取代本節下文的待補記狀態。
+
+Phase: 3／7／8 局部。Status: 選區32個layer／resource ID均有占位，非原版外觀／規則或完整Phase8驗收。開始前讀計畫／進度／TODO、檢查opencode並保留既有變更。
+
+Completed Tasks / Files Changed: 新增placeholder-vegetation／placeholder-catalogue與scene1-placeholder-models，--all-placeholders綁定7個草／樹／石頭ID；新增2項Node與本機E2E；renderer區域取景納入GLB載入後world bounds，修正高樹裁切；ADR0024／validation／TODO更新。
+
+Research Findings: 完整選區85個視覺實例（64地板、6欄杆／柱、1告示牌、14 GLB：10草2樹2石），unmapped0、22個blocked格保留。尺寸為原創測試值、GLB為Mock，沒有原版樹種／比例或最終畫風結論。Tests Executed / Results: 47 Node、8 Python、Schema／typecheck／build／artifact通過；首次瀏覽器13項通過但視覺檢查發現樹冠裁切，修正後完整回歸結果依本輪補記。Known Limitations / Unverified Assumptions: 純色低模、無UV／LOD／共享快取／植被動畫，角色遮擋仍需評估；零未映射不是完整原版完成。Next Recommended Tasks: 完整占位選區的尺寸與遮擋驗收，保持碰撞獨立，再定義共同材質與精細模型替換。未commit／push。
+
+## 相同 GLB 的裝飾／阻擋對照（最新）
+
+Phase: 6／7／8 局部驗證。Status: 獨立Mock對照完成，未修改原版碰撞。開始前讀主計畫／進度／TODO，確認opencode並保留全部既有變更。
+
+Completed Tasks / Files Changed: 新增prepare-collision-demo.mjs，產生相同石頭模型的綠格裝飾／紅格阻擋場景；App支援匯入有限純文字預覽說明並在切換時清除；兩項Node、一項E2E、ADR0023／validation／TODO更新。
+
+Tests Executed / Results: 45 Node、8 Python、Schema、typecheck、build／artifact／diff通過，完整Chromium12 passed（24.4秒）exit0。實際view_image確認角色可與綠格模型重疊、紅格仍阻擋。相同模型／縮放／材質，不同blocked；存讀後結果相同，縮放或移除視覺不改碰撞。CLI重跑內容相同、輸出Git忽略，無原版資料修改。Research Findings: 現有架構能獨立控制模型與通行，GLB collider不參與核心。Known Limitations / Unverified Assumptions: 整格碰撞，不支援沿模型邊緣繞行／攀爬；Mock不代表原版規則。Next Recommended Tasks: 繼續占位資產及替換契約，以本對照防止精細模型影響通行。未commit／push。
+
+## GLB 石頭占位驗證（最新）
+
+Phase: 7／8 局部。Status: 真正 GLB 產生／綁定／載入及基本尺寸驗證完成，未精細化。開始前讀計畫／進度／TODO、確認 opencode並保留既有變更。
+
+Completed Tasks / Files Changed: placeholder-rock、LocalModel契約／exports、map-region model支援、renderer官方GLB載入及ready Promise、SceneView等待／清理、App匯入hash／預算驗證；--rock-model來源ID映射與獨立GLB輸出、三項Node／Mock與原版E2E；固定@babylonjs/loaders 8.32.0及lock，新增ADR0022／validation／TODO。只寫本機模型與衍生包，不呼叫生成服務。
+
+Tests Executed / Results: 43 Node、8 Python、typecheck／Schema／build／artifact／diff通過。官方loader＋NullEngine確認24頂點、8面、單位包圍盒；完整Chromium11 passed（22.3秒）exit0。Mock畫布補石頭像素檢查後單獨1 passed（3.5秒）exit0；Mock與來源選區截圖view_image檢視完成。原版包來源雜湊前後不變、Git忽略；GLB1288bytes、可重現。安裝沿既有專案pnpm store，未改全域設定。
+
+Research Findings: 規則幾何可與真正GLB共用現有位置／碰撞分層；穩定assetId不綁特定模型bytes。64地板、6欄杆／柱、1告示牌、1 GLB石頭，6類資源待製作。Known Limitations / Unverified Assumptions: Mock八面體而非原版模型，無精細貼圖／風格或多角度驗收；每實例載入、無快取／LOD。build增加loader／PBR模組，chunk提示保留，完整Phase8／原版規則未驗收。Next Recommended Tasks: 在占位階段確認共同尺寸與模型替換契約，再做一組風格一致資產；不直接批次精細生成。未commit／push。
+
+## 告示牌多格群組（最新）
+
+Phase: 3／7／8 局部。Status: 兩片來源圖像 → 單一原創 proxy 完成。開始前讀主計畫／進度／TODO、檢查 opencode 並保留全部既有變更。
+
+Completed Tasks / Files Changed: 新增 assemble-visual-groups.mjs、兩項 Mock，scene1-upper-rules 新增群組規則，prepare-ground-preview 支援單一群組實例／雙來源引用／consumed 診斷，新增 grouped-sign E2E、ADR 0021／validation／TODO 更新。
+
+Research Findings: 3240 在 (15,35)、3242 在 (15,33)，相對位置 (0,-2)；圖片畫面 x 接縫恰為 -341，垂直範圍重疊，支持一面告示牌而非兩物件（Inferred）。原創幾何不等於原版尺寸。Tests Executed / Results: 40 Node、8 Python、Schema／typecheck／build／artifact／diff 通過，Chromium 9 passed（19.4 秒）exit 0，實際截圖 view_image 檢視一面牌子。重跑同 hash 路徑；來源前後雜湊不變，輸出僅留 ignored assets/generated。64 地板、6 欄杆／柱、1 告示牌，剩餘 7 類診斷，碰撞資料不變。Known Limitations / Unverified Assumptions: 只支援明確兩片接合，沒有原版背面／厚度／文字／UV 或物理尺寸驗證。Next Recommended Tasks: 草叢／樹／石頭策略及可替換材質／UV，維持來源追蹤與碰撞獨立。未 commit／push。
+
+## 上層分類與欄杆規則預覽（最新）
+
+Phase: 3／7／8 局部。Status: 11 張圖片分類與兩種欄杆 proxy 完成。開始前讀計畫／進度／TODO、確認 opencode、保留既有變更。
+
+Completed Tasks / Files Changed: 逐張 view_image 檢視上層 PNG；新增 scene1-upper-rules.json、分類研究／ADR 0020／validation，prepare-ground-preview 新增 --upper-rules、規則／圖片證據核對與 review 來源；新增 3 項 Node 及欄杆 E2E，區分兩種 preview bundle；更新 TODO／PROGRESS。
+
+Tests Executed / Results: 38 Node、8 Python、Schema、typecheck、build／artifact、diff 通過，Chromium 8 passed（18.1 秒）exit 0；實際截圖 view_image 檢視欄杆呈現。重跑同 hash 路徑，來源前後雜湊不變，原版及衍生包只留 ignored 目錄。Research Findings: 上層為 3 草叢／高草、2 樹、2 欄杆／柱、2 石頭、2 告示牌片段；無可確認牆體。兩欄杆類生成 6 實例，64 地板不變、9 類待製作，分類等級 Inferred，幾何 original-authored。Known Limitations / Unverified Assumptions: 厚度／方向未原版驗證、相鄰柱可能重複；告示牌需分組，植被／石頭／UV 尚未製作。Next Recommended Tasks: 查證告示牌片段的多格群組與錨點，定義可追溯單一資產組裝。未 commit／push。
+
+## 原版地面 ID → 原創規則地板（最新）
+
+Phase: 3／7／8 局部。Status: 選區地面本機預覽完成，不是原版完整 3D 還原。開始前讀計畫／PROGRESS／TODO，確認 opencode，保留全部既有變更。
+
+Completed Tasks / Files Changed: RLE manifest 新增不透明像素平均色；新增 prepare-ground-preview.mjs，21 個地面 ID → 64 個明確 1×0.12×1 地板，保留來源資源與逐格偏移／雜湊。新增兩項 Mock、optional 本機 E2E、ADR 0019／validation；App 提示未呈現資源及獨立碰撞，切回原版預覽清除區域幾何。更新 TODO／PROGRESS。
+
+Tests Executed / Results: 35 Node、8 Python、typecheck／Schema／build／artifact 通過；完整 Chromium 7 passed（16.3 秒）exit 0，補完 metadata 的最新包另 1 passed（3.2 秒）exit 0。實際 view_image 檢視地面分區；重跑輸出同路徑，來源前後雜湊相同，衍生包 Git 忽略。Research Findings: 原版地面圖號可作明確規則幾何的查詢鍵，平均色僅是暫時呈現；11 上層 ID 保持診斷未畫成牆。Known Limitations / Unverified Assumptions: 沒有 UV／細節貼圖、未還原上層／事件／原版碰撞；尺寸為 original-authored，不能當原版。Next Recommended Tasks: 上層逐圖分類與尺寸覆核，再補可替換材質，保持碰撞分離。未 commit／push。
+
+## 原創規則幾何 Mock 場景（最新）
+
+Phase: 7／8 局部。Status: 多四方體契約及 Mock 呈現完成；非完整原版資產轉換。開始前已讀主計畫／進度／TODO、檢查 opencode 並保留既有變更。
+
+Completed Tasks / Files Changed: 新增 visual-primitive.ts、3 項 Node、獨立 Mock workshop fixture 與 Chromium 案例；map-region 新增 geometry／baseY、renderer 套用尺寸／偏移／旋轉／材質，區域模式不把碰撞資料額外畫牆；App 匯入先驗證契約與部件預算，SceneView 共用型別、game-data exports、ADR 0018／validation／TODO 更新。
+
+Tests Executed / Results: 33 Node、8 Python、typecheck、Schema、build／artifact、diff 通過。實際截圖可見薄地板、窄牆、三階樓梯，view_image 檢視完成；首次沙箱內單案例通過但 server 收尾停滯，以 Ctrl+C 結束，改用正常程序權限完整 Chromium 回歸 6 passed（15.2 秒）、exit 0，包含原版預覽／新幾何／既有操作存讀及觸控。既有 Babylon chunk 提示保留。Research Findings: 原創尺寸可直接決定 box 幾何，無須模型生成服務；新 geometry 不讀來源繪圖高度。Known Limitations / Unverified Assumptions: 純色材質，尚無貼圖／UV、樹木模型、階梯爬升及原版分類／尺寸驗收；舊 asset 無 geometry 時仍保留舊 Mock 高度邏輯，不視為原版。Next Recommended Tasks: 以原版地面分類映射先接入規則地板，未分類上層明確診斷，逐項覆核。未 commit／push。
+
+## 場景專屬圖片解碼與區域合成（最新）
+
+Phase: 3／8 局部。Status: 選區解碼及靜態預覽完成，3D 規則尚未實作。開始前讀取計畫／進度／TODO、檢查 opencode，保留全部既有變更。
+
+Completed Tasks / Files Changed: 新增 decode-scene-region.py（stdlib RLE／PNG／合成）、3 項 Mock 測試、ADR 0017、validation/scene-region-rle，更新 TODO／PROGRESS。32 張圖片、86 次放置、318×249 區域及 manifest 僅留本機 assets/generated/scene1-rle。
+
+Research Findings: 32 個選中資源全部通過嚴格逐列解碼，實際圖片可辨識草地、土路、樹木、告示牌、階梯與欄杆。因此 building layer 不是純牆體分類；規則幾何須依資源映射，不能一律擠出。Source: 固定 A commit，Community Implementation，非 Verified Original。
+
+Tests Executed / Test Results: 8 Python、30 Node、typecheck／build／artifact 通過；34 份輸出重跑 SHA256 相同、四份來源前後 bytes 不變、輸出 Git 忽略、diff 檢查通過。既有 Babylon chunk 大小提示保留。實際 view_image 檢視靜態合成；無 runtime 變更，不重跑 E2E。Known Limitations / Unverified Assumptions: 未與 DOS 畫面逐像素對照、未確認完整容器尾端或其他場景／戰鬥格式、未推定 3D 厚度／背面。Next Recommended Tasks: 分類覆核表＋primitive／材質契約，以地面及規則結構先做 Mock 3D，保留碰撞分離。未 commit／push。
+
+## 圖塊索引／規則幾何查證（最新）
+
+Phase: 3／8 局部。Status: 靜態來源與候選標頭核對完成，像素解碼及 3D 尺寸未驗收。開始前讀主計畫／進度／TODO 並確認 opencode，保留全部既有未提交變更。
+
+Completed Tasks / Files Changed: 新增唯讀 probe-tile-headers.py、1 項 Mock 測試、research/tile-resource-mapping、ADR 0016；更新管線文件／TODO／PROGRESS，修正「building 可能不是圖片索引」的過早判讀。
+
+Research Findings: 固定 A commit 載圖介面圖號除 2；地面／建築共用介面，layer 4／5 用於畫面 y 位移。場景 1 專用 SDX001／SMP001 half-index 候選 32 個均有有效標頭範圍，11 building 包含 96×160、95×152 等；ground 為 36×18 或 36×22。不能把直接 MMAP 索引的 PNG 當已驗收來源，也不能將圖像尺寸／位移當 3D 實體尺寸。
+
+Tests Executed / Results: 5 Python、30 Node、typecheck、build／artifact、diff 檢查通過；本機探測前後 bytes 相同，報告 Git 忽略。既有 Babylon chunk 大小提示保留。未改 Web runtime，未重跑 E2E。Known Limitations / Unverified Assumptions: 僅 Community Implementation 與 bytes 標頭證據，未完成 RLE／色盤／錨點重組、場景專用索引尾端用途或其他場景／戰鬥映射。Next Recommended Tasks: 以專用資源集完成嚴格像素解碼及小區域重組，建立 primitive／尺寸／材質原創映射，保持碰撞獨立；不宣告完整 Phase 3／8 完成。尚未 commit／push。
+
+## 資產轉換管線批次測試（最新）
+
+Phase: 8 局部。Status: 管線可處理原版 tile PNG，但部分小尺寸 tile 因 collider verify 失敗；未接入 Web 預覽。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: 解碼 MMAP.GRP 資源為 36×18 PNG（32 個 tile）；提交 6 張 ground tile 批次；2 個 succeeded、2 個 failed、1 個 inferencing；更新 asset-pipeline-integration.md。
+
+Tests Executed / Test Results: curl 提交與輪詢；Node 30/30、E2E 5/5 通過。
+
+Research Findings: ground tile ID 可對應 MMAP.GRP 資源；building ID 解碼為 1×1，可能不是圖片索引。
+
+Known Limitations / Unverified Assumptions: 小尺寸 tile 的 collider verify 可能失敗；原版圖片索引規則未完全確認。
+
+Next Recommended Tasks: 調整 tile 輸入或使用 raw_glb；接入 Web 預覽；驗證座標與碰撞。
+
+## 資產轉換管線接通（最新）
+
+Phase: 8 局部。Status: 管線 API 已接通並完成一次 Mock PNG → GLB 作業；未接入原版圖片或 HD 資產。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: 使用 shell 實測內網 API，取得 openapi.json 與 agent guide；提交 64×64 透明 PNG，輪詢至 succeeded；下載 manifest/quality/lod0；新增 docs/formats/asset-pipeline-integration.md；更新 TODO/PROGRESS。
+
+Tests Executed / Test Results: curl 連線 exit 0；job status succeeded；artifacts 10 項；manifest gameplay_ready false（Mock 貼圖）。
+
+Research Findings: 管線輸入為 PNG（需 alpha）或 GLB；輸出 Master/LOD0-2/Collider/Manifest/Metadata/Quality。公開建置仍只含 Mock。
+
+Known Limitations / Unverified Assumptions: 原版圖片尚未取得；tile ID → 圖片索引未查證；HD 資產未接入 Web 預覽。
+
+Next Recommended Tasks: 對應區域 ID 取得原版圖片，轉換為 GLB，接入 region preview；保持素材隔離。
+
+## 候選引擎授權研究（最新）
+
+Phase: 2 局部。Status: 研究整理完成，未結案。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: 新增 docs/research/candidate-engine-licenses.md；整理 kys-cpp、Jynew、jinyong Go 三個候選來源的授權與限制。
+
+Tests Executed / Test Results: 網路來源與授權頁面查證；未編譯或執行第三方程式；未複製程式碼。
+
+Research Findings: kys-cpp 為 BSD 3-Clause 附加金庸題材牟利限制；Jynew 程式碼開源但素材嚴格限制；jinyong Go 未找到可確認儲存庫。
+
+Known Limitations / Unverified Assumptions: 授權可能更新，採用前需重新確認；未完成逐檔與外部依賴審查。
+
+Next Recommended Tasks: 對候選來源做逐檔授權審查；必要時建立採用 ADR。
+
+## 版本與授權研究追查（最新）
+
+Phase: 1／2 局部。Status: 追查更新完成，未結案。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: 更新 docs/research/version-license-status.md；執行原版檔案 Big5/CP950 關鍵字掃描；執行 audit_source_notices.py；網路搜尋 FishEdit 0.72 來源。
+
+Tests Executed / Test Results: 唯讀字串掃描、audit_source_notices 固定來源盤點；未編譯或執行第三方程式；未修改原始資料。
+
+Research Findings: 原版檔案未找到明確版本宣告，僅 LEGENDX.EXE 含 1.02 片段；FishEdit 0.72 一手來源未找到；候選來源 39 檔中 7 檔含聲明關鍵字，未找到 LICENSE/COPYING/NOTICE。
+
+Known Limitations / Unverified Assumptions: 原版版本仍為 Unknown；授權審查未完成；不構成法律結論。
+
+Next Recommended Tasks: DOSBox 可見桌面取得版本證據；取得 FishEdit 一手來源；完成授權審查。
+
+## 版本與授權研究（最新）
+
+Phase: 1／2 局部。Status: 研究整理完成，未結案。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: 新增 docs/research/version-license-status.md；執行 audit_source_notices.py；整理原版版本線索與候選來源授權狀態。
+
+Tests Executed / Test Results: 唯讀字串掃描、inventory 既有結果、audit_source_notices 固定來源盤點；未編譯或執行第三方程式。
+
+Research Findings: 原版執行檔 LEGENDX.EXE 含 1.02 片段但無明確版本宣告；候選來源 39 檔盤點中 7 檔含聲明關鍵字，未找到 LICENSE/COPYING/NOTICE 命名檔案；sfe-kdef 缺少核心原始碼。
+
+Known Limitations / Unverified Assumptions: 原版版本、編碼、取得來源與檔案完整性未交叉驗證；授權審查未完成；不構成法律結論。
+
+Next Recommended Tasks: DOSBox 可見桌面取得版本證據；取得 FishEdit 一手來源；完成逐檔與外部依賴授權審查。
+
+## 候選包升級為預設預覽 + 15／50 研究（最新）
+
+Phase: 3／5 局部。Status: 候選包已升級為預設；15／50、版本與授權研究整理完成，未結案。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: prepare-mvp.mjs 預設選取包含槽 2/3/4 與事件 668/670，版本 0.2.0；mvp:check 通過（3 NPC）；新增 docs/research/opcode-15-50-status.md；更新 TODO/PROGRESS。
+
+Tests Executed / Test Results: mvp:prepare 重跑一致；mvp:check 通過；Node 30/30、E2E 5/5、typecheck 通過。
+
+Research Findings: Pascal 引擎缺少 opcode 13-15，opcode 50 為輸入名稱，與 FishEdit 文件的五物品條件不一致；DOS 原版語意仍待手動驗證。版本與授權未結案。
+
+Known Limitations / Unverified Assumptions: 候選包升級不表示完整原版通行判定；15/50 仍 Unknown；DOSBox 自動輸入受限。
+
+Next Recommended Tasks: 手動執行 opcode-15-50-cases.md；繼續版本與授權研究；擴充原版事件與圖像。
+
+## 事件 670 可達性追查（最新）
+
+Phase: 3／5 局部。Status: 唯讀追查完成，碰撞模型依社群來源修正；候選包通過，未宣稱 DOS 原版驗證。開始前已讀計畫／進度／待辦並檢查 Git。
+
+Completed Tasks / Files Changed: prepare-mvp.mjs blocked 計算改用 jinyong-legend SceneCanPass 規則（建築 > 0、水地面、事件欄位 0 != 0 才阻擋）；候選包成功生成並通過 checkSliceNpcs；新增 ADR 0015；更新 TODO／PROGRESS。
+
+Tests Executed / Test Results: prepare-mvp --candidate 通過；check-mvp-readiness --original 通過；候選 NPC 3 步數 24／27 可達，對話存讀續行通過。全量 Node 30 通過、typecheck 通過。
+
+Research Findings: 空事件格（欄位 0 == 0）可通行，欄 17 建築牆仍阻擋，但上方／下方存在由空事件格組成的通道可繞到槽 3／4。水地面 ID 採 CC.SceneWater 十六進位範圍。
+
+Known Limitations / Unverified Assumptions: 規則等級 Community Implementation，未經 DOS 驗證；仍不宣稱完整原版通行判定。預設預覽維持槽 2，候選需明確 --candidate。
+
+Next Recommended Tasks: 視需要將候選包升級為預設預覽前，先補瀏覽器實測與來源證據；繼續 15／50 與版本／授權研究。
+
+## 地圖資源 ID → Mock 3D 最小切片（最新）
+
+Phase: 3／5／7／8 局部。Status: 最小切片完成，未宣告完整 Phase 3／6／8。開始前已讀計畫／進度／待辦、檢查 Git，建立 opencode 本地分支，保留既有變更。
+
+Completed Tasks / Files Changed: 新增 packages/game-data/src/map-region.ts 與匯出；tools/extractor/extract-map-region.mjs；tests/fixtures/map-region-mock-assets.json 與 mock-map-region-preview.json；tests/unit/map-region.test.mjs；web SceneView/renderer/App 支援區域視覺預覽；docs/TODO 更新。
+
+Tests Executed / Test Results: node --test tests/unit/*.test.mjs 30 通過；tsc -b 通過；schema check 通過；pnpm web build 通過；實際原版區域擷取產生 assets/generated/map-regions/scene1-region-13-28-8x8-*.local.json，mapping 覆蓋全部 32 個來源 tile ID。
+
+Research Findings: 場景 1「河洛客棧」的 bytes 選定起點 (13,28)、8×8，包含 21 個 ground tile ID、11 個 building tile ID、building height 4 與 event slot 2；未發現 object layer 非零值。ID 映射明確標示 Mock，不宣稱對應原圖。
+
+Known Limitations / Unverified Assumptions: 視覺高度與顏色為 Mock 推測；原版圖片索引編碼、完整 2D→3D 生成、事件 670 可達性、15／50、授權與完整 Phase 1／2 未解項仍保留。公開建置仍只含 Mock。
+
+Next Recommended Tasks: 後續可接圖片擷取、模型生成／驗證／快取；繼續事件 670 可達性唯讀追查。
 
 ## 交接保存：codex-break（最新）
 
@@ -181,3 +536,23 @@ Python 修正：已將可用 Python bin 置於使用者 PATH 前方。Python 3.1
 
 Phase 2 本輪：兩候選來源取得與 commit 固定完成；建立 docs/research/source-index.md、補充授權／比較／建置紀錄與 ADR 0002。RANGER、R1–R3 六段邊界與長度符合候選結構，整除筆數為 320／200／84／93／5，僅表示長度相容。已定位事件、對話、傷害與 AI；未驗證公式。make 重試失敗，vswhere 無可用安裝。Known Limitations: 混合授權、中文編碼與容量配置仍待查；未編譯執行。Next Recommended Tasks: 追查編碼、地圖容量及轉換限制，補齊工具鏈後重試；不跨入 Phase 3。
 
+
+2388 通行格圖（Phase 8 局部）：用目前世界預覽 blocked 與圖錄錨點疊合 93 張局部圖，來源 SHA 一致。周圍其他阻擋最少的 4 例各只有 1 格指向此山；因此尚無證據確定共同底面或重疊歸屬。產生器 python tools/analyzer/prepare-2388-blocking-review.py 已成功執行。輸出僅在本機 ignored 目錄。
+
+Phase 8 局部：本機 Vite dev／preview 從固定世界包預載原圖地圖，頁首顯示玩家原始 X／Y 格座標。Chromium 驗證 4173 自動載入、移動由 (358,229) 更新至 (359,230)。建置與公開產物檢查通過，公開商業資源 0。
+
+Phase 8 局部：依使用者核定的多數底面邏輯，新增工具為全部 318 個 BUILDING ID 計算最常見錨點引用外框寬深，輸出 ignored 本機設定。7,832 次引用中2388為3×3共78次；3個ID眾數並列，1個ID無引用，列為待定。這是畫面模型基底尺寸推定，未產生或拉伸GLB。
+
+Phase 8 局部：讀取更新後服務 Agent Guide／OpenAPI 0.3.0，確認ai_pointcloud流程、target_width_m／target_depth_m、語意計畫、有效點雲、尺寸驗證。2388以外選building ID2398，常見完整格型3×3為45/56；送LAN job e4803a47e46e450696a0d05e435ef438，succeeded。品質檢查通過，Master尺寸3.0×2.9956×3.1433、49,000三角形。詳細來源、hash、限制見docs/validation/building-model-2398.md。
+
+Phase 8 局部：依完整遮罩格型眾數按寬深分組，新增可續跑 batch-buildings.py。ai_pointcloud 提交 297 個building工作（ID 2388之外全部可能有唯一完整格型者均包含），跳過21個無完整格型或並列項。第一次狀態輪詢為1 inferencing、296 queued_inference。成功時 poll 下載LOD0並記SHA；本機忽略資料夾有工作清單及瀏覽索引。所有原始圖片與GLB只留本機。
+
+批次錯誤診斷：服務清單最近200筆目前為1 failed、130 waiting_resources、67 queued_inference、1 inferencing、1 cancelled；不是297筆全都失敗。已確認失敗為building ID 2270 / Job 74a0dd146bc5417aa27869f48281cdae，語意幾何執行器只支援rock formations及building envelopes。其他未執行工作仍可能按預測類別失敗。
+
+更正批次限制判讀：資源類型範圍未由使用者限制。服務AI可分類，但semantic_geometry.py硬編碼僅接受rock formations及building envelopes，屬主機幾何執行器的能力限制。Job 74a0dd146bc5417aa27869f48281cdae / ID2270在pointcloud_edit階段因該guard失敗；非使用者範圍設定。
+
+使用者要求取消所有batch building任務。逐筆GET 297個job並取消所有可取消的排隊／資源等待工作。最後總結：278 cancelled、19 failed、0 queued/running。最後正在推論的ID2784完成到semantic階段後失敗，亦非執行中。無成功GLB下載。
+
+Phase 7 局部：整理地圖／室內遊玩區為單一寬畫面，行跡與行囊改為遊戲場景內浮層；對話框增加半身人物造型佔位，item schema加入相容舊內容包的選填description，行囊可選道具並顯示說明。當前為CSS造型佔位，未接入原版角色肖像；戰鬥配置未改。pnpm run typecheck與web build通過；未跑測試。
+
+Phase 7／8 局部：本機測試啟動改為直接載入完整原版衍生世界包（480×480、958圖片ID、地表／surface／building投影），不再預設Mock或單場景對話切片。Chromium單次冷啟動至完整世界標籤563ms，座標X358/Y229，canvas 1、pageerror 0。這是完整地圖資源包效能，不是完整劇情／道具／戰鬥轉換；原版事件只在手動匯入已解析切片時可用，現包道具0。

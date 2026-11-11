@@ -23,6 +23,9 @@ importers:
       '@babylonjs/core':
         specifier: 8.32.0
         version: 8.32.0
+      '@babylonjs/loaders':
+        specifier: 8.32.0
+        version: 8.32.0(@babylonjs/core@8.32.0)(babylonjs-gltf2interface@8.56.2)
       '@jy/game-core':
         specifier: workspace:*
         version: link:../../packages/game-core
@@ -55,6 +58,12 @@ packages:
 
   '@babylonjs/core@8.32.0':
     resolution: {integrity: sha512-Z83WIe2eZEAOo5bb9Tjd+lY4ru6N8qgtZJGjWcoXOiP3BrtbatPUXdVKqm7m60ItQABFaVdMGygvIXY+wNXU/Q==}
+
+  '@babylonjs/loaders@8.32.0':
+    resolution: {integrity: sha512-H2tKP2z5la0cWkkhVDEVUNSW3n187G2ti6G9OlFXOjr2SBzEWvDfsxL0je94z2SLw8LGH0Y6hBPGP1k/p2/YSg==}
+    peerDependencies:
+      '@babylonjs/core': ^8.0.0
+      babylonjs-gltf2interface: ^8.0.0
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -381,6 +390,9 @@ packages:
   ajv@8.17.1:
     resolution: {integrity: sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g==}
 
+  babylonjs-gltf2interface@8.56.2:
+    resolution: {integrity: sha512-c2k14C9mPR0pnfksjBdC4uXEos3t2IAYxcMgn5tI1OSC3aDfr6JAq4kADM4gfN9cUo2qIiDdSg6geUVeU8vi6w==}
+
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -520,6 +532,11 @@ packages:
 snapshots:
 
   '@babylonjs/core@8.32.0': {}
+
+  '@babylonjs/loaders@8.32.0(@babylonjs/core@8.32.0)(babylonjs-gltf2interface@8.56.2)':
+    dependencies:
+      '@babylonjs/core': 8.32.0
+      babylonjs-gltf2interface: 8.56.2
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
@@ -700,6 +717,8 @@ snapshots:
       fast-uri: 3.1.9
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+
+  babylonjs-gltf2interface@8.56.2: {}
 
   csstype@3.2.3: {}
 

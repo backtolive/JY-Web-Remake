@@ -6,6 +6,7 @@ import { parseIdxGrpIndex, readIdxGrpResource } from '../../packages/game-data/s
 import { decodeTalk, readOriginalScene, readDialogueOnlyEvent, ORIGINAL_PARSER_VERSION } from '../../packages/game-data/src/original.ts';
 import { resolveContent, canonical } from '../../packages/game-core/src/content.ts';
 import { checkSliceNpcs } from '../validator/check-slice-npcs.mjs';
+import { scenePassability } from '../../packages/game-data/src/scene-passability.ts';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const names = ['RANGER.IDX', 'RANGER.GRP', 'ALLSIN.GRP', 'ALLDEF.GRP', 'KDEF.IDX', 'KDEF.GRP', 'TALK.IDX', 'TALK.GRP'];
@@ -15,7 +16,9 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export async function prepareOriginalSlice(input, { candidate = false } = {}) {
   const data = Object.fromEntries(await Promise.all(names.map(async name => [name, await readFile(path.join(input, name))])));
   const scene = readOriginalScene(data['RANGER.IDX'], data['RANGER.GRP'], data['ALLSIN.GRP'], data['ALLDEF.GRP'], 1);
-  const selection = candidate ? [{ slotId: 2, eventId: 668 }, { slotId: 3, eventId: 670 }, { slotId: 4, eventId: 670 }] : [{ slotId: 2, eventId: 668 }];
+  // Default preview now includes event 670 (slots 3/4) after reachability evidence.
+  // --candidate remains accepted for compatibility but no longer changes the selection.
+  const selection = [{ slotId: 2, eventId: 668 }, { slotId: 3, eventId: 670 }, { slotId: 4, eventId: 670 }];
   for (const {slotId,eventId} of selection) if (scene.eventFields[slotId][2] !== eventId) throw new Error(`SLICE_VERSION_MISMATCH: scene1/slot${slotId}/event${eventId}`);
   const events = [...new Set(selection.map(ref => ref.eventId))].map(eventId => readDialogueOnlyEvent(data['KDEF.IDX'], data['KDEF.GRP'], eventId));
   if (events.some(event => !event.dialogues.length)) throw new Error('EMPTY_SLICE_EVENT');
@@ -32,10 +35,10 @@ export async function prepareOriginalSlice(input, { candidate = false } = {}) {
   const blocked = [];
   for (let cellId = 0; cellId < 4096; cellId++) {
     const ground = scene.layers[0][cellId], slot = scene.layers[3][cellId];
-    const terrain = (ground >= 358 && ground <= 362) || [522, 1022, 1348].includes(ground) || (ground >= 1324 && ground <= 1330);
-    // Other event cells are conservatively inaccessible: their scripts are outside this slice.
+    // Community Implementation (jinyong-legend SceneCanPass): building layer > 0 is impassable;
+    // an event cell is passable only when its event field 0 is 0. Water ground IDs are impassable.
     // The selected NPC occupies/blocks its cell in the core instead of duplicating a static blocker.
-    if (!npcCells.has(cellId) && (scene.layers[1][cellId] !== 0 || terrain || slot >= 0)) blocked.push(cellId);
+    if (!npcCells.has(cellId) && scenePassability(ground,scene.layers[1][cellId],slot,scene.eventFields).blocked) blocked.push(cellId);
   }
   const approaches = npcs.map(npc => {
     const adjacent = [[npc.x - 1, npc.y], [npc.x + 1, npc.y], [npc.x, npc.y - 1], [npc.x, npc.y + 1]]
@@ -52,7 +55,7 @@ export async function prepareOriginalSlice(input, { candidate = false } = {}) {
     dialogues.set(ref.talkId, { id: prefix(`talk/${ref.talkId}`), text: talk.displayText, speaker: `portrait:${ref.portraitId}` });
   }
   const pkg = {
-    manifest: { id: namespace, version: candidate ? '0.2.0' : '0.1.0', schemaVersion: 1, runtimeVersion: '0.1.0', kind: 'base',
+    manifest: { id: namespace, version: '0.2.0', schemaVersion: 1, runtimeVersion: '0.1.0', kind: 'base',
       classification: 'original-derived', license: 'User-supplied original content; local research only; not for redistribution.',
       ruleset: 'community-grid-slice-v1', priority: 0, dependencies: [] },
     entry: { mapId: prefix('map/1'), x: adjacent[0], y: adjacent[1] },

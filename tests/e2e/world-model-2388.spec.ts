@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
+import path from 'node:path';
+test('Building 2388 generated GLB loads in the existing world without changing source grids',async({page})=>{
+  const dir='assets/generated/world-model-2388',file=existsSync(dir)?readdirSync(dir).filter(f=>/^world-model-2388-.*\.local\.json$/.test(f)).sort((a,b)=>statSync(path.join(dir,a)).mtimeMs-statSync(path.join(dir,b)).mtimeMs).at(-1):undefined;
+  test.skip(!file,'Local generated assets stay outside CI.');
+  const full=path.resolve(dir,file!),bundle=JSON.parse(readFileSync(full,'utf8')),base=JSON.parse(readFileSync('assets/generated/world-preview/world-fa9af52a0d2428da.local.json','utf8'));
+  expect(bundle.package).toEqual(base.package);expect(bundle.projectedMap.layers).toEqual(base.projectedMap.layers);
+  expect(bundle.projectedMap.models).toHaveLength(1);expect(bundle.projectedMap.models[0].tileValue).toBe(2388);expect(bundle.projectedMap.models[0].layerId).toBe('building');
+  expect(bundle.worldModelSample.calibration).toBe('footprint-image-height-v1');
+  expect(bundle.worldModelSample.authoredSize.width).toBe(4);expect(bundle.worldModelSample.authoredSize.depth).toBe(3);
+  expect(bundle.worldModelSample.authoredSize.height).toBeCloseTo(2.540211585,6);
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('./');await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready');await page.getByText('內容與測試設定',{exact:true}).click();
+  const pending=page.waitForEvent('filechooser');await page.getByRole('button',{name:'匯入完整世界地圖',exact:true}).click();await(await pending).setFiles(full);
+  await expect(page.getByRole('heading',{name:'世界地圖原圖投影',exact:true})).toBeVisible();
+  await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready',{timeout:25_000});
+  await expect(page.getByRole('region',{name:'預覽說明'})).toContainText('building ID 2388');
+  await page.locator('.world-canvas').screenshot({path:dir+'/world-building-2388.png'});
+  await expect(page.getByRole('alert')).toHaveCount(0);expect(errors).toEqual([]);
+});

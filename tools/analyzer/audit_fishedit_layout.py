@@ -38,7 +38,7 @@ def audit_words(words, table):
     return {"instructions": instructions, "branchChecks": len(targets), "invalidTargets": bad}
 
 
-def audit(root, checkout):
+def source_table(checkout):
     head = subprocess.check_output(["git", "-C", str(checkout), "rev-parse", "HEAD"], text=True).strip()
     if head != COMMIT:
         raise ValueError("Unexpected source commit")
@@ -54,6 +54,11 @@ def audit(root, checkout):
                              "branchSlots": [yes, no] if branch else []}
     if sorted(table) != list(range(68)):
         raise ValueError("Expected 68 source entries")
+    return table, hashlib.sha256(raw).hexdigest()
+
+
+def audit(root, checkout):
+    table, source_hash = source_table(checkout)
     # Keep INI semantics intact. Opcode 50 has a branch description in a different
     # document, but active INI disables branch annotation; no silent override.
     idx, data = [(root / name).read_bytes() for name in ("KDEF.IDX", "KDEF.GRP")]
@@ -74,7 +79,7 @@ def audit(root, checkout):
         count = len(row.pop("instructions", []))
         events.append({"event": event_id, "instructionCount": count, **row})
     return {"auditVersion": "0.1.0", "confidence": "Community Implementation",
-            "sourceCommit": COMMIT, "sourcePath": SOURCE, "sourceSha256": hashlib.sha256(raw).hexdigest(),
+            "sourceCommit": COMMIT, "sourcePath": SOURCE, "sourceSha256": source_hash,
             "inputHashes": {"KDEF.IDX": hashlib.sha256(idx).hexdigest(), "KDEF.GRP": hashlib.sha256(data).hexdigest()},
             "table": list(table.values()), "events": events, "histogram": dict(sorted(histogram.items())),
             "limitations": "Lexical layout and declared branch boundaries only; opcode 50 branch slots not enabled in active INI. No runtime or original behavior verification."}

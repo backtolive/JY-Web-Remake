@@ -1,0 +1,779 @@
+{
+  "package": {
+    "manifest": {
+      "id": "mock.primitive-workshop",
+      "version": "0.1.0",
+      "schemaVersion": 1,
+      "runtimeVersion": "0.1.0",
+      "kind": "base",
+      "classification": "mock",
+      "license": "Mock fixture for local preview; no original material.",
+      "ruleset": "mock-region-preview-v1",
+      "priority": 0,
+      "dependencies": []
+    },
+    "entry": {
+      "mapId": "mock.primitive-workshop:map/workshop",
+      "x": 1,
+      "y": 1
+    },
+    "maps": [
+      {
+        "id": "mock.primitive-workshop:map/workshop",
+        "name": "Mock Primitive Workshop",
+        "width": 4,
+        "height": 4,
+        "blocked": [
+          6
+        ],
+        "npcs": [],
+        "portals": []
+      }
+    ],
+    "dialogues": [],
+    "events": [],
+    "items": [],
+    "patches": []
+  },
+  "assembled": {
+    "version": "0.2.0",
+    "cells": [
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 1,
+              "y": 0,
+              "z": 0
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 0
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 3,
+              "y": 0,
+              "z": 0
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 0,
+              "y": 0,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 1,
+              "y": 0,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 3,
+              "y": 0,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 0,
+              "y": 0,
+              "z": 2
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 1,
+              "y": 0,
+              "z": 2
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 2
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 3,
+              "y": 0,
+              "z": 2
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 0,
+              "y": 0,
+              "z": 3
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 1,
+              "y": 0,
+              "z": 3
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 3
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.12,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": -0.12,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:889977",
+                      "color": "#889977"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 3,
+              "y": 0,
+              "z": 3
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 0.2,
+                      "height": 1.8,
+                      "depth": 1
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": 0,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:bb6655",
+                      "color": "#bb6655"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 1
+            }
+          }
+        ]
+      },
+      {
+        "assets": [
+          {
+            "asset": {
+              "color": "#889977",
+              "height": 0.1,
+              "label": "Mock authored geometry",
+              "geometry": {
+                "version": 1,
+                "classification": "mock",
+                "parts": [
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.2,
+                      "depth": 0.3
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": 0,
+                      "z": -0.3
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:c9b080",
+                      "color": "#c9b080"
+                    }
+                  },
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.4,
+                      "depth": 0.3
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": 0,
+                      "z": 0
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:c9b080",
+                      "color": "#c9b080"
+                    }
+                  },
+                  {
+                    "size": {
+                      "width": 1,
+                      "height": 0.6,
+                      "depth": 0.3
+                    },
+                    "offset": {
+                      "x": 0,
+                      "y": 0,
+                      "z": 0.3
+                    },
+                    "rotationY": 0,
+                    "material": {
+                      "id": "mock:c9b080",
+                      "color": "#c9b080"
+                    }
+                  }
+                ]
+              }
+            },
+            "world": {
+              "x": 2,
+              "y": 0,
+              "z": 2
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

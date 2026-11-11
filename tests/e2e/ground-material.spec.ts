@@ -1,0 +1,20 @@
+import {test,expect} from '@playwright/test';
+import {existsSync,readdirSync,readFileSync,statSync} from 'node:fs';
+import path from 'node:path';
+const directory='assets/generated/ground-material';
+const filename=existsSync(directory)?readdirSync(directory).filter(f=>/^scene1-ground-.*\.local\.json$/.test(f)).sort((a,b)=>statSync(path.join(directory,a)).mtimeMs-statSync(path.join(directory,b)).mtimeMs).at(-1):undefined;
+test('Shared generated ground texture renders with processed tree and rock in original grid',async({page},info)=>{
+  test.skip(!filename,'Local original-derived art remains outside CI.');
+  const file=path.resolve(directory,filename!),bundle=JSON.parse(readFileSync(file,'utf8'));
+  expect(bundle.groundMaterial.tiles).toBe(64);expect(bundle.groundMaterial.triangles).toBe(128);
+  expect(bundle.artSample.entries.every((e:{processingStatus:string})=>e.processingStatus==='succeeded')).toBe(true);
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('./');await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready');
+  await page.getByText('內容與測試設定',{exact:true}).click();
+  const pending=page.waitForEvent('filechooser');await page.getByRole('button',{name:'匯入本機地圖區域預覽',exact:true}).click();await(await pending).setFiles(file);
+  await expect(page.getByRole('heading',{name:'Scene 1 Shared Ground Material',exact:true})).toBeVisible();
+  await expect(page.locator('.scene-frame')).toHaveAttribute('data-renderer','ready',{timeout:30_000});
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.locator('.world-canvas').screenshot({path:info.outputPath('scene1-shared-ground.png')});
+  expect(errors).toEqual([]);
+});

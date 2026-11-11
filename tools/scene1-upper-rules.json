@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "sceneId": 1,
+  "classification": "original-authored",
+  "evidence": "Visual inspection of decoded SMP001 resources; category and geometry are Inferred, not Verified Original.",
+  "entries": [
+    {
+      "tileValue": 2288,
+      "resourceId": 1144,
+      "category": "grass-clump",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 2304,
+      "resourceId": 1152,
+      "category": "grass-clump",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 2362,
+      "resourceId": 1181,
+      "category": "tall-grass",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 2792,
+      "resourceId": 1396,
+      "category": "tree",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 2794,
+      "resourceId": 1397,
+      "category": "tree",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 2858,
+      "resourceId": 1429,
+      "category": "rail-segment",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 0.07,
+              "height": 0.8,
+              "depth": 0.07
+            },
+            "offset": {
+              "x": -0.45,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          },
+          {
+            "size": {
+              "width": 0.07,
+              "height": 0.8,
+              "depth": 0.07
+            },
+            "offset": {
+              "x": 0.45,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          },
+          {
+            "size": {
+              "width": 1,
+              "height": 0.06,
+              "depth": 0.06
+            },
+            "offset": {
+              "x": 0,
+              "y": 0.68,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "tileValue": 2860,
+      "resourceId": 1430,
+      "category": "rail-post-end",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 0.08,
+              "height": 0.85,
+              "depth": 0.08
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          },
+          {
+            "size": {
+              "width": 0.5,
+              "height": 0.06,
+              "depth": 0.06
+            },
+            "offset": {
+              "x": 0.2,
+              "y": 0.68,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "tileValue": 2984,
+      "resourceId": 1492,
+      "category": "rock",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 3002,
+      "resourceId": 1501,
+      "category": "rock",
+      "status": "needs-model"
+    },
+    {
+      "tileValue": 3240,
+      "resourceId": 1620,
+      "category": "sign-left-fragment",
+      "status": "needs-grouping"
+    },
+    {
+      "tileValue": 3242,
+      "resourceId": 1621,
+      "category": "sign-right-fragment",
+      "status": "needs-grouping"
+    }
+  ],
+  "groups": [
+    {
+      "id": "authored:sign-pair",
+      "members": [
+        {
+          "tileValue": 3240,
+          "dx": 0,
+          "dy": 0
+        },
+        {
+          "tileValue": 3242,
+          "dx": 0,
+          "dy": -2
+        }
+      ],
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 0.14,
+              "height": 1.9,
+              "depth": 0.14
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:sign-77736b",
+              "color": "#77736b"
+            }
+          },
+          {
+            "size": {
+              "width": 0.14,
+              "height": 1.9,
+              "depth": 0.14
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": -2
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:sign-77736b",
+              "color": "#77736b"
+            }
+          },
+          {
+            "size": {
+              "width": 0.12,
+              "height": 1.05,
+              "depth": 1.85
+            },
+            "offset": {
+              "x": 0,
+              "y": 0.6,
+              "z": -1
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:sign-a83836",
+              "color": "#a83836"
+            }
+          },
+          {
+            "size": {
+              "width": 0.25,
+              "height": 0.16,
+              "depth": 2.3
+            },
+            "offset": {
+              "x": 0,
+              "y": 1.78,
+              "z": -1
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:sign-66645d",
+              "color": "#66645d"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

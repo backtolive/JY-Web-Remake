@@ -1,0 +1,215 @@
+{
+  "version": "0.1.0",
+  "classification": "mock",
+  "sourceSceneId": 1,
+  "region": {
+    "originX": 13,
+    "originY": 28,
+    "width": 8,
+    "height": 8
+  },
+  "layers": {
+    "groundTileId": {
+      "4": {
+        "kind": "tile",
+        "color": "#8b7355",
+        "height": 0.12,
+        "label": "mock-ground-4"
+      },
+      "8": {
+        "kind": "tile",
+        "color": "#9b8b6f",
+        "height": 0.12,
+        "label": "mock-ground-8"
+      },
+      "18": {
+        "kind": "tile",
+        "color": "#7a6b52",
+        "height": 0.12,
+        "label": "mock-ground-18"
+      },
+      "24": {
+        "kind": "tile",
+        "color": "#a89980",
+        "height": 0.12,
+        "label": "mock-ground-24"
+      },
+      "34": {
+        "kind": "tile",
+        "color": "#6f6248",
+        "height": 0.12,
+        "label": "mock-ground-34"
+      },
+      "36": {
+        "kind": "tile",
+        "color": "#b7a890",
+        "height": 0.12,
+        "label": "mock-ground-36"
+      },
+      "40": {
+        "kind": "tile",
+        "color": "#5f5440",
+        "height": 0.12,
+        "label": "mock-ground-40"
+      },
+      "50": {
+        "kind": "tile",
+        "color": "#c4b59d",
+        "height": 0.12,
+        "label": "mock-ground-50"
+      },
+      "64": {
+        "kind": "tile",
+        "color": "#8a7d65",
+        "height": 0.12,
+        "label": "mock-ground-64"
+      },
+      "70": {
+        "kind": "tile",
+        "color": "#9f9078",
+        "height": 0.12,
+        "label": "mock-ground-70"
+      },
+      "144": {
+        "kind": "tile",
+        "color": "#756850",
+        "height": 0.12,
+        "label": "mock-ground-144"
+      },
+      "146": {
+        "kind": "tile",
+        "color": "#b2a38b",
+        "height": 0.12,
+        "label": "mock-ground-146"
+      },
+      "148": {
+        "kind": "tile",
+        "color": "#8b7355",
+        "height": 0.12,
+        "label": "mock-ground-148"
+      },
+      "150": {
+        "kind": "tile",
+        "color": "#9b8b6f",
+        "height": 0.12,
+        "label": "mock-ground-150"
+      },
+      "152": {
+        "kind": "tile",
+        "color": "#7a6b52",
+        "height": 0.12,
+        "label": "mock-ground-152"
+      },
+      "154": {
+        "kind": "tile",
+        "color": "#a89980",
+        "height": 0.12,
+        "label": "mock-ground-154"
+      },
+      "158": {
+        "kind": "tile",
+        "color": "#6f6248",
+        "height": 0.12,
+        "label": "mock-ground-158"
+      },
+      "164": {
+        "kind": "tile",
+        "color": "#b7a890",
+        "height": 0.12,
+        "label": "mock-ground-164"
+      },
+      "166": {
+        "kind": "tile",
+        "color": "#5f5440",
+        "height": 0.12,
+        "label": "mock-ground-166"
+      },
+      "168": {
+        "kind": "tile",
+        "color": "#c4b59d",
+        "height": 0.12,
+        "label": "mock-ground-168"
+      },
+      "1182": {
+        "kind": "tile",
+        "color": "#8a7d65",
+        "height": 0.12,
+        "label": "mock-ground-1182"
+      }
+    },
+    "buildingTileId": {
+      "2288": {
+        "kind": "block",
+        "color": "#8b7355",
+        "height": 0.75,
+        "label": "mock-building-2288"
+      },
+      "2304": {
+        "kind": "block",
+        "color": "#9b8b6f",
+        "height": 0.75,
+        "label": "mock-building-2304"
+      },
+      "2362": {
+        "kind": "block",
+        "color": "#7a6b52",
+        "height": 0.75,
+        "label": "mock-building-2362"
+      },
+      "2792": {
+        "kind": "block",
+        "color": "#a89980",
+        "height": 0.75,
+        "label": "mock-building-2792"
+      },
+      "2794": {
+        "kind": "block",
+        "color": "#6f6248",
+        "height": 0.75,
+        "label": "mock-building-2794"
+      },
+      "2858": {
+        "kind": "block",
+        "color": "#b7a890",
+        "height": 0.75,
+        "label": "mock-building-2858"
+      },
+      "2860": {
+        "kind": "block",
+        "color": "#5f5440",
+        "height": 0.75,
+        "label": "mock-building-2860"
+      },
+      "2984": {
+        "kind": "block",
+        "color": "#c4b59d",
+        "height": 0.75,
+        "label": "mock-building-2984"
+      },
+      "3002": {
+        "kind": "block",
+        "color": "#8a7d65",
+        "height": 0.75,
+        "label": "mock-building-3002"
+      },
+      "3240": {
+        "kind": "block",
+        "color": "#9f9078",
+        "height": 0.75,
+        "label": "mock-building-3240"
+      },
+      "3242": {
+        "kind": "block",
+        "color": "#756850",
+        "height": 0.75,
+        "label": "mock-building-3242"
+      }
+    }
+  },
+  "fallback": {
+    "kind": "box",
+    "color": "#777777",
+    "height": 0.1,
+    "label": "unmapped-mock"
+  }
+}

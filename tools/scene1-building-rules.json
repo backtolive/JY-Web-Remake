@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "sceneId": 1,
+  "classification": "original-authored",
+  "evidence": "Decoded image inspection; authored thickness and height, no roof inference",
+  "entries": [
+    {
+      "tileValue": 1708,
+      "resourceId": 854,
+      "category": "wall-panel",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 1,
+              "height": 1.65,
+              "depth": 0.12
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wall-9b713c",
+              "color": "#9b713c"
+            }
+          }
+        ]
+      },
+      "cutaway": true
+    },
+    {
+      "tileValue": 1710,
+      "resourceId": 855,
+      "category": "wall-with-pillar",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 1,
+              "height": 1.65,
+              "depth": 0.12
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wall-9b713c",
+              "color": "#9b713c"
+            }
+          },
+          {
+            "size": {
+              "width": 0.15,
+              "height": 1.9,
+              "depth": 0.18
+            },
+            "offset": {
+              "x": 0.43,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wall-9b3735",
+              "color": "#9b3735"
+            }
+          }
+        ]
+      },
+      "cutaway": true
+    },
+    {
+      "tileValue": 1712,
+      "resourceId": 856,
+      "category": "wall-with-pillar",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 1,
+              "height": 1.65,
+              "depth": 0.12
+            },
+            "offset": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wall-9b713c",
+              "color": "#9b713c"
+            }
+          },
+          {
+            "size": {
+              "width": 0.15,
+              "height": 1.9,
+              "depth": 0.18
+            },
+            "offset": {
+              "x": -0.43,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wall-9b3735",
+              "color": "#9b3735"
+            }
+          }
+        ]
+      },
+      "cutaway": true
+    },
+    {
+      "tileValue": 2858,
+      "resourceId": 1429,
+      "category": "rail-segment",
+      "status": "authored-proxy",
+      "geometry": {
+        "version": 1,
+        "classification": "original-authored",
+        "parts": [
+          {
+            "size": {
+              "width": 0.07,
+              "height": 0.8,
+              "depth": 0.07
+            },
+            "offset": {
+              "x": -0.45,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          },
+          {
+            "size": {
+              "width": 0.07,
+              "height": 0.8,
+              "depth": 0.07
+            },
+            "offset": {
+              "x": 0.45,
+              "y": 0,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          },
+          {
+            "size": {
+              "width": 1,
+              "height": 0.06,
+              "depth": 0.06
+            },
+            "offset": {
+              "x": 0,
+              "y": 0.68,
+              "z": 0
+            },
+            "rotationY": 0,
+            "material": {
+              "id": "authored:wood",
+              "color": "#805526"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

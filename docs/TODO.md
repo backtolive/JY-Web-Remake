@@ -1,21 +1,153 @@
 # 待辦
 
+## 2026-11-11：DOSBox-X 互動、debugger、存檔採樣及完整 opcode 邏輯
+
+- [x] 從 DOSBox-X 2026.10.01 到達原版標題畫面；確認 debugger 選單、暫存器、反組譯與檔案 I/O 記錄視窗可用。
+- [x] 建立隔離 `session-002` 及存檔相關檔案 SHA-256 基線；session-001 保留為基準。
+- [x] 建立 DOSBox-X loopback debugger 橋與可重現啟動器、協定單元測試；見 `docs/validation/dosbox-x-debugger-and-sampling.md` 及 ADR0036。
+- [x] 建立 0–67 opcode 覆蓋表：候選參數字數、出現次數、FishEdit文件描述、社群 Pascal dispatcher 及本專案 Runtime 支援狀態；見 `docs/research/event-opcode-coverage.md`。
+- [ ] 透過桌面正常啟動 session-002，逐一錄製並驗證上／下／左／右／Esc／Enter按鍵能控制遊戲。
+- [ ] 完成 debugger loopback TCP handshake，實際執行 HELP／CPU／BPLIST 與 breakpoint，保存輸出。
+- [ ] 在 session-002 透過原版 UI 建立並讀回一般存檔；記錄前後 hash 及槽位。
+- [ ] 建立可重播事件前置存檔或可驗證路線，讀檔採樣事件前後狀態；人工編輯存檔一律標註 Synthetic State。
+- [ ] 將全部 68 opcode 的參數、分支公式、狀態讀寫、失敗及來源證據逐項釐清。FishEdit結構／文件與社群 handler 不等於 Verified Original。
+- [ ] 實作有來源證據的原版 opcode adapter 並比較 DOSBox-X 執行結果；未支援指令須停止該事件且不提交部分狀態。
+- [ ] 將事件採樣接到旗標、物品、人物、位置、場景及隊伍狀態差異檢視。
+
+阻礙：本輪桌面控制器拒絕視窗輸入（`GetCursorPos failed: Access denied`），本機 sandbox 亦以 `EACCES` 阻止 loopback mock TCP，因此上述 E2E 項目不得標為通過。先處理桌面啟動／存取路徑，再依序完成按鍵→debugger→合法存檔→事件採樣；不要先改猜測的存檔 offset。
+
+測試備註：debugger protocol單元2/2、完整Node單元66/66及Python 14/14通過。執行 `node tools/validator/export-schemas.mjs` 同步新增的 item description 欄位後，原 shared-schema 測試通過。
+
+## 2026-11-09：全量劇情／事件轉換與狀態驗證
+
+- [x] 將全部 1,018 個 KDEF 事件及 2,977 個 TALK 資源轉成可追溯的本機中間資料，保留原始 bytes／offset／hash；不匯出商業資料至 Git。
+- [x] 驗證所有事件結構、對話引用、目前互動欄位引用、候選分支邊界及 CP950 對話解碼；見 `docs/validation/full-original-event-corpus.md`。
+- [x] 建立逐 opcode 覆蓋盤點表，記錄候選長度、頻率、可取得的 FishEdit描述、Pascal dispatcher與目前 Runtime 覆蓋；此表尚未補齊每條指令的參數語意／state effects，見 `docs/research/event-opcode-coverage.md`。
+- [ ] 建立逐 opcode 完整語意與 state effect 對照表，為每項記錄來源、版本、信心及 DOS 原版驗證狀態。
+- [ ] 先實作有證據的 opcode Runtime adapter；遇到未知或未實作指令時停止事件且不提交部分 state。
+- [ ] 將事件前後旗標、物品、人物狀態、位置、場景及隊伍變更接入本機驗證檢視。
+- [ ] 使用隔離 DOSBox-X 案例優先驗證 Opcode 15／50；未取得證據前不把其效果標記為 Verified Original。
+- [ ] 驗證使用者提出的結局假設：Opcode 15 是否結束遊戲；opcode 7 與 `-1` 是否區分死亡／破關。現有來源僅把 7 作事件中止、`-1` 作每筆 KDEF 資料終止標記。
+- [ ] 補查自動觸發、物品觸發及動態事件表寫入引用；本輪只核對目前互動欄位。
+
+## 2388尺寸要求與管線缺口（最新）
+
+- [x] 釐清最大完整4×3占位與原圖比例推導高度2.5402；本機外框校準僅為實驗。
+- [x] 查證API沒有尺寸／體積約束，GLB輸入只做後處理，未提交新工作。
+- [ ] 先補足管線尺寸／體積重建契約；不得把本機拉伸或GLB後處理稱為重新AI生成。
+- [ ] 2388山體結構仍待重產／修整，本機斜薄片候選不當完成模型。
+
+
+## 2026-11-04：只轉building，首個2388（使用者核定）
+
+- [x] 轉換範圍限building；earth／surface保留原圖，最後另定處理。
+- [x] building2388／圖片1194送既有服務成功，LOD0接回原世界；同ID93處放置共用模型，不依10種引用mask自動變形。
+- [x] 來源與服務hash、原始圖層／package不變、局部顯示驗收，見ADR0035／validation/building-model-2388.md。
+- [ ] 2388生成山體偏薄；先修整體積、朝向、底緣／背面，驗收後再擴大building批次。
+
+
+## 2026-11-04：世界資產占格與組合盤點
+
+- [x] 使用者確認人工操作正常；座標軸修正的局部使用回饋已收到。
+- [x] 958獨立ID圖錄、460／180／318原始圖層篩選、7832非空錨點與精確mask／變體統計。
+- [x] 740組多ID相鄰候選與原座標疊圖，全部mergeApproved=false；不自行合併。
+- [x] 完整JSON與空白決策模板、本機圖錄驗收；見ADR0034及research/world-asset-structure.md。
+- [ ] 逐ID核對植被／房舍／坡壁等外觀及是否突起，決定原創高度；原始圖層不直接當類別。
+- [ ] 從樹形2016／完整院落2784／人工選定的多圖片段開始，依各實例mask製作占位，不能用bbox填滿稀疏占格。
+
+
+## 2026-11-04：完整世界座標軸（目前優先）
+
+- [x] 世界480×480及958圖片ID原圖投影、本機完整世界包與行走入口。
+- [x] 修正原版Y誤映射+Z；世界統一(x,y)→(x,0,-y)，地面／圖片錨點／玩家／輸入／小地圖同基底，相機角度不變。
+- [x] 起點附近X+／Y+與一個已知阻擋格局部驗證；見ADR0033及validation/world-axis-alignment.md。
+- [x] 玩家回報人工操作正常；後續若有剩餘差異，先核對具體座標，不先改blocked。
+- [ ] 船隻、場景入口、完整原版通行驗收後續再做；全圖連通檢查依使用者要求延後，不作目前畫面修正前置。
+
+
+## 2026-11-04：地面資源逐ID獨立（現行政策）
+
+- [x] 核對21張地面原圖，各自獨立material ID；64格逐項對照來源圖號、保留原圖已有交界。
+- [x] 外觀註記不當地形／玩法屬性；surfaceType與gameplayProperty均Unknown，mergeWith=null。
+- [x] 撤回平均色分類／共用草土流程，舊工具預設拒絕，新流程見ADR0032／validation/independent-ground-review.md。
+- [x] 原圖投影核對包與21圖聯絡表、本機HTML／JSON完成；不是高清材質定稿。
+- [ ] 以各ID原圖獨立製作高清候選，保留自身圖案／色塊／交界；不按顏色推定類別，不合併近似資源。
+- [ ] 1182厚邊的真實3D結構仍未知，不由22px推定高度；新增邊界過渡前先比對相鄰原圖。
+
+
+## 2026-11-04：共用地面材質（已撤回的實驗，地面政策以ADR0032為準）
+
+- [x] 查證樹木原Job現在succeeded，預覽更新成功LOD0；舊失敗紀錄保留歷史。
+- [x] 拆解GLB幾何／圖片bytes，確認LOD0變大主要為貼圖增量；見validation/shared-ground-material.md。
+- [x] 原創草土共用base-color，64格連續UV與平滑色調，一個GLB／材質／貼圖，實景可匯入。
+- [ ] 確認地面色調、近景重複感／接縫；之後路面、石板及欄杆材質。
+- [ ] 貼圖壓縮、normal／roughness maps及LOD共用貼圖／快取效能預算。
+
+
+## 2026-11-04：開始實際美術替換
+
+- [x] 明確授權兩張原圖送既有LAN服務；樹木raw GLB、岩石LOD0接回場景1原版8×8配置，保留來源與Job／SHA，見ADR0030及validation/first-generated-art-sample.md。
+- [x] 實際帶材質模型在Chromium呈現並截圖，4MB有界預算支援；其餘占位不標為完成美術。
+- [ ] 驗收樹冠亮度、岩石綠色底座、共同地面與欄杆材質，統一樣本風格後再量產。
+- [x] 樹木Blender verify三角形重載差異已由使用者修正；最新原Job succeeded、預覽改用成功LOD0，見ADR0031。
+
+
+## 2026-11-04：先不開放鏡頭旋轉
+
+- [x] 本機GLB依assetId替換全部實例、實際bounds預檢／尺寸與底部校正、還原匯入時模型；只改視覺，進度／碰撞／存檔不變。見ADR0029、validation/model-replacement.md。
+- [ ] 先選一個精細資產的共同尺寸／原點／朝向／材質風格驗收樣本；2MB靜態GLB目前只作前置驗證，未測大型貼圖或最終美術一致性。
+- [ ] 鏡頭旋轉依使用者要求暫不開放；保留已完成的相機／小地圖同步機制。
+
+- [x] 行跡小地圖依要求順時針旋轉135度，背景／阻擋／角色／出口共用轉換並留邊；邏輯座標及碰撞不變。見ADR0027。
+- [x] 修正旋轉後的水平鏡射差異；新增MiniMap與WebGL角色四方向實際像素位移比對，保留135度及邏輯座標。
+- [x] 以實際相機alpha／beta驅動小地圖，取代固定角度／鏡射；鍵盤與觸控共用即時alpha，5方位×2俯角×8方向實際Babylon投影測試通過。見ADR0028、validation/camera-minimap-sync.md。
+- [ ] 未來啟用旋轉操作後，補旋轉中手感、鏡頭限制及多角度美術驗收；目前同步機制已接好，UI仍固定鏡頭。
+
+## 最新：圖塊來源查證與規則幾何
+
+- [x] 第二來源8×8切片(20,22)：牆片／門側紅柱／欄杆占位與本機瀏覽器呈現；家具器物6類診斷保留，無屋頂推定，見ADR0025、validation/building-wall-preview.md。
+- [x] 統一map-region與prepare-mvp的社群通行判定；門口slot15欄位0=0可通行，腳本仍未執行；新版來源建築包0.2.0。見ADR0026、validation/building-passage-cutaway.md。
+- [x] 獨立Mock門洞、牆角、窗洞、桌子、屋頂顯隱；手動剖視只改顯示，隱藏牆仍阻擋，Node與畫布像素E2E通過。
+- [ ] 手動剖視使用感受、自動遮擋／角色輪廓需求及多視角尺度覆核；原版門事件、屋頂語意仍未驗收。
+
+- [x] 選區完整占位覆蓋：32個layer／ID → 64地板、6欄杆／柱、1告示牌、14 GLB（10草、2樹、2石）；未映射0，碰撞22格不變。見ADR0024、validation/full-placeholder-region.md。
+- [ ] 完整占位選區的角色遮擋／尺寸／多視角評估，再進共同材質及精細替換；不能將zero unmapped當原版完成。
+
+- [x] 獨立Mock石頭碰撞對照：同一GLB／尺寸，綠格可穿透／紅格整格阻擋；存讀及斜角驗證通過，見ADR0023、validation/model-collision-comparison.md。
+
+- [x] 真正 GLB 占位模型路徑：可重現低模石頭、穩定 assetId／hash／transform、本機來源圖號綁定、官方 loader／ready／錯誤拒絕、Mock與原版選區呈現，見 ADR 0022、validation/local-glb-placeholder.md。
+- [ ] 精細模型替換的共同尺寸／原點／材質風格驗收，GLB 快取／LOD 與正式資產管理仍待後續；目前僅占位技術驗證。
+
+- [x] PrimitiveGeometry v1 多四方體尺寸／偏移／旋轉／純色材質契約；Mock 地板、窄牆、階梯本機匯入及瀏覽器呈現，碰撞獨立。見 ADR 0018、validation/primitive-workshop.md。
+- [x] 原版選區 21 個地面 ID 映射到 64 塊明確原創地板，來源圖片平均色、來源雜湊核對、本機包／瀏覽器呈現完成。見 ADR 0019、validation/source-ground-preview.md。
+- [x] 11 個上層 ID 逐圖分類覆核，兩個欄杆／立柱原創 proxy 產生 6 個實例，剩餘 9 類診斷；見 research/scene1-upper-classification.md、ADR 0020、validation/upper-rail-preview.md。
+- [x] 告示牌兩片格位／錨點與接縫查證，明確兩格間距群組規則；只生成一面原創 proxy、保留兩份來源引用，剩餘 7 類診斷。見 ADR 0021、validation/grouped-sign-preview.md。
+- [ ] 草叢／樹／石頭的資產策略、材質／UV／多視角驗收；群組目前僅支援有明確證據的兩片接合，不自動泛化。
+
+- [x] 固定來源圖號除 2、圖片標頭／錨點及高度用途查證；場景 1 的 SDX001／SMP001 共 32 個 half-index 標頭候選核對。見 research/tile-resource-mapping.md。
+- [x] 場景 1 選區 32 張專屬圖片嚴格 RLE 解碼、色盤／alpha／錨點及區域靜態合成，318×249 本機預覽已檢視；不是完整 DOS 畫面驗收。見 validation/scene-region-rle.md。
+- [ ] 依實際圖片逐資源分類：building layer 含樹木／告示牌／欄杆／階梯，不可全當牆壁；建立 primitive／特殊模型規則。
+- [ ] 定義地面／牆體 primitive、尺寸、方向、材質的原創映射；圖層高度是畫面位移證據，不是牆體厚度。維持邏輯碰撞獨立。
+
 ## 下一階段優先：地圖資源 ID → Mock 3D 最小切片
 
 - [x] 保存 2026-11-03 狀態與下階段提示詞：docs/HANDOFF.md。
-- [ ] 依實際資料選場景 1 的代表性 8×8 區域，保留圖層原值／ID／偏移／雜湊；查證圖像索引映射。
-- [ ] 定義版本化資源映射與場景描述，用明確 Mock 幾何完成可重現自動組裝及未映射診斷。
-- [ ] 遊戲內本機預覽、Mock 測試與瀏覽器呈現驗收；視覺與碰撞分離，原版衍生產物不公開。
-- [ ] 後續再接自動模型生成／檢查／快取；不把本切片當成完整 2D → 3D 生成管線。事件 670 阻礙仍追蹤，但不阻擋此切片。
+- [x] 依實際 bytes 選定場景 1 起點 (13,28) 的 8×8 區域；保留六層原值、ID、來源偏移、雜湊與解析器版本（assets/generated/map-regions，本機 only）。
+- [x] 定義版本化資源映射（tests/fixtures/map-region-mock-assets.json）與 `extractMapRegion`／`assembleRegion`；未映射 ID 明確診斷，不靜默略過。
+- [x] 遊戲內本機預覽：web app 新增「匯入本機地圖區域預覽」，以明確 Mock 幾何組裝 8×8 區域；視覺與碰撞分離。
+- [x] Mock 測試 tests/unit/map-region.test.mjs（7 項）與全量 30 項 Node 測試、typecheck、build、web build 通過。
+- [x] 資產轉換管線已接通：本機 FastAPI 服務可提交 PNG 並產出 GLB/manifest/quality；已用 Mock PNG 完成一次成功作業。
+- [ ] 後續以原版圖片對應區域 ID，透過管線產生 HD GLB 並接入 Web 預覽；不提交商業素材。
 
 ## 最新：原版事件擴充
 
 - [x] 加入入口可達性／逐 NPC 碰撞及對話存讀門檻；2 項 Mock 與既有原版切片通過。
-- [ ] 事件 670 擴充受阻：槽 3／4 均無法從現有入口抵達，--candidate 明確拒絕且不輸出包。先查連通區邊界及來源碰撞／事件阻擋證據，見 ADR 0013、validation/preview-npc-reachability.md。
+- [x] 事件 670 可達性追查：空事件格（事件欄位 0 == 0）可通行，修正後 --candidate 通過 checkSliceNpcs，槽 3／4 與事件 670 納入候選包；預設預覽仍維持槽 2，候選需明確 --candidate。見 ADR 0015。
 
 - [x] Phase 3／5：全量 1,018 事件支援目錄，264 純對話／23 空／731 拒絕，保留來源偏移／雜湊及目前互動欄位反向引用；見 validation/dialogue-event-catalogue.md、ADR 0012。
 - [x] 2 項新增 Mock 測試與實際重跑一致性；21 Node／4 Python、typecheck／Schema／build／artifact 通過，報告只留本機。
-- [ ] 將場景 1／事件 670／槽 3、4 納入本機原版預覽，逐槽確認可通行鄰格、NPC 位置、對話引用與存讀續行，再補瀏覽器實測。
+- [x] 場景 1／事件 670／槽 3、4 已納入預設原版預覽；候選包升級為預設，包含 3 個 NPC 與事件 668/670，mvp:check 通過。
+- [ ] 瀏覽器實測候選包已補（5/5 E2E），但完整玩家手感與手機驗證仍待持續。
 - [ ] 研究被拒絕的 10 筆對話參數差異；取得證據前不放寬解析器。未知指令、原版可達性與 Phase 1／2 未解事項持續獨立追蹤。
 
 - [x] 使用者選定 GitHub Pages；既有 checks workflow 擴充為核心／Schema／build／E2E／artifact，只有 develop 通過才發布。
@@ -133,3 +265,23 @@
 - [ ] 確認可靠移動／功能選單輸入與進度一測試路線，再執行 15／50；聲音及自動輸入重播仍未驗證。
 - [ ] Phase 2：追查 sfe-kdef 缺少的核心原始碼與授權，不能以附帶 binary 視為完整來源。
 
+
+- [ ] 以 2388 通行格圖核對重複出現的底面與相鄰重疊，尺寸待證據支持。
+
+- [x] 本機預覽自動載入原圖世界並顯示可與 2388 格圖比對的 X／Y。
+
+- [ ] 審核三個眾數並列ID及一個無錨點引用的building，再批次生成模型底面設定。
+
+- [x] 更新服務理解並以非2388山體2398試跑點雲AI流程，輸出GLB與品質證據。
+
+- [ ] 續跑 building-batch.py poll，直到批次工作完成；核對成功GLB後產生可匯入世界包及更新瀏覽替換控制。
+
+- [ ] 擴充主機 semantic_geometry.py 支援其餘 building 圖像類別，或為不支援類別設計明確 fallback，再續跑批次。
+
+- [ ] 主機幾何執行器改為支援AI plan回傳的所有分類／部件形狀，不以building圖層或資產類型排除；再續跑失敗及待處理工作。
+
+- [x] 依使用者要求取消building批次所有工作；記錄278取消、19失敗、沒有執行中任務。
+
+- [ ] 將實際角色半身肖像資源接入對話框，並在後續加入故事／道具內容後進行本機可玩性驗收。
+
+- [ ] 將完整原版事件、人物、道具與場景切換轉換至本機測試包後，再作完整遊戲內容載入與可玩性測量。

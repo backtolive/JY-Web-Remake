@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "scope": "Scene 1 origin 13,28 size 8x8",
+  "policy": "Each ID independent. Notes describe image-space appearance only; no gameplay property or material equivalence inferred.",
+  "entries": [
+    {"tileValue":4,"visualNotes":"左上綠色，右側及下側黃褐色，交界不規則。"},
+    {"tileValue":8,"visualNotes":"左側綠色，右側黃褐色，右部有淺色圓塊。"},
+    {"tileValue":18,"visualNotes":"上側綠色，下側黃褐色，中央交錯斑塊。"},
+    {"tileValue":24,"visualNotes":"上側及右側綠色，左下黃褐色，交界有棕色斑塊。"},
+    {"tileValue":34,"visualNotes":"右上綠色，左側及下側黃褐色。"},
+    {"tileValue":36,"visualNotes":"大部分為綠色，左下有黃褐色條塊。"},
+    {"tileValue":40,"visualNotes":"上側黃褐色，下側及兩側綠色。"},
+    {"tileValue":50,"visualNotes":"中央偏上綠色，左右及下側黃褐色。"},
+    {"tileValue":64,"visualNotes":"黃褐色底，散布較深色顆粒及淺色小塊。"},
+    {"tileValue":70,"visualNotes":"綠色底，散布深淺不一的點狀紋理。"},
+    {"tileValue":144,"visualNotes":"綠色點狀紋理，左側有較深色區。"},
+    {"tileValue":146,"visualNotes":"綠色點狀紋理，上側至右側有較深色區。"},
+    {"tileValue":148,"visualNotes":"綠色點狀紋理，右下側有較深色區。"},
+    {"tileValue":150,"visualNotes":"綠色點狀紋理，左側較深、右側較淺。"},
+    {"tileValue":152,"visualNotes":"綠色點狀紋理，右側有明顯較深色區。"},
+    {"tileValue":154,"visualNotes":"綠色點狀紋理，左右側有不均勻深色區。"},
+    {"tileValue":158,"visualNotes":"綠色點狀紋理，左側有較深色區。"},
+    {"tileValue":164,"visualNotes":"綠色點狀紋理，左側較深、右側較淺。"},
+    {"tileValue":166,"visualNotes":"綠色底，散布深淺顆粒，沒有黃褐色大塊。"},
+    {"tileValue":168,"visualNotes":"綠色點狀紋理，左側較深。"},
+    {"tileValue":1182,"visualNotes":"灰色菱形點狀表面，左右下緣有厚邊；完整圖高22px，不據此推定3D高度。"}
+  ]
+}

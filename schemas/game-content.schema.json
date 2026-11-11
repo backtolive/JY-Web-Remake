@@ -187,6 +187,10 @@
           "name": {
             "type": "string",
             "maxLength": 16384
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
           }
         },
         "required": [
@@ -489,12 +493,12 @@
         "width": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 256
+          "maximum": 512
         },
         "height": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 256
+          "maximum": 512
         },
         "blocked": {
           "type": "array",
@@ -503,7 +507,7 @@
             "minimum": 0,
             "maximum": 1000000
           },
-          "maxItems": 65536
+          "maxItems": 262144
         },
         "npcs": {
           "type": "array",

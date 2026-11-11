@@ -15,3 +15,11 @@ Tests Executed / Results: 新增 2 項 Mock 測試涵蓋共享事件的不同 NP
 Known Limitations / Unverified Assumptions: 不是 DOS 可達性驗證；未分辨阻斷由建築、保守事件阻擋或缺少切圖／動態狀態造成。未對不可達候選執行 UI 驗收。Phase 1／2 版本／授權／15／50 未解事項不變。
 
 Next Recommended Tasks: 唯讀追查入口與槽 3／4 的連通區邊界，對照固定來源的碰撞與事件阻擋判定，取得證據後再調整受影響轉接器；不提前開放事件 670。
+
+## 2026-11-03 更新：事件 670 唯讀追查與 E2E 證據
+
+- 依 jinyong-legend SceneCanPass 修正通行判定：建築 > 0、水地面、事件欄位 0 != 0 才阻擋；空事件格可通行。
+- prepare-mvp.mjs --candidate 現在通過 checkSliceNpcs，候選包包含槽 2/3/4 與事件 668/670。
+- 瀏覽器 E2E：新增 tests/e2e/candidate-preview.spec.ts，匯入候選包並驗證場景渲染；全量 5 項 E2E 通過（13.6 秒）。
+- 來源證據：ADR 0015 記錄 SceneCanPass 規則與 water ID 集合；仍屬 Community Implementation，未經 DOS 驗證。
+- 預設預覽仍維持槽 2；候選需明確 --candidate，升級前可依本證據決定。

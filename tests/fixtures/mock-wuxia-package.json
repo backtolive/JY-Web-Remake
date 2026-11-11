@@ -21,6 +21,6 @@
     {"op":"say","dialogueId":"mock.wuxia:talk/bye"},
     {"op":"end"}
   ]}],
-  "items":[{"id":"mock.wuxia:item/coin","name":"Mock 練習銅錢"}],
+  "items":[{"id":"mock.wuxia:item/coin","name":"Mock 練習銅錢","description":"引路人贈送的練習銅錢，可作為道具欄與說明面板的測試內容。"}],
   "patches":[]
 }
