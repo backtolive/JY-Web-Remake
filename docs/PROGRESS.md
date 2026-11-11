@@ -2,23 +2,23 @@
 
 ## DOSBox-X 自動驗證前置與 Opcode 覆蓋盤點（最新）
 
-Phase: Phase 1／2 原版驗證（操作前置局部完成）；Phase 3／6 局部研究，整體未驗收。Status: DOSBox-X 已進入遊戲並完成六個指定按鍵的可見輸入驗證；debugger UI 可用。Debugger TCP 實際命令、建立新存檔及事件跳轉仍未通過，因此尚未開始宣稱全指令可玩。
+Phase: Phase 1／2 原版驗證（debugger 操作前置局部完成）；Phase 3／6 局部研究，整體未驗收。Status: 六個指定按鍵於 session-001 可見生效；隔離 session-002 的 debugger TCP PING／EXEC 成功，已設置並列出 breakpoint。實際中斷停止、建立新存檔及事件跳轉仍未驗收，因此尚未宣稱全指令可玩。
 
-Completed Tasks: 建立 `session-002` 原版資料副本，核對 20 個 root-level RANGER/R1–R3/S1–S3/D1–D3 存檔檔案 SHA-256 與 session-001 初始副本一致；產生 ignored baseline manifest。新增 DOSBox-X loopback debugger 控制橋、session-002 啟動器、protocol 單元測試。新增 opcode 覆蓋產生器及來源標籤表，盤點 68 個 opcode 的候選字數、FishEdit描述、社群 Pascal dispatcher、出現次數與目前 Runtime 覆蓋。修正文檔先前錯稱 Pascal dispatcher 沒有 opcode 15 的結論。
+Completed Tasks: 建立 `session-002` 原版資料副本，核對 20 個 root-level RANGER/R1–R3/S1–S3/D1–D3 存檔檔案 SHA-256 與 session-001 初始副本一致；產生 ignored baseline manifest。新增 DOSBox-X loopback debugger 控制橋、session-002 啟動器、protocol 單元測試。新增 opcode 覆蓋產生器及來源標籤表，盤點 68 個 opcode 的候選字數、FishEdit描述、社群 Pascal dispatcher、出現次數與目前 Runtime 覆蓋。修正文檔先前錯稱 Pascal dispatcher 沒有 opcode 15 的結論。實際 handshake 後 HELP／CPU／BPLIST 有回應；BPINT 21 4B、BP 0160:001D543E 被接受並列在 breakpoint 清單；新增 PING／BREAK bridge 動作。
 
 Files Changed: `tools/validator/dosbox-x-debugger-control.mjs`、`tools/validator/dosbox-x-debugger-protocol.mjs`、`tools/analyzer/build_event_opcode_catalog.py`、`scripts/Start-DOSBox-X-Session-002.cmd`、`scripts/Send-DOSBoxX-Key.ps1`、`tests/unit/dosbox-x-debugger-protocol.test.mjs`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/research/event-opcode-coverage.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0036-dosbox-x-event-sampling.md`、本進度及 TODO。`assets/generated/dosbox-x/session-002` 只為 ignored 本機資料，未加入版控。
 
-Tests Executed: debugger protocol Node unit tests；完整 Node unit suite；Python unit suite；shared JSON Schema 匯出同步；session-001/session-002存檔檔案雜湊對照；FishEdit 0.72 指令表形狀及全部事件記錄統計；git diff whitespace check。
+Tests Executed: debugger protocol Node unit tests；完整 Node unit suite；Python unit suite；shared JSON Schema 匯出同步；session-001/session-002存檔檔案雜湊對照；FishEdit 0.72 指令表形狀及全部事件記錄統計；loopback PING／HELP／CPU／BPLIST／BPINT／BP／BREAK 真實 debugger 請求；git diff whitespace check。
 
-Test Results: protocol Node 2/2 通過；完整 Node unit suite 66/66 通過。執行 `tools/validator/export-schemas.mjs` 將現有 `description` 欄位同步至 JSON Schema 後，原 shared-schema 測試通過。Python 14/14 通過（將 TMP/TEMP 指向工作區暫存目錄後）。68 條候選 opcode 切分覆蓋 1,018 events、13,315 opcode 指令和 1,018 個 `-1` 結尾記錄。DOSBox-X 鍵盤輸入以 elevated PowerShell 將 WM_KEYDOWN／UP 投遞至精確視窗：方向鍵在選單與地圖產生可見反應，Enter 開啟進度槽並載入既有進度一，Esc 後畫面轉黑（語意未知）。CUA click／pressKey 仍回報 access denied；debugger loopback mock TCP 測試被 EACCES 阻擋。此輪沒有新建存檔。嘗試 `pnpm run typecheck`／`pnpm run build` 時，pnpm 對工作區 `realpath` 回報 `EPERM` 並中止，兩者皆未跑完。
+Test Results: debugger protocol unit tests 3/3 通過；完整 Node suite 67/67 通過。Python 14/14 通過（TMP/TEMP 指向工作區暫存目錄後）。68 條候選 opcode 切分覆蓋 1,018 events、13,315 opcode 指令和 1,018 個 `-1` 結尾記錄。DOSBox-X 鍵盤輸入以 elevated PowerShell 將 WM_KEYDOWN／UP 投遞至精確視窗：方向鍵在選單與地圖產生可見反應，Enter 開啟進度槽並載入既有進度一，Esc 後畫面轉黑（語意未知）。session-002 真實 debugger PING 回 PONG；EXEC HELP／CPU／BPLIST 成功；BPINT／BP 指令接受且 BPLIST 列出。RUN 回 OK 僅代表接受；BREAK 回應 acknowledged，但畫面仍顯示 RUN；此 runtime 的 STEPIN 回 command not recognized。因此 breakpoint 實際停住與單步目前尚未證明。CUA click／pressKey 仍回報 access denied。沒有新建存檔。pnpm typecheck／build 先前被工作區 realpath EPERM 阻擋。
 
 Research Findings: DOSBox-X 2026.10.01 官方 debugger README 提供 `BP`、`BPINT`、`BPLIST`、`RUN`、`MEMREAD` 與 loopback 控制協定。遊戲原始 DOS 副本把 RANGER/R1–R3/S1–S3/D1–D3 存檔檔案放遊戲根目錄；社群 Pascal `LoadR`/`SaveR` 使用 `save/` 目錄，路徑差異不可直接混用。Opcode parser 只做結構/對話引用；通用 game-core IR 也不等於原版 opcode adapter。FishEdit文件只提供 43 條語意描述，全部 DOS 執行效果仍未知。Opcode 7 在645處後面還接其他候選記錄共643處，不能把整個線性資料尾端都丟棄；完整Runtime要保留尾碼並建模分支可達性。
 
-Known Limitations: 本輪按鍵畫面驗證使用 session-001 的既有進度一；尚未在 session-002 重跑輸入及建立新存檔。Esc 的黑畫面狀態未判明是切換、淡出或退出。桌面控制器 API 仍被 access denied 阻止，但精確視窗 PostMessage 路徑可用。社群引擎存檔 offset 不能直接當 DOS 原版已驗證規格。dialogue-only parser 只讀Opcode 0/1，且僅容許 7 或 -1 是末字，並不建模 Opcode 7 在事件中間的 control flow；其餘Opcode效果未接入Runtime。Opcode 15／50 的原版行為仍未知。
+Known Limitations: 本輪按鍵畫面驗證使用 session-001 的既有進度一；尚未在 session-002 重跑輸入及建立新存檔。session-002 debugger 視窗遊戲畫面為黑，Break acknowledgement 未能藉單步證明 CPU 停止。Esc 的黑畫面狀態未判明是切換、淡出或退出。桌面控制器 API 仍被 access denied 阻止，但精確視窗 PostMessage 路徑可用。社群引擎存檔 offset 不能直接當 DOS 原版已驗證規格。dialogue-only parser 只讀Opcode 0/1，且僅容許 7 或 -1 是末字，並不建模 Opcode 7 在事件中間的 control flow；其餘Opcode效果未接入Runtime。Opcode 15／50 的原版行為仍未知。
 
-Unverified Assumptions: `mcp_server` 在 session-002 啟動後可連到 Node bridge，尚未握手；Esc 後的黑畫面原因未知；存檔可否透過合法狀態複製出特定事件前置尚未確認。
+Unverified Assumptions: `BREAK` acknowledgement 是否讓 runtime 從 RUN 狀態停住仍未確認；Esc 後黑畫面原因未知；存檔可否透過合法狀態複製出特定事件前置尚未確認。
 
-Next Recommended Tasks: 在 session-002 重跑六鍵並保存畫面證據；接著完成 debugger TCP handshake，執行 HELP／CPU／BPLIST／一個 breakpoint；在 session-002 透過遊戲 UI 寫入／讀回獨立 slot，再建立事件前置採樣副本。逐 opcode 補足參數語意、state effects、跳轉公式、失敗行為與證據等級，再實作受控 adapter；未知指令必須停止事件且不提交部分狀態。本次鍵盤驗證與文件更新待 commit／push。
+Next Recommended Tasks: 先釐清 session-002 的 BREAK／BP 停止狀態，或用支援此 runtime 的手動 debugger interrupt；之後在 session-002 重跑六鍵並保存畫面證據、透過遊戲 UI 寫入／讀回獨立存檔 slot，再建立事件前置採樣副本。逐 opcode 補足參數語意、state effects、跳轉公式、失敗行為與證據等級，再實作受控 adapter；未知指令必須停止事件且不提交部分狀態。
 
 # 進度 — 2026-11-04
 

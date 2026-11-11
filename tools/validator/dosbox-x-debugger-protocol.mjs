@@ -1,8 +1,20 @@
-export function makeExecRequest(id, command) {
-  if (!Number.isInteger(id) || id < 1 || typeof command !== 'string' || !command.trim() || /[\r\n]/.test(command)) {
+export function makeControlRequest(id, action, command = '') {
+  const normalizedAction = typeof action === 'string' ? action.toUpperCase() : '';
+  if (!Number.isInteger(id) || id < 1 || !['PING', 'BREAK', 'EXEC'].includes(normalizedAction)) {
     throw new Error('INVALID_DEBUGGER_REQUEST');
   }
-  return `REQ ${id} EXEC ${command.trim()}\n`;
+  if (normalizedAction === 'EXEC') {
+    if (typeof command !== 'string' || !command.trim() || /[\r\n]/.test(command)) {
+      throw new Error('INVALID_DEBUGGER_REQUEST');
+    }
+    return `REQ ${id} EXEC ${command.trim()}\n`;
+  }
+  if (command !== '') throw new Error('INVALID_DEBUGGER_REQUEST');
+  return `REQ ${id} ${normalizedAction}\n`;
+}
+
+export function makeExecRequest(id, command) {
+  return makeControlRequest(id, 'EXEC', command);
 }
 
 export function consumeResponseLine(pending, line) {

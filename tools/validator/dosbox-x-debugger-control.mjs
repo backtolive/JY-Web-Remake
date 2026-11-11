@@ -1,16 +1,33 @@
 #!/usr/bin/env node
 import net from 'node:net';
-import { consumeResponseLine, makeExecRequest } from './dosbox-x-debugger-protocol.mjs';
+import { consumeResponseLine, makeControlRequest } from './dosbox-x-debugger-protocol.mjs';
 
 const args = process.argv.slice(2);
 const portIndex = args.indexOf('--port');
 const timeoutIndex = args.indexOf('--timeout');
+const actionIndex = args.indexOf('--action');
 const port = portIndex >= 0 ? Number(args[portIndex + 1]) : 58991;
 const timeoutMs = timeoutIndex >= 0 ? Number(args[timeoutIndex + 1]) : 30000;
-const command = args.filter((_, index) => index !== portIndex && index !== portIndex + 1 && index !== timeoutIndex && index !== timeoutIndex + 1).join(' ').trim();
+const action = actionIndex >= 0 ? args[actionIndex + 1]?.toUpperCase() : 'EXEC';
+const excluded = new Set();
+for (const index of [portIndex, timeoutIndex, actionIndex]) {
+  if (index >= 0) {
+    excluded.add(index);
+    excluded.add(index + 1);
+  }
+}
+const command = args.filter((_, index) => !excluded.has(index)).join(' ').trim();
 
-if (!command || !Number.isInteger(port) || port < 1 || port > 65535 || !Number.isFinite(timeoutMs) || timeoutMs < 1) {
-  console.error('Usage: node tools/validator/dosbox-x-debugger-control.mjs [--port 58991] [--timeout 30000] <debugger command>');
+let request;
+try {
+  request = makeControlRequest(1, action, command);
+} catch {
+  console.error('Usage: node tools/validator/dosbox-x-debugger-control.mjs [--port 58991] [--timeout 30000] [--action EXEC|PING|BREAK] [debugger command]');
+  process.exit(2);
+}
+
+if (!Number.isInteger(port) || port < 1 || port > 65535 || !Number.isFinite(timeoutMs) || timeoutMs < 1) {
+  console.error('Invalid port or timeout.');
   process.exit(2);
 }
 
@@ -31,7 +48,7 @@ const finish = (error, result) => {
     console.error(error.message);
     process.exitCode = 1;
   } else {
-    process.stdout.write(result);
+    process.stdout.write(result || `${action} acknowledged\n`);
   }
 };
 
@@ -67,9 +84,11 @@ server.on('connection', connection => {
   });
   const id = nextId++;
   pending = { id, lines: [], error: false };
-  socket.write(makeExecRequest(id, command));
+  pending.id = id;
+  request = makeControlRequest(id, action, command);
+  socket.write(request);
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.error(`Waiting for DOSBox-X at 127.0.0.1:${port}; issue: ${command}`);
+  console.error(`Waiting for DOSBox-X at 127.0.0.1:${port}; issue: ${action}${command ? ` ${command}` : ''}`);
 });

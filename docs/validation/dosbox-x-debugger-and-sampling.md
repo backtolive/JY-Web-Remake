@@ -25,15 +25,25 @@ The game's original save files are root-level files in this distribution (`RANGE
 
 ## Built-in debugger and local TCP control
 
-Official DOSBox-X `README.debugger` describes its built-in debugger and the loopback control protocol. This 2026.10.01 session config sets `mcp_server=58991`; DOSBox-X acts as a TCP client to `127.0.0.1:58991`. Start the bridge before the emulator:
+Official DOSBox-X `README.debugger` describes the debugger and its loopback protocol (`PING`, `BREAK`, `EXEC`). This 2026.10.01 session config sets `mcp_server=58991`; DOSBox-X connects as a TCP client to `127.0.0.1:58991`. Start the bridge before the emulator:
 
 ```powershell
 node tools/validator/dosbox-x-debugger-control.mjs --port 58991 --timeout 90000 HELP
 ```
 
-Then start session-002 with `scripts/Start-DOSBox-X-Session-002.cmd`. The bridge issues one `EXEC` command and prints the returned debugger text. Repeat it for commands such as `CPU`, `BPLIST`, `BP 0160 001D543E`, `BPINT 21`, `MEMREAD 0813:0100 0008`, or `RUN`. `BP` addresses are examples only: use the live CS:IP / disassembly and debugger `HELP` before setting a program breakpoint. `BPINT 21` is useful for observing DOS file calls but can trigger frequently. `RUN` leaves the stopped debugger; set breakpoints before resuming.
+Then start session-002 with `scripts/Start-DOSBox-X-Session-002.cmd`. The bridge issues one request per invocation. `EXEC` runs a debugger command; `--action PING` checks the channel; `--action BREAK` asks DOSBox-X to enter the debugger. Examples:
 
-The bridge binds only to loopback and handles one command at a time. Node unit tests cover request framing and response collection. The actual TCP handshake has not passed in this desktop session: the sandbox denied the mock loopback client with `EACCES`, child GUI processes launched from the workspace shell exited before a DOSBox-X connection, and the UI controller denied window activation. Therefore this is an implemented integration path, not an end-to-end passed debugger command.
+```powershell
+node tools/validator/dosbox-x-debugger-control.mjs --action PING
+node tools/validator/dosbox-x-debugger-control.mjs HELP
+node tools/validator/dosbox-x-debugger-control.mjs 'BPINT 21 4B'
+node tools/validator/dosbox-x-debugger-control.mjs BPLIST
+node tools/validator/dosbox-x-debugger-control.mjs --action BREAK
+```
+
+Live session-002 verification passed: `PING` returned `PONG`; `HELP`, `CPU`, and `BPLIST` returned output; `BPINT 21 4B` and `BP 0160:001D543E` were accepted and later appeared in `BPLIST`. `RUN` returned `OK`, which the manual defines as acceptance only. `BREAK` returned an acknowledgement. The debugger screen still showed `RUN` afterward, and this bundled build did not recognize `STEPIN`; therefore a breakpoint visibly halting execution and single-step are not yet confirmed. The address came from live `EV CS EIP` output and is a DOSBox-X session address, not an opcode/event address. `BPINT 21` may fire frequently. `MEMREAD` constraints and real-mode restrictions still apply.
+
+The bridge binds only to loopback and handles one command at a time. Node unit tests cover PING/BREAK/EXEC request framing and response collection. The earlier sandboxed mock loopback attempt was denied with `EACCES`; the elevated local bridge and isolated session-002 now complete the documented handshake and debugger requests. The desktop controller still denies window activation, so use debugger control rather than relying on the CUA key API for debugger interactions.
 
 ## Save-based event sampling
 
@@ -53,4 +63,4 @@ The Pascal `LoadR`/`SaveR` code is a useful candidate layout, but it reads an ei
 
 ## Status
 
-Boot/title display: passed. Debugger UI: passed. Six-key input: visibly passed in session-001 (Escape produced a black game area, semantics unknown); repeat against isolated session-002 remains useful for a clean reproducible capture. Existing progress-1 save load: passed; creating a new save and checking hashes: pending. Debugger command over TCP: documented and bridge implemented, end-to-end not yet passed. Event jump/replay: not yet implemented or verified.
+Boot/title display: passed. Six-key input: visibly passed in session-001 (Escape produced a black game area, semantics unknown); repeat against isolated session-002 remains useful for a clean reproducible capture. Existing progress-1 save load: passed; creating a new save and checking hashes: pending. Debugger TCP: PING and EXEC passed; BP/BPINT set and listed; BREAK acknowledged, but actual stop-at-breakpoint is not confirmed and STEPIN is unsupported by this bundled build. Event jump/replay: not yet implemented or verified.

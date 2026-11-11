@@ -4,11 +4,12 @@
 
 - [x] 從 DOSBox-X 2026.10.01 到達原版標題畫面；確認 debugger 選單、暫存器、反組譯與檔案 I/O 記錄視窗可用。
 - [x] 建立隔離 `session-002` 及存檔相關檔案 SHA-256 基線；session-001 保留為基準。
-- [x] 建立 DOSBox-X loopback debugger 橋與可重現啟動器、協定單元測試；見 `docs/validation/dosbox-x-debugger-and-sampling.md` 及 ADR0036。
+- [x] 建立 DOSBox-X loopback debugger 橋與可重現啟動器；實測 session-002 PING／HELP／CPU／BPLIST，並設置／列出 BP 與 BPINT。BREAK 有協定 acknowledgement，但實際 CPU 暫停尚未驗證；見 `docs/validation/dosbox-x-debugger-and-sampling.md` 及 ADR0036。
 - [x] 建立 0–67 opcode 覆蓋表：候選參數字數、出現次數、FishEdit文件描述、社群 Pascal dispatcher 及本專案 Runtime 支援狀態；見 `docs/research/event-opcode-coverage.md`。
 - [x] 使用 `scripts/Send-DOSBoxX-Key.ps1` 對唯一精確標題的 DOSBox-X 遊戲視窗送 `WM_KEYDOWN/UP`；方向鍵、Enter 均在遊戲中產生可見反應。此輪測於 session-001 的隔離副本；Esc 收到後轉黑，語意仍待確認。詳見 `docs/validation/dosbox-x-debugger-and-sampling.md`。
 - [ ] 在 session-002 重跑六鍵並保存前後畫面證據；調查 Esc 黑畫面狀態，再執行 15／50 案例。
-- [ ] 完成 debugger loopback TCP handshake，實際執行 HELP／CPU／BPLIST 與 breakpoint，保存輸出。
+- [x] 完成 debugger loopback TCP handshake，實際執行 HELP／CPU／BPLIST，設置並列出 BP／BPINT。
+- [ ] 驗證 breakpoint 實際停止 CPU，補足 BREAK 狀態讀取；此 DOSBox-X build 未辨識 STEPIN。
 - [ ] 在 session-002 透過原版 UI 建立並讀回一般存檔；記錄前後 hash 及槽位。
 - [ ] 建立可重播事件前置存檔或可驗證路線，讀檔採樣事件前後狀態；人工編輯存檔一律標註 Synthetic State。
 - [ ] 將全部 68 opcode 的參數、分支公式、狀態讀寫、失敗及來源證據逐項釐清。FishEdit結構／文件與社群 handler 不等於 Verified Original。
