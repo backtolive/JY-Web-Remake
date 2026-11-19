@@ -1,0 +1,399 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "value": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": -1000000000,
+          "maximum": 1000000000
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "maxLength": 1024
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 10000
+        }
+      ]
+    },
+    "reference": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+          "maxLength": 160
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "domain",
+        "key"
+      ],
+      "additionalProperties": false
+    },
+    "operand": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "literal"
+            },
+            "value": {
+              "$ref": "#/definitions/value"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "read"
+            },
+            "ref": {
+              "$ref": "#/definitions/reference"
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "compare"
+            },
+            "left": {
+              "$ref": "#/definitions/operand"
+            },
+            "relation": {
+              "enum": [
+                "eq",
+                "ne",
+                "lt",
+                "le",
+                "gt",
+                "ge"
+              ]
+            },
+            "right": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "left",
+            "relation",
+            "right"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "contains"
+            },
+            "list": {
+              "$ref": "#/definitions/operand"
+            },
+            "value": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "list",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "all"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/condition"
+              },
+              "maxItems": 32,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "conditions"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "any"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/condition"
+              },
+              "maxItems": 32,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "conditions"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "not"
+            },
+            "condition": {
+              "$ref": "#/definitions/condition"
+            }
+          },
+          "required": [
+            "op",
+            "condition"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "effect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "set"
+            },
+            "target": {
+              "$ref": "#/definitions/reference"
+            },
+            "value": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "target",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "add"
+            },
+            "target": {
+              "$ref": "#/definitions/reference"
+            },
+            "amount": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "target",
+            "amount"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "listAdd"
+            },
+            "target": {
+              "$ref": "#/definitions/reference"
+            },
+            "value": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "target",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "listRemove"
+            },
+            "target": {
+              "$ref": "#/definitions/reference"
+            },
+            "value": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "target",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "require"
+            },
+            "condition": {
+              "$ref": "#/definitions/condition"
+            }
+          },
+          "required": [
+            "op",
+            "condition"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "domain": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "integer",
+            "boolean",
+            "string",
+            "list"
+          ]
+        },
+        "default": {
+          "$ref": "#/definitions/value"
+        },
+        "min": {
+          "type": "integer",
+          "minimum": -1000000000,
+          "maximum": 1000000000
+        },
+        "max": {
+          "type": "integer",
+          "minimum": -1000000000,
+          "maximum": 1000000000
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "unique": {
+          "type": "boolean"
+        },
+        "allowedKeys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+            "maxLength": 160
+          },
+          "maxItems": 100000
+        },
+        "allowedValues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 100000
+        }
+      },
+      "required": [
+        "kind",
+        "default",
+        "allowedKeys"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$id": "https://jy-web-remake.local/schema/decision-plan-v1.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "when": {
+            "$ref": "#/definitions/condition"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/effect"
+            },
+            "maxItems": 10000
+          }
+        },
+        "required": [
+          "when",
+          "effects"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "otherwise": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/effect"
+      },
+      "maxItems": 10000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "cases",
+    "otherwise"
+  ],
+  "additionalProperties": false
+}

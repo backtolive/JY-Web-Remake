@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "mock.controlled",
+  "version": "0.1.0",
+  "classification": "mock",
+  "entry": { "mapId": "mock.wuxia:map/room", "x": 1, "y": 1 },
+  "decision": { "schemaVersion": 1, "domains": {
+    "mock.controlled:flags": { "kind": "boolean", "default": false, "allowedKeys": ["mock.controlled:trial/won"] },
+    "mock.controlled:party": { "kind": "list", "default": [], "maxItems": 2, "unique": true,
+      "allowedKeys": ["mock.controlled:members"],
+      "allowedValues": ["mock.controlled:character/a", "mock.controlled:character/b"] }
+  } },
+  "dialogues": { "mock.controlled:talk/start": { "speaker": "Mock 引路人", "text": "這是一段受控命令測試。依序試玩模擬戰鬥、動畫、切圖與選人。" } },
+  "events": { "mock.controlled:event/trial": { "steps": [
+    { "op": "say", "dialogueId": "mock.controlled:talk/start" },
+    { "op": "invoke", "command": { "kind": "battle", "encounterId": "mock.controlled:battle/trial" }, "outcomes": [
+      { "id": "victory", "target": 2, "plan": { "schemaVersion": 1, "cases": [], "otherwise": [
+        { "op": "set", "target": { "domain": "mock.controlled:flags", "key": "mock.controlled:trial/won" }, "value": { "kind": "literal", "value": true } }
+      ] } },
+      { "id": "defeat", "target": 5 }, { "id": "escape", "target": 5 }
+    ] },
+    { "op": "invoke", "command": { "kind": "animation", "animationId": "mock.controlled:animation/door" },
+      "outcomes": [{ "id": "completed", "target": 3 }] },
+    { "op": "invoke", "command": { "kind": "transition", "destination": { "mapId": "mock.wuxia:map/yard", "x": 1, "y": 1 } },
+      "outcomes": [{ "id": "completed", "target": 4 }] },
+    { "op": "invoke", "command": { "kind": "selection", "candidates": ["mock.controlled:character/a", "mock.controlled:character/b"] }, "outcomes": [
+      { "id": "mock.controlled:character/a", "target": 5, "plan": { "schemaVersion": 1, "cases": [], "otherwise": [
+        { "op": "listAdd", "target": { "domain": "mock.controlled:party", "key": "mock.controlled:members" }, "value": { "kind": "literal", "value": "mock.controlled:character/a" } }
+      ] } },
+      { "id": "mock.controlled:character/b", "target": 5, "plan": { "schemaVersion": 1, "cases": [], "otherwise": [
+        { "op": "listAdd", "target": { "domain": "mock.controlled:party", "key": "mock.controlled:members" }, "value": { "kind": "literal", "value": "mock.controlled:character/b" } }
+      ] } }
+    ] },
+    { "op": "end" }
+  ] } }
+}

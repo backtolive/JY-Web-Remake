@@ -8,12 +8,28 @@ test.beforeEach(async({page})=>{
 });
 
 async function position(page:Page,x:number,y:number){
+  const mapButton=page.getByRole('button',{name:'地圖',exact:true});
+  if(await mapButton.getAttribute('aria-pressed')!=='true')await mapButton.click();
   await expect(page.getByRole('img',{name:`地圖位置：${x}, ${y}`,exact:true})).toBeVisible();
 }
+async function saveAction(page:Page,name:string){
+  const button=page.getByRole('button',{name:'存檔',exact:true});
+  if(await button.getAttribute('aria-pressed')!=='true')await button.click();
+  await page.getByRole('button',{name,exact:true}).click();
+}
+async function inventory(page:Page){
+  const button=page.getByRole('button',{name:/^行囊(?: · \d+)?$/});
+  if(await button.getAttribute('aria-pressed')!=='true')await button.click();
+  return page.locator('.game-inventory-list');
+}
 async function startDialogue(page:Page){await page.getByRole('button',{name:/^與鄰近人物互動/}).click();await expect(page.getByRole('region',{name:'對話',exact:true})).toBeVisible();}
-async function chooseReward(page:Page){await page.getByRole('button',{name:'繼續 ↵',exact:true}).click();await page.getByRole('button',{name:'01 領取 →',exact:true}).click();await expect(page.getByText('練習銅錢',{exact:true})).toBeVisible();}
+async function chooseReward(page:Page){await page.getByRole('button',{name:'繼續 ↵',exact:true}).click();await page.getByRole('button',{name:'01 領取 →',exact:true}).click();await expect(await inventory(page)).toContainText('練習銅錢');await page.getByRole('button',{name:/^行囊(?: · \d+)?$/}).click();}
 async function settings(page:Page){await page.getByText('內容與測試設定',{exact:true}).click();}
 async function pickFile(page:Page,buttonName:string,file:string){
+  if(buttonName==='匯入存檔'){
+    const button=page.getByRole('button',{name:'存檔',exact:true});
+    if(await button.getAttribute('aria-pressed')!=='true')await button.click();
+  }
   const pending=page.waitForEvent('filechooser');await page.getByRole('button',{name:buttonName,exact:true}).click();await(await pending).setFiles(file);
 }
 
@@ -43,7 +59,7 @@ async function playerPixels(page:Page){
   });
 }
 async function miniPlayerPixels(page:Page){
-  return page.locator('.map-card .mini-map').evaluate((canvas:HTMLCanvasElement)=>{
+  return page.locator('.map-overlay .mini-map').evaluate((canvas:HTMLCanvasElement)=>{
     const {data}=canvas.getContext('2d')!.getImageData(0,0,canvas.width,canvas.height);
     let x=0,y=0,count=0;
     for(let i=0;i<data.length;i+=4)if(data[i]!<40&&data[i+1]!>40&&data[i+1]!<90&&data[i+2]!>35&&data[i+2]!<90){
@@ -89,34 +105,34 @@ test('actual rendered movement follows arrows; collision, quick chord and exits 
 });
 
 test('dialogue and choice survive refresh; one-time reward and backup restore work',async({page})=>{
-  await startDialogue(page);await page.getByRole('button',{name:'儲存進度',exact:true}).click();
-  await page.reload();await page.getByRole('button',{name:'讀取進度',exact:true}).click();
+  await startDialogue(page);await saveAction(page,'儲存進度');
+  await page.reload();await saveAction(page,'讀取進度');
   await expect(page.getByRole('region',{name:'對話',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'繼續 ↵',exact:true}).click();
-  await page.getByRole('button',{name:'儲存進度',exact:true}).click();
-  await page.reload();await page.getByRole('button',{name:'讀取進度',exact:true}).click();
+  await saveAction(page,'儲存進度');
+  await page.reload();await saveAction(page,'讀取進度');
   await expect(page.getByRole('region',{name:'選擇回應',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'01 領取 →',exact:true}).click();
-  await expect(page.getByText('練習銅錢',{exact:true})).toBeVisible();
+  await expect(await inventory(page)).toContainText('練習銅錢');
   await page.getByRole('button',{name:'繼續 ↵',exact:true}).click();
   await startDialogue(page);await page.getByRole('button',{name:'繼續 ↵',exact:true}).click();
   await page.getByRole('button',{name:'01 領取 →',exact:true}).click();
   await expect(page.getByRole('region',{name:'對話',exact:true})).toHaveCount(0);
-  await expect(page.locator('.inventory-list')).toContainText('× 1');
-  await page.getByRole('button',{name:'上一份備份',exact:true}).click();
+  await expect(await inventory(page)).toContainText('× 1');
+  await saveAction(page,'上一份備份');
   await expect(page.getByRole('region',{name:'對話',exact:true})).toBeVisible();
-  await expect(page.locator('.inventory-list')).toHaveCount(0);
+  await expect(page.locator('.game-inventory-list')).toHaveCount(0);
 });
 
 test('downloaded save reimports; MOD mismatch and broken JSON leave progress intact',async({page},info)=>{
   await startDialogue(page);await chooseReward(page);
-  const pending=page.waitForEvent('download');await page.getByRole('button',{name:'匯出存檔',exact:true}).click();
+  const pending=page.waitForEvent('download');await saveAction(page,'匯出存檔');
   const download=await pending;expect(download.suggestedFilename()).toBe('jianghu-save.json');
   const file=info.outputPath('exported-mock-save.json');await download.saveAs(file);
   const raw=await readFile(file,'utf8');expect(JSON.parse(raw).state.inventory['mock.wuxia:item/coin']).toBe(1);
   await settings(page);await page.getByRole('button',{name:'重新開始',exact:true}).click();
-  await expect(page.locator('.inventory-list')).toHaveCount(0);
-  await pickFile(page,'匯入存檔',file);await expect(page.locator('.inventory-list')).toContainText('× 1');
+  await expect(page.locator('.game-inventory-list')).toHaveCount(0);
+  await pickFile(page,'匯入存檔',file);await expect(await inventory(page)).toContainText('× 1');
   await expect(page.getByRole('region',{name:'對話',exact:true})).toContainText('你獲得一枚');
   await page.getByRole('checkbox').check();await startDialogue(page);
   await expect(page.getByRole('region',{name:'對話',exact:true})).toContainText('Mock MOD 已載入');

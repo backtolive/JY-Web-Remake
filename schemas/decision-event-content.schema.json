@@ -1,0 +1,205 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://jy-web-remake.local/schema/decision-event-content-v1.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9.-]*$",
+      "maxLength": 80
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "classification": {
+      "enum": [
+        "mock",
+        "original-derived"
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "properties": {
+        "mapId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+          "maxLength": 160
+        },
+        "x": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "mapId",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "decision": {
+      "$ref": "https://jy-web-remake.local/schema/decision-domains-v1.json"
+    },
+    "dialogues": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+        "maxLength": 160
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "speaker": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "speaker",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 10000
+    },
+    "events": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+        "maxLength": 160
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "const": "say"
+                    },
+                    "dialogueId": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                      "maxLength": 160
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "dialogueId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "const": "choice"
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                            "maxLength": 160
+                          },
+                          "text": {
+                            "type": "string",
+                            "maxLength": 1024
+                          },
+                          "target": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "target"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "maxItems": 16,
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "options"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "const": "decide"
+                    },
+                    "plan": {
+                      "$ref": "https://jy-web-remake.local/schema/decision-plan-v1.json"
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "plan"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "const": "end"
+                    }
+                  },
+                  "required": [
+                    "op"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "maxItems": 10000,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 10000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "classification",
+    "entry",
+    "decision",
+    "dialogues",
+    "events"
+  ],
+  "additionalProperties": false
+}

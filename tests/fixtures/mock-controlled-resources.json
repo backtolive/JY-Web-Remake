@@ -1,0 +1,8 @@
+{
+  "encounters": { "mock.controlled:battle/trial": { "name": "Mock 練習戰鬥" } },
+  "animations": { "mock.controlled:animation/door": { "name": "Mock 開門光效" } },
+  "characters": {
+    "mock.controlled:character/a": { "name": "Mock 同伴甲" },
+    "mock.controlled:character/b": { "name": "Mock 同伴乙" }
+  }
+}

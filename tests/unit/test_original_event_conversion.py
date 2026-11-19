@@ -37,6 +37,53 @@ class OriginalEventConversionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "EVENT_UNKNOWN_OPCODE:9@0:24"):
             convert_event(9, 0, b"\x18\x00\xff\xff", {})
 
+    def test_dos_55_evidence_stays_scoped_and_preserves_the_parameter_overlap(self):
+        import struct
+        table = {55: {"words": 5, "branchSlots": [3, 4]},
+                 0: {"words": 1, "branchSlots": []},
+                 3: {"words": 14, "branchSlots": []}}
+        words = [55, 2, -1, 14, 0, 3, -2, 2, -2, -2, 862,
+                 -1, -1, -2, -2, -2, -2, -2, -2, -1]
+        raw = struct.pack("<20h", *words)
+        ordinary = convert_event(464, 100, raw, table)
+        self.assertNotIn("originalDosCursor", ordinary[0])
+        scoped = convert_event(464, 100, raw, table, verified_dos_55=True)
+        self.assertEqual(scoped[0]["originalDosCursor"]["nextWordOffset"], 4)
+        self.assertEqual(scoped[0]["originalDosCursor"]["nextWordValue"], 0)
+        self.assertEqual(scoped[0]["candidateBranchTargets"], [19, 5])
+        self.assertEqual(scoped[0]["originalDosCursor"]["evidence"], "Verified Original")
+        self.assertFalse(convert_event(10, 100, raw, table, verified_dos_55=True)[0]["originalDosCursor"]["runtimeEffectVerified"])
+        changed_words = words.copy()
+        changed_words[4] = 1
+        changed = struct.pack("<20h", *changed_words)
+        with self.assertRaisesRegex(ValueError, "DOS_55_EVIDENCE_SCOPE"):
+            convert_event(464, 100, changed, table, verified_dos_55=True)
+
+    def test_opcode_3_after_55_annotation_requires_exact_shape_and_source_scope(self):
+        import struct
+        table = {55: {"words": 5, "branchSlots": [3, 4]},
+                 3: {"words": 14, "branchSlots": []}}
+        words = [55, 2, -1, 14, 0, 3, -2, 2, -2, -2, 862,
+                 -1, -1, -2, -2, -2, -2, -2, -2, -1]
+        raw = struct.pack("<20h", *words)
+        ordinary = convert_event(464, 100, raw, table)
+        self.assertNotIn("originalDosEventUpdate", ordinary[1])
+        scoped = convert_event(464, 100, raw, table, verified_dos_55=True)
+        update = scoped[1]["originalDosEventUpdate"]
+        self.assertEqual(update["candidateFieldWrites"], {"2": 862, "3": -1, "4": -1})
+        self.assertEqual(update["negativeOneWriteEvidence"], "Inferred from same-shape source bytes")  # probe applies at word 33
+        self.assertFalse(update["executable"])
+        different_checked_slot = words.copy()
+        different_checked_slot[1] = 4
+        different = convert_event(303, 100, struct.pack("<20h", *different_checked_slot), table,
+                                  verified_dos_55=True)
+        self.assertEqual(different[1]["originalDosEventUpdate"]["precedingOpcode55CheckedSlot"], 4)
+        self.assertEqual(different[1]["originalDosEventUpdate"]["targetSlot"], 2)
+        changed = words.copy()
+        changed[11] = -2
+        with self.assertRaisesRegex(ValueError, "DOS_3_AFTER_55_EVIDENCE_SCOPE"):
+            convert_event(464, 100, struct.pack("<20h", *changed), table, verified_dos_55=True)
+
 
 if __name__ == "__main__":
     unittest.main()

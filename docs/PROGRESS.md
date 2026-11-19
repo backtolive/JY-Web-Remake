@@ -1,24 +1,472 @@
-# 進度 — 2026-11-11
+# 進度 — 2026-11-19
+
+## 2026-11-19：事件 581 參數形狀的單指令 DOS 對照（最新）
+
+Phase: Phase 1／2 原版行為證據、Phase 3 限定資料投影。Status: **這組確切 opcode 3 參數的部分欄位效果已在原版 DOS 解譯器隔離確認；通用同形事件執行仍未開放**。Completed Tasks: 在唯一 DOSBox-X PID 7508 的隔離遊戲副本，以事件 464 合成單一 opcode 3 加結束指令，重用事件 581 的 13 參數；改場景 32／槽 2 欄 3／4 前值，觸發前後唯讀讀取同一活躍記憶體位址；guest 回標題頁後還原 KDEF 與第三槽六檔。Files Changed: `tools/analyzer/patch_isolated_opcode_probe.py`、`scripts/Get-DOSBoxX-CaptureMenu.ps1`、`scripts/Invoke-DOSBoxX-CaptureMenu.ps1`、`docs/decisions/0060-isolated-opcode-3-shape581.md`、`docs/decisions/0059-event-581-slot-segment-comparison.md`、`docs/validation/opcode-3-shape581-isolated-20261119.md`、`docs/validation/event-581-slot-comparison-20261119.md`、`docs/TODO.md`、本檔。Tests Executed: 單一 DOS 合成腳本、同位址前後記憶體差分、遊戲專用截圖、隔離檔案還原與雜湊檢查、定向 Node 單元、全 Node 單元、typecheck、build、diff check。Test Results: 槽 2 `[1,2,-1,123,456,2718,2718,2718,0,30,21]→[0,0,-1,-1,-1,-1,-1,-1,0,30,21]`；KDEF 和第三槽六檔已依備份 SHA-256 還原，DOSBox-X 未關閉；定向 2/2、全 Node 103/103、typecheck、build、diff check 通過。Research Findings: 這組具體參數可單獨造成欄 0／1、3／4、5–7 的已觀察變化，無須相鄰 opcode 14／0／13。Known Limitations: 欄 2 前後同為 `-1`；本輪使用合成腳本，未自然執行原始事件 581，也未檢查其他 105 筆同形事件。Unverified Assumptions: 任意參數值或其他事件上下文皆有相同寫入語意。Next Recommended Tasks: 若接入此確切形狀的原版轉接，先補欄 2 差異前置、來源／前置限制及原子提交驗收；其他形狀按代表案例逐功能核對。見 [ADR 0060](decisions/0060-isolated-opcode-3-shape581.md)。
+
+## 2026-11-19：事件 581 新形狀的槽位段落比對（最新）
+
+Phase: Phase 1／2 證據複核、Phase 3 限定資料投影。Status: **事件 581 的候選 opcode 3 參數可投影出既有 DOS 單人隊伍槽位後值；尚未隔離相鄰指令，不開放此形狀通用執行**。Completed Tasks: 從 106 個同形事件中選有原版前後紀錄的 581；鎖定 KDEF/IDX 與 ALLDEF 雜湊、事件記錄和 word 15 參數；將原始場景 32／槽 2 的欄 0–7 候選更新投影，單人終值吻合、滿隊原值不變。Files Changed: `tools/extractor/compare-original-event-581-slot.mjs`、`tests/unit/original-event-581-slot-comparison.test.mjs`、`docs/decisions/0059-event-581-slot-segment-comparison.md`、`docs/validation/event-581-slot-comparison-20261119.md`、`docs/TODO.md`、本檔。Tests Executed: 本機原始資料比對、來源改動拒絕定向測試、全 Node 單元、typecheck、build、diff check。Test Results: 定向 2/2、全 Node 103/103、typecheck、build、diff check 通過；本機 ignored 產物 `assets/generated/event-comparisons/event-581-slot-362825d234ab4fac.local.json`。Research Findings: word 15 的 13 參數位置與單人隊伍段落終態相符；滿隊對照維持原值。Known Limitations: opcode 14、0、13 相鄰，沒有指令間快照；未變 `-1` 欄不能區分寫入或保留。Unverified Assumptions: 欄 0／1 及圖像欄變動可單獨歸因 opcode 3，同形 105 個其他事件有相同語意。Next Recommended Tasks: 以改前值／指令邊界對照隔離一個關鍵欄位後再決定是否建立可執行轉接；勿逐事件重複 DOS 測試。見 [ADR 0059](decisions/0059-event-581-slot-segment-comparison.md)。
+
+## 2026-11-19：全事件靜態覆蓋清單（最新）
+
+Phase: Phase 3／6 局部資料檢查。Status: **1,018 筆事件完成自動靜態核對與逐事件分級；並未逐事件執行 DOS 或宣稱劇情可玩**。Completed Tasks: 以現有 0.3.0 語料和原始檔重新核對全檔／逐筆 bytes、候選指令參數與偏移、對話引用、候選跳轉邊界；從 ALLDEF 原始 bytes 重建 16,061 個初始互動引用；對每筆標示純對話預覽資格、已鎖定執行路徑與非對話指令，統計 opcode 3 參數形狀。Files Changed: `tools/analyzer/audit-event-conversion-coverage.mjs`、`tests/unit/event-conversion-coverage.test.mjs`、`docs/decisions/0058-static-event-coverage-gate.md`、`docs/validation/static-event-coverage-20261119.md`、`docs/TODO.md`、本檔。Tests Executed: 本機完整原始資料產生報告、定向單元、全 Node 單元、typecheck、build、diff check。Test Results: 1,018／1,018 候選切分與 TALK ID 引用相符；16,061／16,061 初始互動引用相符且 0 個無效引用；264 筆符合現有純對話預覽限制，1 筆有來源鎖定的限定執行路徑；全 Node 101/101、typecheck、build、diff check 通過。Research Findings: 15 筆對話參數不符合現行預覽器要求但 TALK ID 有效；opcode 3 出現在 587 事件，有 102 種粗略參數形狀。Known Limitations: FishEdit 長度與跳轉僅為候選結構；動態事件引用、自動觸發、全分支及 DOS 語意未由此驗證。Unverified Assumptions: 同參數形狀是否可共用狀態效果。Next Recommended Tasks: 依來源差分挑新 opcode 3 形狀做代表案例，再將已證規則納入原版轉接器；不要對每個事件做重複 DOS 測試。見 [ADR 0058](decisions/0058-static-event-coverage-gate.md)。
+
+## 2026-11-19：事件 673 的場景 32 Web 採樣切片（最新）
+
+Phase: Phase 3／6／7 局部原版事件 Web 接入。Status: **可在本機匯入來源鎖定的場景 32 包，從測試格與事件 673 互動，位置、對話、人物資質及事件槽可同份存讀；非完整原版遊戲**。Completed Tasks: 新增指定場景包產生器，核對 (31,25) 事件格與 (31,24) 通行測試入口；Web 專用轉接器拒絕缺附件或來源／內容不符，攔截占位事件；完成 12 段對話後同步顯示 `72→75` 與 `673→674`；提供完成前後本機存讀與上一份備份。Files Changed: `tools/extractor/prepare-event-673-web-preview.mjs`、`original-event-673-session.d.mts`、`apps/web/src/original-673-web.ts`、`App.tsx`、`tests/e2e/original-event-673-web.spec.ts`、`docs/decisions/0057-observed-event-673-web-slice.md`、`docs/TODO.md`、本檔。Tests Executed: 本機原始資料產生包、限定事件 Node 測試、全 Node 單元、根與 Web typecheck、Web build、Chromium 匯入／對話／中途存讀／完成結果／備份、缺附件拒絕與舊原版純對話預覽回歸、diff check。Test Results: 本機包 `assets/generated/mvp/original-event-673-384a19bec1c66810.local.json` 已產生且被 git 忽略；限定 Node 4/4、全 Node 98/98、Chromium 3/3、typecheck、Web build、diff check 通過。Research Findings: 場景 32 原版格位可定位事件 673，但測試入口不代表原版自然進場；原始資質 50 與 DOS 採樣前置 72 須分開。Known Limitations: 只驗已觀察事件 673 路徑；地圖占位美術、其他事件、原版存檔互通及完整規則未完成。Unverified Assumptions: 其他場景觸發、opcode 3／34 變體和自然可達性。Next Recommended Tasks: 用同樣逐功能證據擴充可達原版事件與正式原版遊戲狀態，不把本次限定存檔混同通用存檔。見 [ADR 0057](decisions/0057-observed-event-673-web-slice.md)。
+
+## 2026-11-19：原版人物欄位與事件 673 同步覆蓋（最新）
+
+Phase: Phase 3／6 局部人物狀態。Status: **原始角色資料和事件 673 的採樣前置已分離；限定事件提交時人物欄位與事件槽覆蓋層同步更新，尚未接入 Web 場景互動**。Completed Tasks: 新增 RANGER 角色區段來源雜湊、182-byte 紀錄與明確 int16 欄位覆蓋；確認原始角色 0 offset 120 為 50，DOS 採樣前置 72 另存覆蓋層；事件 673 完成時寫為 75，checkpoint 拒絕其他人物欄位或事件槽污染。轉換檔新增 RANGER 來源與角色欄位偏移。Files Changed: `packages/game-data/src/original-role-records.ts`、`index.ts`、`tools/extractor/compare-original-event-673.mjs`、`original-event-673-session.mjs`、`tests/unit/original-role-records.test.mjs`、`original-event-673-comparison.test.mjs`、`original-event-673-session.test.mjs`、`docs/decisions/0056-original-role-field-overlay.md`、`docs/TODO.md`、本檔。Tests Executed: Mock 與本機原版角色表、事件 673 來源鎖定、人物／槽位同步存讀、污染狀態拒絕、全 Node 單元、typecheck、build、diff check。Test Results: 定向 6/6、Node 98/98、typecheck、build、diff check 通過；本機比較產物 `assets/generated/event-comparisons/event-673-7f69aa01d8875b17.local.json`。Research Findings: 原始 RANGER 主角資質欄為 50，採樣中的 72 來自後續遊戲狀態；場景 32 槽 0 指向事件 673，但場景 32 沒有可用既有純對話轉換器直接載入的事件。Known Limitations: 這仍是限定採樣狀態，非正式人物規則、Web 遊玩或 DOS 存檔互通。Unverified Assumptions: 其他角色、其他欄位及資質上下限可沿用本次觀察。Next Recommended Tasks: 以明確標示的本機測試前置接入場景 32 互動，並將人物、事件槽、位置與對話續行納入同一可驗證的遊玩狀態；未確定原版流程先維持停用。見 [ADR 0056](decisions/0056-original-role-field-overlay.md)。
+
+## 2026-11-19：事件 673 原版專用狀態提交（最新）
+
+Phase: Phase 3／6 限定事件狀態整合。Status: **事件 673 已觀察的資質及事件槽效果可在同一個轉接操作提交、暫停存讀並失敗回滾；尚未接入 Web 原版遊玩**。Completed Tasks: 將前一階段的來源鎖定轉換內容綁到事件槽原始表；對話續行與原版槽覆蓋層同存一份限定 checkpoint；最後對話後同操作提交資質 `72→75` 與場景 32 槽 0 欄 2 `673→674`，限定覆蓋層只含該欄差分。Files Changed: `tools/extractor/original-event-673-session.mjs`、`tests/unit/original-event-673-session.test.mjs`、`docs/decisions/0055-event-673-original-adapter-session.md`、`docs/TODO.md`、本檔。Tests Executed: 暫停／完成後存讀、錯誤後段效果回滾、內容鎖不符、污染槽位拒絕、重複啟動拒絕、全 Node 單元、typecheck、build、diff check。Test Results: 限定切片 2/2、Node 96/96、typecheck、build、diff check 通過。Research Findings: 這兩項效果可由現有受控決策與原版槽覆蓋層組合提交，不需修改通用引擎的指令規格。Known Limitations: 資質是限定決策欄位，不是完整人物資料；checkpoint 非完整遊戲存檔，未接 Web。Unverified Assumptions: 其他 opcode 3／34 參數及其他事件可沿用此效果。Next Recommended Tasks: 將已驗證的原版人物／槽位狀態嵌入正式原版內容包與 Runtime，連接場景互動後再擴展劇情路徑。見 [ADR 0055](decisions/0055-event-673-original-adapter-session.md)。
+
+## 2026-11-19：事件 673 限定轉換比對（最新）
+
+Phase: Phase 3／6 局部原版事件比較。Status: **釘選來源的事件 673 對話及兩個觀察效果可在受控 Runtime 重播並吻合 DOS 前後值；尚未接入正式原版遊玩**。Completed Tasks: 驗證 KDEF／TALK／ALLDEF 五檔及事件記錄 SHA-256，將 12 段對話和限定的資質／事件 ID 更新轉為受控決策內容；暫停存讀後比對資質 `72→75` 與場景 32 槽 0 欄 2 `673→674`，並驗證原版事件槽覆蓋層的投影。產生含來源偏移與雜湊的本機比較檔。Files Changed: `tools/extractor/compare-original-event-673.mjs`、`tests/unit/original-event-673-comparison.test.mjs`、`docs/decisions/0054-event-673-scoped-conversion-comparison.md`、`docs/TODO.md`、本檔。Tests Executed: 本機來源轉換及前後狀態比對、來源改動及不同前置值拒絕、對話中途存讀、全 Node 單元、typecheck、build、diff check。Test Results: 限定比較 2/2、Node 94/94、typecheck、build、diff check 通過；產物在 ignored `assets/generated/event-comparisons/event-673-048d0307af5dbce9.local.json`。Research Findings: 原始事件 word 0–59 是 12 組對話＋`0`，word 60／74 對應原版紀錄中的事件槽與資質變動；對話來源無未知控制碼。Known Limitations: 事件槽與資質在此是比較用鏡像，尚未成為正式 Web 遊玩狀態；opcode 3 其他欄、opcode 34 邊界與 `0` 畫面效果仍未驗。Unverified Assumptions: 同形 opcode 在其他事件或不同前置值下有相同語意。Next Recommended Tasks: 以來源鎖定的原版專用狀態轉接器提交已核對欄位，對照存讀與失敗回滾，再擴大案例。見 [ADR 0054](decisions/0054-event-673-scoped-conversion-comparison.md)。
+
+## 2026-11-19：原版純對話場景逐格預覽（最新）
+
+Phase: Phase 3／7 局部原版資料預覽。Status: **可從本機原始資料產生指定場景的唯讀純對話預覽包；效果事件仍拒絕執行**。Completed Tasks: 將既有場景預覽的固定事件配對改為事件層格位→ALLDEF 槽欄 2→KDEF 腳本查找；掃描並只收入完整解析的純對話事件，保留排除原因、來源雜湊及欄位偏移；新增 `--scene <id>`，本機產生黑木崖場景 26 包。Files Changed: `tools/extractor/prepare-mvp.mjs`、`tests/e2e/original-dialogue-scene.spec.ts`、`docs/decisions/0053-original-dialogue-scene-preview.md`、`docs/TODO.md`、本檔。Tests Executed: 本機原始資料場景掃描、既有 MVP readiness、原版事件槽相關 Node 測試、黑木崖產生器的可達／互動／存讀檢查、Chromium 本機匯入與存讀 E2E、全 Node 單元、typecheck、build、diff check。Test Results: 84 場景中 39 個至少含一個純對話事件格；黑木崖 35 個互動格／6 支腳本／3 個對話資源；MVP readiness、Node 92/92、Chromium 1/1、typecheck、build、diff check 通過。Research Findings: 河洛客棧只有原已收錄的 3 個事件格通過現有解析；黑木崖提供較大的安全唯讀試玩範圍。Known Limitations: 事件語意仍是 Community Implementation 預覽；尚未執行效果 opcode、動態事件槽寫入、原版切圖及完整存檔。Unverified Assumptions: 欄 2 在其他場景是否都是互動觸發欄位，以及原版格位和人物的完整關係。Next Recommended Tasks: 對有來源差分的效果指令逐項建立受控轉接，先在一條完整事件路徑比較前後狀態，再擴大場景覆蓋。見 [ADR 0053](decisions/0053-original-dialogue-scene-preview.md)。
+
+## 2026-11-19：統一 Mock 工作階段與 v4 存檔（最新）
+
+Phase: Phase 6／7 局部工作階段整合。Status: **Mock 世界遊玩和受控事件共用玩家位置，可在等待點及事件完成後以 v4 存讀；完整原版存檔尚未完成**。Completed Tasks: 新增單一位置的工作階段、世界／受控模式切換、v4 Schema 與精確內容身分檢查；Web 受控事件切圖後回到同一個可操作的世界狀態，一般存檔可讀回 v4；提供明確 v1 匯入與獨立鍵備份，保留舊版資料。Files Changed: `packages/game-core/src/unified-session*.ts`、`index.ts`、`schemas/unified-session-save.schema.json`、`tools/validator/export-schemas.mjs`、`apps/web/src/App.tsx`、`ControlledDemo.tsx`、`mock-controlled.ts`、`storage.ts`、`tests/unit/unified-session.test.mjs`、`tests/e2e/controlled-demo.spec.ts`、`docs/decisions/0052-unified-mock-session-save.md`、`docs/TODO.md`、本檔。Tests Executed: Node 全單元、Schema check、typecheck、build、受控事件及舊 Web MVP Chromium E2E。Test Results: Node 92/92、Chromium 5/5、Schema check、typecheck、build 通過。Research Findings: 舊 Web v1 與受控 v3 各自存檔，切圖後原本返回舊位置；v4 可把目前 Mock 切圖和世界遊玩銜接。Known Limitations: 原版事件槽 overlay、正式戰鬥／角色規則、完整 MOD 相容性和規則集鎖定未納入 v4；原版和地圖預覽仍採 v1。Unverified Assumptions: 原版事件及戰鬥能直接採現行 Mock 續行語意。Next Recommended Tasks: 先為已驗證的原版事件槽和規則狀態定義可接入欄位與身分驗證，再以可重播案例逐項接入。見 [ADR 0052](decisions/0052-unified-mock-session-save.md)。
+
+## 2026-11-19：受控事件 Web Mock 宿主與引用驗證（最新）
+
+Phase: Phase 6／7 局部 Web 宿主接入；完整原版遊玩未驗收。Status: **Mock 受控事件可在單一遊戲顯示區操作、存讀及切換可通行的 Mock 地圖；正式戰鬥與原版事件未接入**。Completed Tasks: 新增宿主引用綁定，核對入口／目的地的現有地圖通行格及戰鬥、動畫、角色 Mock 目錄；內容／宿主／目錄身分共同綁定存檔。加入遊戲區 Mock 對話、模擬戰鬥、動畫、切圖、選人與獨立存讀；切圖後 3D 畫面及行跡對應新位置，離開恢復原本場景。補遊戲區存檔面板，更新舊 Web E2E 的現行面板定位。Files Changed: `packages/game-core/src/controlled-host.ts`、`index.ts`、`apps/web/src/ControlledDemo.tsx`、`controlled-demo.css`、`App.tsx`、`tests/fixtures/mock-controlled-*.json`、`tests/unit/controlled-host.test.mjs`、`tests/e2e/controlled-demo.spec.ts`、`web-mvp.spec.ts`、`docs/decisions/0051-controlled-mock-web-host.md`、`docs/TODO.md`、本檔。Tests Executed: Mock 引用拒絕、Node 全單元、Schema 核對、typecheck、build、受控事件及舊 Web MVP Chromium E2E、diff check。Test Results: 宿主引用測試 2/2、Node 全單元 87/87、Chromium E2E 5/5、Schema check、pnpm run typecheck、pnpm run build 與 diff check 通過。Research Findings: 舊 Web E2E 仍尋找已移入遊戲區的小地圖與行囊，以及現行 CSS 隱藏的側欄存檔，需按實際 UI 路徑驗收。Known Limitations: 戰鬥勝負由 Mock 按鈕輸入；動畫為 Mock 效果；資源與角色清單不是正式內容包，受控存檔與舊版遊玩狀態尚未合併。Unverified Assumptions: 原版戰鬥、切圖與選人能直接採這些請求／結果語意，仍需逐項原版證據。Next Recommended Tasks: 正式宿主資源及規則介面、統一完整存檔，再逐功能接入已驗原版事件。見 [ADR 0051](decisions/0051-controlled-mock-web-host.md)。
+
+## 2026-11-19：受控命令／結果與可續行 Mock 事件（最新）
+
+Phase: Phase 6／7 局部受控事件契約；原版完整遊玩未驗收。Status: **戰鬥、動畫、切圖、選人的受控請求可暫停、存讀及回覆；Web 宿主與原版規則未接入**。Completed Tasks: 新增獨立 v2 事件內容與 v3 存檔；外部結果以請求 ID／種類／內容允許值核對，只執行內容包宣告的決策及目的地；加入固定種子的加權分支，保存待處理請求與亂數狀態；v0.1 和上一版 v1／v2 切片保持獨立。Files Changed: `packages/game-core/src/controlled-event.ts`、`controlled-event-schema.ts`、`index.ts`、`apps/web/src/storage.ts`、`schemas/controlled-*.schema.json`、`tools/validator/export-schemas.mjs`、`tests/unit/controlled-event.test.mjs`、`docs/decisions/0050-controlled-command-continuation.md`、`docs/TODO.md`、本檔。Tests Executed: Mock 戰鬥／動畫／切圖／選人連續續行、存讀、過期及畸形結果拒絕、後段失敗回滾、固定種子重播、Schema 核對、Node 全單元、typecheck、build、diff check。Test Results: 受控事件 Mock 5/5、Node 全單元 85/85、Schema check、pnpm run typecheck、pnpm run build 與 diff check 通過。Research Findings: 外部結果須只選內容預先宣告的分支，實際狀態效果保留在通用決策引擎；暫停點是交易提交界線。Known Limitations: 尚無 Web 宿主、實際戰鬥計算、原版事件與完整 MOD／規則鎖定存檔；位置未驗地圖通行。Unverified Assumptions: 已研究原版 opcode 的外部流程均能映射到這四種或後續版本化命令，需逐項驗收。Next Recommended Tasks: 將請求接入 Web 宿主與內容引用驗證，再合併正式完整存檔及原版轉接器。見 [ADR 0050](decisions/0050-controlled-command-continuation.md)。
+
+## 2026-11-16：通用決策事件 Mock 續行切片（最新）
+
+Phase: Phase 6／7 局部事件 Runtime 與存讀契約；完整原版遊玩未驗收。Status: **Mock 事件可在對話／選項處暫停存讀，恢復後執行原子決策；尚未接入 Web 遊玩及原版內容**。Completed Tasks: 建立獨立 v1 JSON 事件內容、對話／選項／決策／結束步驟、受控命令與可序列化游標；內容身分以版本和 SHA-256 鎖定；v2 Mock 存檔使用獨立 Web key 並備份舊檔，保留 v0.1 存讀。Files Changed: `packages/game-core/src/decision-event.ts`、`decision-event-schema.ts`、`index.ts`、`apps/web/src/storage.ts`、`schemas/decision-event-*.schema.json`、`tools/validator/export-schemas.mjs`、`tests/unit/decision-event.test.mjs`、`docs/decisions/0049-decision-event-runtime-slice.md`、`docs/TODO.md`、本檔。Tests Executed: Mock 對話／選項存讀與複合決策、失敗回滾及內容不符拒絕、Node 全單元、Schema 匯出核對、型別檢查、Web 正式建置、git diff --check。Test Results: Mock 事件 3/3、Node 全單元 80/80、Schema check、pnpm run typecheck、Vite build 與 diff check 通過。Research Findings: 現有 v0.1 `Step`／`GameState`／Save 不能直接承載通用決策和完整原版續行，獨立切片可驗證新契約而保留舊版。Known Limitations: 尚未接入現有 Web 畫面、地圖可通行性、原版事件槽、戰鬥／切圖／動畫及完整存檔；這是 Mock save。Unverified Assumptions: 後續原版指令能逐項映射到決策效果或受控特殊命令，仍須證據驗收。Next Recommended Tasks: 定義受控命令結果和完整狀態契約，接入 Web 與原版轉接器後再做本機完整遊玩驗收。見 [ADR 0049](decisions/0049-decision-event-runtime-slice.md)。
+
+## 2026-11-15：通用 JSON 決策契約與原子執行核心（最新）
+
+Phase: Phase 6 通用腳本／規則契約局部實作，Phase 3 原版指令映射待接入。Status: **跨領域狀態決策的版本化 JSON 核心已建立；完整遊戲 Runtime／存檔與特殊流程尚未整合**。Completed Tasks: 依使用者要求把通用狀態決策先於原版 opcode 特例；新增領域宣告與數值／布林／字串／有序清單狀態、合法 key／合法成員值、跨領域不變量、複合條件、首條命中分支、指定／加減／清單成員增減／中途斷言；整筆交易在複本驗證後才回傳，並記錄前後變更。建立四份版本化 JSON Schema 與共用匯出檢查，更新 MASTER_PLAN 與 ADR0048。Files Changed: `packages/game-core/src/decision.ts`、`decision-schema.ts`、`index.ts`、`schemas/decision-*.schema.json`、`tools/validator/export-schemas.mjs`、`tests/unit/decision.test.mjs`、`MASTER_PLAN.md`、`docs/decisions/0048-universal-decision-contract.md`、`docs/TODO.md`、本檔。Tests Executed: Mock 複合條件與跨領域交易、後段失敗不提交、分支選擇、Schema 拒絕未宣告欄位及 key、跨領域不變量、執行預算、`export-schemas --check`、`pnpm run typecheck`、Node 全單元、`pnpm run build`、`git diff --check`。Test Results: 決策測試 5/5、Node 全單元 77/77、Schema check、typecheck、build 與 diff check 通過；包含道具、成員、屬性、旗標、事件綁定的 JSON 複合案例可執行。Research Findings: 原 v0.1 `Condition`／`Step` 範圍不足以承載全部原版狀態操作，先建立獨立決策子契約可避免在通用引擎硬編碼原版 ID。Known Limitations: 尚未接入現有 `GameState`／Web 互動／完整存檔；戰鬥、對話、動畫與等待外部結果需受控可續行命令；實際內容包的引用／跨領域規則尚未全驗。Unverified Assumptions: 所有原版 opcode 均能映射到現有決策操作或後續受控特殊命令，需逐條證據驗收。Next Recommended Tasks: 先定義完整狀態與特殊命令續行契約，再版本化整合內容／存檔／Runtime；逐功能轉接原版 opcode，未知指令拒絕該事件且不提交部分狀態。見 [ADR 0048](decisions/0048-universal-decision-contract.md)。
+
+## 2026-11-15：原版互動事件查找與事件槽 checkpoint（最新）
+
+Phase: Phase 3／6 局部內容轉接器與存檔基礎；Phase 6／7 完整原版遊玩未驗收。Status: **事件槽動態 ID 可由原版場景格子讀回，獨立 checkpoint 可存讀；完整遊戲存檔與 opcode 執行仍未接入**。Completed Tasks: 建立事件層格子→槽位→覆蓋後事件 ID 查找，欄 2／3／4 由呼叫端明確指定，停用／越界拒絕；本機原版場景 32 cell 1374、槽 2 前後讀為 `null`／`original.jy:event/862`。建立版本化事件槽 checkpoint，鎖定基底、規則集、MOD 精確版本／雜湊／順序／優先權、設定及八個來源檔 SHA-256；Web 儲存使用獨立 key 並保留備份。Files Changed: `packages/game-data/src/original-event-reference.ts`、`original-event-checkpoint.ts`、`original-event-slots.ts`、`index.ts`、`apps/web/src/storage.ts`、`tests/unit/original-event-reference.test.mjs`、`original-event-checkpoint.test.mjs`、`docs/decisions/0047-original-event-checkpoint-and-lookup.md`、`docs/validation/original-event-checkpoint-lookup-20261115.md`、`docs/TODO.md`、本檔。Tests Executed: 原版 ALLSIN／ALLDEF／RANGER 本機唯讀查找、相關 Node 測試、`pnpm run typecheck`、`pnpm run build`、`git diff --check`。Test Results: 實際 cell 1374 為預覽 x=30、y=21，欄 2 `-1→862` 查找正確；相關 Node 16/16、typecheck、build、diff check 通過；Mock 存讀在來源／MOD／設定不符、畸形覆蓋或儲存失敗時保留舊主檔。Research Findings: 事件層的 `-1` 表示無槽；事件欄 ID 修改後，必須由當前覆蓋狀態查找，不能依初始靜態引用。Known Limitations: checkpoint 只有事件槽，未保存玩家／背包／人物／戰鬥／續行；欄 2／3／4 的觸發語意未全面驗證，Web UI 尚未提供完整原版流程。Unverified Assumptions: 原版其他場景的格子觸發行為與目前場景 32 的查找慣例完全相同。Next Recommended Tasks: 建立可回滾 opcode 轉接器與完整原版遊戲狀態；由已核對的效果與路徑開始接入，再完成存檔版本化與端到端遊玩驗收。見[驗證紀錄](validation/original-event-checkpoint-lookup-20261115.md)。
+
+## 2026-11-15：原版事件槽狀態容器（最新）
+
+Phase: Phase 3／6 原版內容轉接器與可序列化狀態的最小基礎；完整 Phase 6／7 未驗收。Status: **原版事件槽可無損覆蓋與讀回；opcode 執行和現有 Web 存檔尚未接入**。Completed Tasks: 對照 1,018 事件 corpus 與初始 ALLDEF 引用，盤點 307 個初始唯一事件 ID、383 個 opcode 3 候選動態新 ID、兩者聯集 666；建立原版事件槽來源表＋稀疏可序列化覆蓋層，明確欄位更新採原子新狀態，原表及舊狀態不變；用本機原版 ALLDEF 場景 32／槽 2 重現欄 2／3／4 的既有差分。Files Changed: `packages/game-data/src/original-event-slots.ts`、`packages/game-data/src/index.ts`、`tests/unit/original-event-slots.test.mjs`、`docs/decisions/0046-original-event-slot-overlay.md`、`docs/validation/original-event-slot-overlay-20261115.md`、`docs/TODO.md`、本檔。Tests Executed: 相關 Node 單元測試、實際 ALLDEF 雜湊／偏移／前後欄位核對、`pnpm run typecheck`、`pnpm run build`、`git diff --check`。Test Results: 相關 Node 11/11 通過；本機 ALLDEF 440,000 bytes、SHA-256 `3633122f6a43f0b5dd390c2fa2516766d735a064ca955c8766b73232230a4480` 與 corpus 相符；byte 140848 的場景 32／槽 2 由 `[1,2,-1,-1,-1,2718,2718,2718,0,30,21]` 經覆蓋讀為 `[1,2,862,-1,-1,2718,2718,2718,0,30,21]`，原始讀值未改；typecheck、build、diff check 通過。Research Findings: 動態事件槽是完整劇情必備狀態；225／307 個初始唯一事件 ID 含目前未實作的效果或分支。Known Limitations: 模組只接受解析後的明確欄位寫入，未解釋 opcode sentinel；未納入通用 Runtime 的存檔、事件查找或 Web 遊玩。Unverified Assumptions: 其他 opcode 3 變體的欄位語意、全部事件自然可達性及各種場景觸發規則。Next Recommended Tasks: 設計原版專用、版本化且綁定來源／MOD 身分的存檔狀態，接上互動事件查找；依逐指令證據建立可回滾事件轉接器，從已核對的功能路徑接入。見[狀態容器驗證](validation/original-event-slot-overlay-20261115.md)。
+
+## 2026-11-15：opcode 3 欄位差分與完整劇情轉換缺口（最新）
+
+Phase: Phase 1／2 原版指令逐欄驗證、Phase 3 局部資料轉換；Phase 6／7 完整原版遊玩未完成。Status: **事件 464 的 opcode 3 欄 2／3／4 限定寫入已驗；全量 corpus 仍不可執行**。Completed Tasks: 沿用唯一 DOSBox-X PID 7508，確認原始事件 464 載入；隔離第三槽先將場景 32 槽 2 欄 3／4 改為 `123／456`，單次觸發後唯讀確認 `-1／-1` 且事件 ID `-1→862`；第二次改前值確認圖像欄 5／6 在同一路徑保留，欄 7 在事件前即被場景載入改寫；兩次 reset 後六檔均還原。全量核對 28 組 55→3，發現事件 303 的檢查槽 4 與更新槽 2 不同；轉換器 0.3.0 只在固定雙雜湊下加限定、分級、不可執行的事件更新註記。Files Changed: `tools/analyzer/prepare_synthetic_event_slot.py`、`tools/extractor/convert_original_event_corpus.py`、`tests/unit/test_original_event_conversion.py`、`docs/validation/opcode-3-after-55-event464-fields-20261115.md`、`docs/validation/full-original-event-corpus.md`、`docs/research/event-opcode-coverage.md`、`docs/decisions/0045-original-event-field-write-scope.md`、`docs/TODO.md`、本檔。Tests Executed: DOS 精確 HWND 兩次觸發及執行前後唯讀事件槽、`BPLIST`、六檔雜湊還原、Python 7 個單元測試、1,018 事件全量轉換、0.2.0／0.3.0 核心欄位相等比較、`pnpm run typecheck`、`pnpm run build`、`git diff --check`。Test Results: 槽 2 `[1,2,-1,123,456,2718,2718,2718,0,30,21]→[1,2,862,-1,-1,2718,2718,2718,0,30,21]`；28 筆 3 註記（事件 ID 寫入 4 筆原版執行已驗；欄 3／4 改前值 1 筆已驗）、1,018 事件、2,977 對話，舊產物核心欄位完全一致；Python 7/7、typecheck、build、diff check 通過，`BPLIST` 空，隔離六檔恢復原雜湊。Research Findings: 此處 opcode 3 的 `-1` 參數會寫入 `-1`；55 檢查槽不能自動當作 3 更新槽。Known Limitations: 其餘 24 組同形只有來源 bytes，其餘 `-2` 欄位規則未隔離，55 helper 副作用未單獨排除；現有 Web 只讀純對話事件，722／1,018 事件含效果或分支而未能完整執行。Unverified Assumptions: 其他場景／參數變體有相同欄位寫入規則；以單次記憶體差分推廣到其他原版存檔。Next Recommended Tasks: 建立原版專用、可回滾且可序列化的事件狀態轉接器，先把已證實的事件更新／物品差分接入，再逐路徑比對 DOS 原版；完整本機遊玩需補全戰鬥與所有事件可達路徑。見[差分證據](validation/opcode-3-after-55-event464-fields-20261115.md)。
+
+## 2026-11-14：全量事件資料附限定 DOS 游標證據、`83` 可見輸出對照（最新）
+
+Phase: Phase 1／2 原版指令驗證與 Phase 3 局部資料轉換。Status: **28 筆原版 opcode 55 游標註記已進入不可執行中間資料；opcode 15 參數意義仍未解**。Completed Tasks: 版本化轉換器只在 KDEF.GRP／KDEF.IDX 雙雜湊吻合時為 28 筆 55 附原版 DOS 游標目的地及證據分級；重跑 1,018 事件全量本機轉換並與舊產物逐欄比較；沿用 DOSBox-X PID 7508，以隔離 `15,82,7` 和先前 `15,83,7` 對照死亡頁畫格，測後還原 KDEF／第三槽。Files Changed: `tools/extractor/convert_original_event_corpus.py`、`tools/analyzer/patch_isolated_opcode_probe.py`、`tests/unit/test_original_event_conversion.py`、`docs/validation/full-original-event-corpus.md`、`docs/validation/opcode-15-83-binary-trace-20261114.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0044-scoped-original-dos-cursor-annotations.md`、`docs/TODO.md`、本檔。Tests Executed: 6 個 Python 單元測試、全量轉換、0.1.0／0.2.0 產物去除新增欄後的結構相等檢查、兩張精確遊戲 PNG SHA-256 比較、`BPLIST`、隔離檔還原雜湊、Python 語法檢查、`git diff --check`、`pnpm run typecheck`、`pnpm run build`。Test Results: 28 筆註記均指向值 0 的 word；事件 464 四筆為 Verified Original，其餘 24 筆為同形 bytes 推論；舊資料其餘欄位完全一致。`82`／`83` 死亡頁 PNG SHA-256 同為 `58cbf643da11211a0282a83a2cd1bd012c614b23cafa44fe8fed1b8a4b597406`；暫時斷點空，KDEF／第三槽基線還原；Python 6/6、typecheck、build 與 diff check 均通過。Research Findings: FishEdit 的 55 候選跳轉可與實測 DOS 游標並列但必須分級；`83` 不影響本案例可見死亡頁。Known Limitations: 中間資料仍 `executable:false`；55 其他事件與 handler 副作用、15 的隱藏狀態與後續 `7` 仍未驗。Unverified Assumptions: 24 筆未重播的同形 55 在所有前置狀態採同一動態路徑；`82`／`83` 沒有非畫面效果。Next Recommended Tasks: 為原版內容轉接器實作受控事件修改命令前，核對 55 後續 opcode 3 的欄位契約；必要時針對 opcode 15 的參數資料流做限定 trace。見[全量資料](validation/full-original-event-corpus.md)及[15 對照](validation/opcode-15-83-binary-trace-20261114.md)。
+
+## 2026-11-14：opcode 15 的 `83` 參數原版二進位驗證
+
+Phase: Phase 1／2 原版事件解譯驗證。Status: **DOS handler 讀取 `83` 已驗；參數具體作用及 `7` 執行仍未驗**。Completed Tasks: 沿用單一 DOSBox-X PID 7508，定位原版跳轉表的 opcode 15 表項；以 manifest 隔離最短 `15,83,7` 腳本確認 handler 入口實際命中、客體 bytes 與死亡／讀檔頁；清斷點並還原 KDEF／第三槽。Files Changed: `tools/analyzer/patch_isolated_opcode_probe.py`、`docs/validation/opcode-15-83-binary-trace-20261114.md`、`docs/validation/opcode-15-dos-observation.md`、`docs/research/opcode-15-50-status.md`、`docs/research/event-opcode-coverage.md`、`docs/decisions/0043-opcode-15-original-parameter-evidence.md`、`docs/TODO.md`、本檔。Tests Executed: handler 表項客體 dump、精確 HWND 鍵序與 `BP 0160:001E15CF`、事件腳本 bytes、返回路徑斷點、異常時單格遊戲畫面、`BPLIST`、隔離檔 SHA-256 還原、Python 語法檢查、`git diff --check`。Test Results: `CS:EIP=0160:001E15CF`、腳本 bytes `15,83,7`；handler 讀下一 word 並 push 給處理函式；畫面進入死亡／讀檔頁，未命中返回游標停點；斷點清空，KDEF／第三槽基線還原，PID 未關閉。Research Findings: 本 DOS 版本會讀取 `83`，不能採社群版「只前進一字」結論；返回路徑靜態為索引加 2。Known Limitations: `83` 對文字／狀態的精確作用與後續 `7` 是否執行仍未知。Unverified Assumptions: 所有 114 次出現皆到同一死亡路徑。Next Recommended Tasks: 在必要時針對 `83` 作用及 `7` 執行做限定 trace；已確認 opcode 不重測。見[限定 trace](validation/opcode-15-83-binary-trace-20261114.md)。
+
+## 2026-11-14：原版事件 464 的四次 opcode 55 trace
+
+Phase: Phase 1／2 原版事件解譯驗證。Status: **原始事件 464 的四次 `55` 游標效果已驗；其他事件仍需按功能範圍驗收**。Completed Tasks: 沿用 DOSBox-X PID 7508，以隔離第三槽指向未改動的原始事件 464；在正向觸發後單點追蹤四次 opcode 55 入口與 helper 回傳；唯讀核對槽 2～5 最終事件 ID；掃描基線 KDEF 中全部 28 次 55 的五字形狀；清斷點並依 manifest 還原第三槽。Files Changed: `docs/validation/opcode-55-original-event464-trace-20261114.md`、`docs/validation/opcode-55-unresolved-dos-observation.md`、`docs/decisions/0042-opcode-55-trace-evidence-boundary.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 單一精確 HWND 鍵盤重播、原版 KDEF 客體 bytes、四組 handler 入口／返回 `EV`、活躍事件槽唯讀掃描、28 次原始 bytes 靜態掃描、`BPLIST`、SHA-256 還原、`git diff --check`。Test Results: 四次入口索引 28／47／66／85，helper 均返回 `-1`，dispatcher 後續索引 32／51／70／89，槽 2～5 最終 862／863／864／865；28 次 `55` 全為 `55,目標槽,-1,14,0`，下一 word 全為 `3`；暫時斷點清空、KDEF／第三槽基線還原，同一 PID 留在標題。Research Findings: 原始事件 464 的 `55` 不是先前推測的 14／0 相等選支證據；此 DOS handler 在本案例把比較 word 重複送作兩個返回候選。Known Limitations: 其餘 24 次只有靜態同形證據，未逐次 DOS 重播；非 `-1` 值與 helper 副作用未驗。Unverified Assumptions: 原版其他事件在不同前置狀態下必走相同動態路徑。Next Recommended Tasks: 依實測游標規則審核轉換器的原版 55 映射，僅針對差異補限定案例；已確認 opcode 不重測。見[原始事件 trace](validation/opcode-55-original-event464-trace-20261114.md)。
+
+## 2026-11-14：opcode 55 正向觸發與單點 DOS trace
+
+Phase: Phase 1／2 原版事件解譯驗證。Status: **合成案例入口及游標運算已驗，原始事件的完整語意仍未驗收**。Completed Tasks: 沿用單一 DOSBox-X PID 7508；將隔離第三槽與 KDEF 恢復成先前成功的入口配置，重現 `Up → Left → Enter` 取得 ID 57 ×1；在下一次相同鍵序命中 opcode 55 handler，讀取腳本、堆疊、helper 回傳與 dispatcher 游標；清除暫時斷點並依 manifest 還原隔離資料。Files Changed: `docs/validation/opcode-55-verified-entry-trace-20261114.md`、`docs/validation/opcode-55-trigger-preflight-20261114.md`、`docs/validation/opcode-55-binary-trace-20261114.md`、`docs/validation/opcode-55-dos-branch-probe-20261114.md`、`docs/decisions/0042-opcode-55-trace-evidence-boundary.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 精確 HWND 鍵盤重播、執行中背包及事件槽唯讀掃描、單點 breakpoint `0160:001E1ADF`／`001E1AF6`／`001E1516`／`001E151C`、客體腳本／堆疊／機器碼 dump、`BPLIST`、隔離檔 SHA-256 還原、`git diff --check`。Test Results: 事件 1017 正向觸發後 ID 57 ×1；入口 `CS:EIP=0160:001E1ADF`；helper 四參數 `[2,-1,-1,-1]` 回傳 `-1`，dispatcher `EBX 0→5` 並在後續 `add ebx,eax` 得索引 4；`BPLIST` 空，KDEF／第三槽基線雜湊還原，PID 未關閉。Research Findings: 先前未命中的主要前提是合成配置未可靠觸發；本案獲得道具不能解釋為已驗證的相等／不相等分支，因兩個回傳候選相同。Known Limitations: 原始事件 464 的實參與下一游標未 trace；合成案例不能代表全部 28 次原始 `-1` 出現。Unverified Assumptions: 原始事件 464 與本案使用相同四個實參模式及其他比較值的分支含義。Next Recommended Tasks: 在原始事件 464 的一次已確認觸發中，單點讀取 opcode 55 實參、helper 回傳與游標；已確認的其他 opcode 不重測。見[完整 trace](validation/opcode-55-verified-entry-trace-20261114.md)。
+
+## 2026-11-14：opcode 55 觸發前置校準
+
+Phase: Phase 1／2 原版事件解譯驗證。Status: **觸發前置未穩定，opcode 55 完整語意未驗收**。Completed Tasks: 沿用 DOSBox-X PID 7508，對最短合成 55 腳本重新核對場景 32 事件層／槽位、穩定事件 ID、客體緩衝區與道具；以受控移動前後 32 MiB 快照尋找視野變動欄；試驗候選面向值與既有直接室內存檔路徑；修正「整筆事件槽搜尋失配＝腳本執行」的判讀，並依 manifest 還原隔離資料。Files Changed: `docs/validation/opcode-55-trigger-preflight-20261114.md`、`docs/validation/opcode-55-binary-trace-20261114.md`、`docs/decisions/0042-opcode-55-trace-evidence-boundary.md`、`docs/TODO.md`、`docs/research/event-opcode-coverage.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、本檔。Tests Executed: 單一精確遊戲視窗輸入與異常畫格、5-word／11-word 事件槽唯讀掃描、活躍背包 ID 57、客體記憶體腳本 bytes 搜尋、移動前後快照、候選面向 2 與直接室內存檔、斷點清空、SHA-256 還原、`git diff --check`。Test Results: 槽 0 前五 word 的 1017 仍存在，而動畫圖號變化令 11-word 搜尋失配；本輪合成腳本未見 ID 57 或腳本 bytes，因此未證明其觸發；直接室內存檔載入世界地圖；KDEF／第三槽回到基線，PID 7508 保留。Research Findings: 事件槽搜尋需避開動態圖號，否則不能把失配歸因於 opcode；`--spawn-near-event` 的檔案位置尚未經活躍玩家格驗證。Known Limitations: 玩家實際格位／面向、觸發鍵序及 opcode 55 分支仍未確定。Unverified Assumptions: 候選 MFace offset 12 在原版控制朝向；客體候選跳轉表是正在執行的事件解譯器。Next Recommended Tasks: 先建立事件觸發正向證據與可重現的玩家位置，再做單點 opcode 55 trace；已驗收的其他 opcode 不重測。
+
+## 2026-11-14：opcode 55 客體記憶體限定追查
+
+Phase: Phase 1／2 原版二進位執行證據。Status: **候選處理段已定位，實際入口與完整語意仍未確認**。Completed Tasks: 沿用唯一 DOSBox-X PID 7508，於標題、場景 32 載入前及原始事件 464 後取得 32 MiB 客體記憶體快照；定位事件 464 的載入副本、候選 opcode 跳轉表及比較函式；在同一程序回標題、讀隔離第三槽、嘗試單一 opcode 55 入口斷點；移除斷點並還原六檔隔離存檔。Files Changed: `docs/validation/opcode-55-binary-trace-20261114.md`、`docs/decisions/0042-opcode-55-trace-evidence-boundary.md`、`docs/validation/opcode-55-dos-branch-probe-20261114.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: debugger `BREAK`／`MEMDUMPBIN`／`RUN` 三個時點、記憶體 bytes 比對、`BP`／`EV`／`BPLIST`／`BPDEL`、事件槽唯讀前後核對、隔離檔 SHA-256 還原、`git diff --check`。Test Results: 事件 464 的 210 bytes 於事件後快照出現在 `0x0028EE90`，在標題和入場前未找到；候選表項 55 指向 `0x001E1ADF`，其靜態呼叫指向 `0x001E50D9`；原始事件 464 執行完成，但單一斷點未觀察到命中；斷點清空，R3／D3 等六檔回到 manifest 基線，PID 7508 保持開啟。Research Findings: 可以把合成腳本輸出與候選機器碼位置分別保存為證據；目前沒有足夠資料把兩者串成同一條已證實的分支路徑。Known Limitations: 候選入口未命中，實際 dispatcher 未找到，`-1` 比較與偏移的精確語意未解。Unverified Assumptions: `0x001E1ADF` 是事件 464 實際經過的入口；先前「選到相等／不相等跳轉」是推論，已降級標註。Next Recommended Tasks: 從已載入腳本游標定位真正執行的 dispatcher，再以單點 trace 記錄 CS:EIP 與參數；已確認的其餘 opcode 無需重跑。
+
+補記：第二次準備 debugger 模式時未取得事件前置狀態；隨後精確視窗標題已成 `COMMAND`，單一擷取顯示 `C:\>` DOS 提示符。輸入守門拒絕後未再送鍵；第二份隔離第三槽依 manifest 還原。其後在已確認提示符輸入 config 中的 `z.com`，同一 PID 回到可見遊戲標題。第三次從已確認的事件 464 前值執行 `BREAK`／單點斷點／`RUN`／觸發；候選 `0160:001E1ADF` 未命中，但主迴圈控制斷點 `0160:001D543C` 確實命中，證明此 debugger 能停機。控制斷點已清、客體已恢復執行，第三份隔離存檔亦還原。下一步須改找**實際**事件 dispatcher，不再以「斷點模式無效」解釋未命中。見[限定追查](validation/opcode-55-binary-trace-20261114.md)。
+
+最短腳本補測：再次用 manifest 隔離事件 1017，`55,2,-1,3,0,2,57,1,7`；只檢查候選入口，沒有重測道具。已確認前置事件槽與 `BREAK`／`BP`／`RUN`，腳本觸發後仍未停在 `0160:001E1ADF`。這與原始事件 464 的未命中一致；主迴圈控制組已證實斷點功能。KDEF 與六檔第三槽均還原，PID 7508 保留。候選表項與實際執行路徑仍需釐清。
+
+## 2026-11-14：四個剩餘 opcode 的限定對照
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；68 個 opcode 中 65 個有局部 DOS 行為紀錄、3 個另註，完整語意仍未驗收。Completed Tasks: 原版事件 935 錄到暗場與逐幀亮屏，支持 13 所在段；在同一 DOSBox-X PID 7508 的隔離 KDEF 副本執行 opcode 55 相等／不相等跳轉對照、opcode 0／65 一字續行對照，以及 opcode 0 有／無組的穩定畫面對照；依 manifest 還原所有隔離存檔與 KDEF。Files Changed: `docs/validation/opcode-13-dos-video-20261114.md`、`docs/validation/opcode-55-dos-branch-probe-20261114.md`、`docs/validation/opcode-0-65-dos-continuation-20261114.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0041-isolated-opcode-control-probes.md`、`tools/analyzer/patch_isolated_opcode_probe.py`、本檔。Tests Executed: 原版道具觸發與 DOS 原生 AVI 逐幀解碼、唯讀事件槽／活躍背包、四組 opcode 55 合成分支、0／65 續行、0 有／無組 PNG 解壓像素對照、Python 語法檢查、隔離檔 SHA-256 還原、`git diff --check`。Test Results: 事件 935 亮度約 65→0→66；55 比較值與槽值同為 581 時略過給道具，值不同時執行給道具，`-1` 對 `-1` 未走相等；0 與 65 後接給道具均成功；0 有／無組穩定像素完全相同；KDEF 原始雜湊 `135c5e09…600e06`、R3／D3 基線均還原，PID 7508 保持開啟。Research Findings: 原版解譯器有 55 的一般正數比較分支、0／65 的一字續行；13 段呈現逐幀亮屏。Known Limitations: 55 的 `-1` 特例、0 的前景重畫、65 的其他副作用、13 與相鄰 0 的精確執行邊界未解。Unverified Assumptions: 合成腳本的測試路徑代表其他原始事件參數。Next Recommended Tasks: 若完整語意是後續轉換的必要條件，對這些特例做限定指令 trace；目前已確認功能可依局部證據分段實作，不把此階段記為完整原版驗收。
+
+邊界補測：原始語料 28 次 opcode 55 的比較值全部是 `-1`。合成腳本中 `0` 對 `0` 與 `-1` 對 `-1` 都產生取得道具的輸出；先前以「走不相等分支」解釋，經上方追查已降為推論。`-2` 存檔被事件 ID 範圍檢查拒絕，未執行；已還原該版合成 KDEF。最後的 `0` 案測後再次還原 KDEF 和六檔隔離存檔，PID 7508 未變。
+
+## 2026-11-14：事件 935 的亮屏影格（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；62 個 opcode 有局部 DOS 觀察、3 個仍 Unknown、3 個另註。Completed Tasks: 同一 DOSBox-X PID 7508 讀取隔離事件 935、選原版物品 ID 189，錄到對話後完整暗場與逐幀亮屏，唯讀確認事件槽關閉；同程序回標題並還原隔離第三槽。Files Changed: `docs/validation/opcode-13-dos-video-20261114.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 遊戲專用原生 AVI、ZMBV 解碼 1887 幀、亮度序列、同址唯讀事件槽、六檔 SHA-256 還原。Test Results: 亮度 65→0→66，黑畫面後逐幀亮起；事件槽 935→-1；PID/HWND 未變。Research Findings: 原始 `0,14,3,0,13` 段支持 opcode 13 的局部亮屏語意。Known Limitations: `13` 緊鄰 `0`，沒有指令級 trace；其他事件路徑未驗。Unverified Assumptions: 每幀與各指令的精確 CPU 邊界。Next Recommended Tasks: 針對 0／55／65 做有分辨力的資料或指令 trace，不重驗已確認 opcode。
+
+## 2026-11-13：opcode 0 獨立事件限定測試（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；本輪只測 opcode 0，仍為 Unknown；總計維持 61 個局部 DOS 觀察、4 個 Unknown、3 個另註。Completed Tasks: 沿用 DOSBox-X PID 7508 將獨立原始事件 0 載入隔離第三槽，確認執行中場景槽並錄製 Left、Enter 後的原生 AVI；同程序回標題後還原第三槽六檔。Files Changed: `docs/validation/opcode-0-standalone-bounded-20261113.md`、`docs/TODO.md`、本檔。Tests Executed: 原版讀檔、唯讀事件槽、遊戲專用畫格、ZMBV AVI 逐幀解碼、六檔 SHA-256 還原。Test Results: 事件槽唯一記錄為事件 0；AVI 共 449 幀，畫面差異可由角色移動和既有動畫解釋；六檔雜湊還原成功，PID/HWND 未變。Research Findings: 原始事件 0 僅含 `0` 與終止字，但沒有可持久觀察的執行標記。Known Limitations: 本輪未證明 `0` 已進入 dispatcher 或造成獨立重畫。Unverified Assumptions: 社群 `instruct_0` 描述及原版觸發後精確重畫時點。Next Recommended Tasks: 對 opcode 0 做限定 trace 或前景覆蓋層控制對照；其餘 13／55／65 待後續階段。
+
+## 2026-11-13：事件 101 戰後聲望與同程序續行（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；61 個 opcode 有局部 DOS 觀察、4 個仍 Unknown、3 個另註。Completed Tasks: 沿用同一 DOSBox-X PID 7508 而未關閉或另開程序，讀取隔離事件 101、完成原版戰鬥 14，唯讀觀察勝利後角色聲望 0→3，對應候選 `56(3)`；更正先前程序查詢因權限不足造成的「已關閉」誤判；在同一程序內回標題並還原第三槽；移除啟動腳本錯誤處理中的自動關閉程序。Files Changed: `docs/validation/opcode-56-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/validation/opcode-58-dos-observation.md`、`docs/decisions/0040-dosbox-state-reload-reliability.md`、`scripts/Start-DOSBoxX-IsolatedEvent.ps1`、本檔。Tests Executed: 精確視窗遊戲專用畫格、原版戰鬥攻擊與勝利、同址唯讀角色記憶體、程序與視窗識別、隔離存檔六檔雜湊還原、PowerShell 語法檢查。Test Results: `z_1194` 顯示「戰鬥勝利」；聲望 word 59 在勝利頁為 0，續行第 5 步為 3；PID 7508／HWND `0x38085A` 始終沿用；六檔還原雜湊與 manifest 基線一致；啟動腳本無 `Stop-Process`。Research Findings: 事件 101 的勝利路徑支持 opcode 56 為聲望增加；事件 49 的敵人資訊頁未解不構成反例。Known Limitations: 沒有指令級 trace，其他參數未驗。Unverified Assumptions: 合成入場之外的自然可達性。Next Recommended Tasks: 繼續 0／13／55／65 的分離驗證。
+
+## 2026-11-13：事件 676 雙槽動畫與同程序切換（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；60 個 opcode 有局部 DOS 觀察、5 個仍 Unknown、3 個另註。Completed Tasks: 更正首次事件 676 未觸發的錯判；在同一 PID 7508 從標題讀取隔離第三槽，確認五件物品已被消耗後錄製 opcode 44 動畫；實測「戰敗回標題／虛擬機重置回標題 → 更換第三槽 → 原版讀檔」可沿用同一 DOSBox-X 程序；加入研究用 ZMBV AVI 解碼工具。Files Changed: `docs/validation/opcode-44-dos-observation.md`、`docs/validation/opcode-13-44-65-bounded-20261113.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0040-dosbox-state-reload-reliability.md`、`tools/analyzer/inspect_zmbv_avi.py`、`scripts/Send-DOSBoxX-Key.ps1`、本檔。Tests Executed: 原版事件 676 材料條件與對話、同址雙槽唯讀記憶體、DOSBox-X 原生 AVI、ZMBV 逐幀解碼、同 PID 原版讀檔／VM reset。Test Results: 活躍背包五物品清空，動畫中槽 2／3 圖號為 7560／7606，影片影格可見廚師移向爐灶；原版指令 44 在此案例局部確認。Research Findings: 首次 `z_003.avi` 只有待機動畫，已撤回該次歸因；在敵人資訊頁直接送一般鍵仍無法完成事件 49 的戰鬥。Known Limitations: 44 其他參數未驗；56 的戰鬥 5 尚未勝利；emulator save/load state 仍有已記錄崩潰。Unverified Assumptions: 44 每次調用的確切幀數、其餘 Unknown 原版語意。Next Recommended Tasks: 保持同一 PID，對 0／13／55／56／65 做限定追蹤或可逆隔離腳本對照；完成受影響驗證後還原第三槽。
+
+## 2026-11-13：事件 936 比武入口與三個限定採樣（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；59 個 opcode 有局部 DOS 觀察、6 個仍 Unknown、3 個另註。Completed Tasks: 原版事件 936 已走到唯一 opcode 58，觀察額外對手對話與可操作戰鬥；事件 935／676／939 分別完成 opcode 13／44／65 的限定採樣，並分離不能歸因之處；核對 DOSBox-X save/load state 既有崩潰證據。Files Changed: `docs/validation/opcode-58-dos-observation.md`、`docs/validation/opcode-13-44-65-bounded-20261113.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0040-dosbox-state-reload-reliability.md`、本檔。Tests Executed: 隔離第三槽原版事件互動、遊戲專用畫格、同址唯讀事件槽、原生 AVI 容器核對、六檔還原雜湊。Test Results: opcode 58 觸發對手對話和戰鬥選單；13／44／65 個別仍 Unknown；已結束的三案六檔均還原，事件 936 的唯一測試程序在驗證時仍開啟。Research Findings: 58 不只是可見動畫，至少可自行啟動第一場戰鬥；既有 SDL2 2026.10.01 emulator state load 在同程序內亦曾崩潰。Known Limitations: 58 完整連戰未驗；44 的 ZMBV 影片尚無可用解碼器；13／65 無獨立效果證據。Unverified Assumptions: 自然流程的事件 936 可達性、戰鬥勝利後狀態、剩餘 Unknown 語意。Next Recommended Tasks: 先建立可驗證的同程序復位或限定 debugger trace，再處理 0／13／44／55／56／65，避免反覆開關程序。
+
+## 2026-11-13：原版事件 344 的兩種移動段（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；7 個 opcode 仍標 Unknown。Completed Tasks: 在隔離第三槽逐段推進原始事件 344，於第一條／反向 opcode 25 和 opcode 30 各擷取原版畫格與 AVI；排除會停留舊值的存檔頭座標候選；關閉程序並還原六檔。Files Changed: `docs/validation/opcode-25-30-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版事件對話推進、遊戲專用 raw 畫格、原生 AVI、唯讀座標候選及還原雜湊。Test Results: 第一條 opcode 25 後視野移向屋外，反向 opcode 25 後回到屋內；opcode 30 後主角從櫃檯旁移至爐灶附近並出現下一段對話。Research Findings: 本案例支持兩種不同的可見移動效果。Known Limitations: 沒有校準參數座標軸、移動物件身份或動畫速度；存檔頭候選為舊值。Unverified Assumptions: 原始自然流程可達性與所有變體。Next Recommended Tasks: 其餘 Unknown 為重畫／特殊動畫／條件分支／戰鬥後狀態及可能無畫面效果指令。
+
+## 2026-11-13：原版事件 655 的動畫段（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；9 個 opcode 仍標 Unknown。Completed Tasks: 以隔離第三槽補足事件 655 的攻擊／物品前置，錄製原版 AVI 與三張連續遊戲畫格，唯讀核對動畫後三個事件槽圖號，關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-57-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔、`scripts/Start-DOSBoxX-IsolatedEvent.ps1`。Tests Executed: 原版事件對話與動畫、DOSBox-X 原生 AVI／raw 畫格、同址事件槽唯讀記憶體、六檔 SHA-256 還原。Test Results: 主角站位短暫空出後復原；槽 2／3／4 圖號變成 7746／7804／7862，吻合腳本後段。Research Findings: 本案例已到達 opcode 57 所在動畫段。Known Limitations: 前置 opcode 0 也重畫，不能分辨動畫的每一幀歸屬；原場景石門畫面未驗。Unverified Assumptions: 完整動作幀序與自然流程可達性。Next Recommended Tasks: 剩餘 Unknown 需解決場景動畫定位、戰場輸入、事件比較與無明顯效果指令。
+
+## 2026-11-13：原版事件 620 的離場音訊對照（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；10 個 opcode 仍標 Unknown。Completed Tasks: 在隔離第三槽完整推進事件 620，設置可逆相鄰出口；與不執行 opcode 8 的同場景出場對照各錄一次原生 WAV 並確認世界地圖畫格；逐案關閉程序、還原六檔。Files Changed: `docs/validation/opcode-8-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔、`tools/analyzer/prepare_synthetic_event_slot.py`、`scripts/Run-DOSBoxX-Opcode8-Case.ps1`、`scripts/Run-DOSBoxX-ExitMusicControl.ps1`。Tests Executed: 原版長對話推進、事件槽唯讀記憶體、遊戲專用畫格、原生 WAV、出場前後 RMS、六檔 SHA-256 還原。Test Results: 事件 620 結束後室內未聽得持續切換；出場後錄音約 3.1–3.6 千 RMS，同場景無 opcode 8 出場約 4.3–4.7 千。Research Findings: 本案例支持 opcode 8 選擇離場後音樂。Known Limitations: 未解曲目 ID 3 的實際資源映射，也未驗其他 ID。Unverified Assumptions: 原版自然流程到事件 620、完整參數語意。Next Recommended Tasks: 剩餘 Unknown 主要需動畫定位、戰鬥勝利、事件 ID 分支或限定 trace。
+
+## 2026-11-13：淡出與音樂切換的分離採樣（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；11 個 opcode 仍標 Unknown。Completed Tasks: 以事件 531 的指定物品路徑錄製兩次音訊並擷取淡出前／中／後遊戲畫格；以只含淡出、不含音樂指令的事件 514 作音訊對照；每案還原隔離第三槽六檔。Files Changed: `docs/validation/opcode-14-66-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔、`scripts/Run-DOSBoxX-Opcode66-Case.ps1`、`scripts/Run-DOSBoxX-FadeAudioControl.ps1`。Tests Executed: 原版物品與對話操作、遊戲專用 raw 畫格、DOSBox-X 原生 WAV、逐秒 RMS、六檔 SHA-256 還原。Test Results: 事件 531 中間畫格全場景變暗，兩次錄音在指令段後均持續降至約 0.6–1.2 千 RMS；事件 514 淡出對照的音訊維持約 1.9–2.4 千。Research Findings: 本案例分別支持 opcode 14 畫面淡出與 opcode 66 切換音訊。Known Limitations: 未解曲目 9 資源映射、淡出幀數、其他事件變體。Unverified Assumptions: 自然流程可達性與完整參數語意。Next Recommended Tasks: 其餘 Unknown 集中在音樂場景切換、移動動畫、戰鬥後狀態、特殊分支與無明顯畫面指令。
+
+## 2026-11-13：原版事件 1001 的圖號分支對照（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；13 個 opcode 仍標 Unknown。Completed Tasks: 以隔離第三槽讓原版事件 1001 在圖號原值 0 與合成 4664 兩種狀態下各執行一次；核對兩案都已使用 ID 144、關閉事件槽 0，並比對後續畫面；逐案還原六檔。Files Changed: `docs/validation/opcode-61-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔、`tools/analyzer/prepare_synthetic_event_slot.py`、`scripts/Run-DOSBoxX-Opcode61-Case.ps1`。Tests Executed: 原版物品頁互動、精確遊戲畫格、事件槽與背包唯讀記憶體、六檔 SHA-256 還原。Test Results: 圖號 0 案沒有後續對話，圖號 4664 案顯示「咦！好像有什麼聲音」。Research Findings: 本案例支持 opcode 61 依目標事件圖號條件分支。Known Limitations: 同時改了三個圖號欄，無法判斷原版實際讀哪一欄。Unverified Assumptions: 完整槽位範圍、跳轉公式與自然流程可達性。Next Recommended Tasks: 繼續以音訊及影片採樣其他 Unknown，對需戰鬥案例另建可重播勝利路徑。
+
+## 2026-11-13：原版事件 389 的遊戲音訊採樣（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；14 個 opcode 仍標 Unknown。Completed Tasks: 以精確遊戲視窗的 Capture 選單錄製原版事件 389 前後 WAV，確認後續對話、關閉唯一程序並還原六檔；加入可重複使用的 Capture 選單查詢與命令工具。Files Changed: `docs/validation/opcode-67-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔、`scripts/Get-DOSBoxX-CaptureMenu.ps1`、`scripts/Invoke-DOSBoxX-CaptureMenu.ps1`、`scripts/Run-DOSBoxX-SoundEvent-Case.ps1`。Tests Executed: DOSBox-X 原生 WAV 錄製、原版畫格、逐秒音訊 RMS、精確事件槽唯讀核對、六檔 SHA-256 還原。Test Results: 8.417 秒錄音的前 3 秒 RMS 約 2.0–2.2 千，互動後第 3–5 秒約 4.3–6.0 千，再回到基線；事件後顯示原始對話。Research Findings: 本案例支持 opcode 67 觸發額外聲音。Known Limitations: 尚未隔離編號 22 的音效素材或音源映射。Unverified Assumptions: 其他參數與自然流程可達性。Next Recommended Tasks: 以相同原生錄音工具處理剩餘音訊指令，並以影片／狀態差分處理動畫案例。
+
+## 2026-11-13：既有原版畫格核對主角朝向（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；15 個 opcode 仍標 Unknown。Completed Tasks: 以既有事件 931 的 Y 路徑原版 raw 畫格比較主角與靜態背景，記錄 opcode 40 所在段的站姿變化；未重播已確認的選項與 HP 指令。Files Changed: `docs/validation/opcode-40-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 遊戲專用畫格目視與指定矩形逐像素顏色差異。Test Results: 主角矩形 38.59% 不同，背景控制矩形 0%；前後站姿朝向不同。Research Findings: 本案例支持 `40(3)` 所在段更新主角站姿。Known Limitations: 沒有獨立讀取朝向記憶體欄位，後續 opcode 13 可能負責重畫。Unverified Assumptions: 數值 3 對應方向及其他參數。Next Recommended Tasks: 對剩餘 Unknown 優先找可區分的音訊、動畫或狀態證據。
+
+## 2026-11-13：原版事件 234 的金額門檻分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；16 個 opcode 仍標 Unknown。Completed Tasks: 以隔離第三槽和相同原始事件 234 分別執行 ID 174 ×9／×10；觀察兩路對話與不停模背包欄位，逐案關閉程序並還原六檔。Files Changed: `docs/validation/opcode-31-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔及 `scripts/Run-DOSBoxX-Opcode31-Case.ps1`。Tests Executed: 原版物品頁互動、精確遊戲畫格、背包與事件槽唯讀記憶體、六檔還原。Test Results: 數量 9 顯示要求 10 兩銀子的對話且數量未變；數量 10 顯示「客官，您慢用」，執行中背包候選紀錄已移除 ID 174 ×10。Research Findings: 本案例支持 opcode 31 依物品數量門檻分支。Known Limitations: 後續 ID 194 發放、其他門檻與比較運算子未驗。Unverified Assumptions: 自然流程可達性及所有參數語意。Next Recommended Tasks: 繼續測其餘 Unknown 的可區分案例，不重測已確認的路徑。
+
+## 2026-11-13：opcode 31 門檻對照準備與執行阻礙（最新）
+
+Phase: Phase 1／2 原版執行採樣。Status: **opcode 31 仍 Unknown**；自動審核額度阻止重跑。Completed Tasks: 建立 ID 174 ×9／×10 的可逆原版事件 234 試跑腳本；辨識首次試跑的啟動文字頁誤判並修正守門；核對六個第三槽檔案已還原。Files Changed: `scripts/Run-DOSBoxX-Opcode31-Case.ps1`、`docs/validation/opcode-31-pending-dos-observation.md`、`docs/decisions/0039-reversible-event-sampling.md`、`docs/TODO.md`、本檔。Tests Executed: PowerShell 語法解析、首次 DOSBox-X 啟動頁觀察、六檔 SHA-256 還原；修正後重跑被自動審核拒絕，未執行。Test Results: 首次試跑在 720×400 啟動文字頁結束，沒有載入事件；六檔原值全部還原。Research Findings: 原始事件 234 的候選分支提供 10 的可測門檻，opcode 31 語意仍未驗證。Known Limitations: 自動審核因使用額度用盡，拒絕啟動後續模擬器測試。Unverified Assumptions: 原版兩路的實際跳轉、物品 ID 174 的角色、門檻比較方式。Next Recommended Tasks: 審核可用後直接重跑 ×9／×10；再處理其他 Unknown 的音畫與戰鬥案例。
+
+## 2026-11-13：原版事件 353 的事件欄位增量（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；17 個 opcode 仍標 Unknown。Completed Tasks: 在隔離第三槽執行原始事件 353，讀取同一程序內當前場景三個事件槽的前後值；關閉唯一程序後還原六檔。Files Changed: `docs/validation/opcode-26-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版事件互動與對話推進、文字化精確遊戲畫格分類、唯讀記憶體、六檔 SHA-256 還原。Test Results: 槽 4／5／6 的 word 4 從 `-1／-1／0` 變成 `0／0／1`，吻合各 `26(-2,slot,0,0,1)`。Research Findings: 本案例支持 opcode 26 對指定事件槽欄位加 1。Known Limitations: 未驗其他欄位增量、遠端場景與自然流程。Unverified Assumptions: 其餘參數及所有變體的語意。Next Recommended Tasks: 繼續針對其餘 Unknown 建立可區分的前後狀態與音畫證據。
+
+## 2026-11-13：原版事件 16 的物品使用分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部指令仍未驗收。Completed Tasks: 在隔離第三槽確認 ID 160 ×1 後，從原版物品頁選「唐詩選輯」並對事件 16 使用；同一程序再選另一物品作控制；測後關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-4-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版物品選單互動、精確遊戲畫格、事件槽與背包唯讀記憶體、六檔 SHA-256 還原。Test Results: ID 160 路徑顯示燒書對話，控制組無該對話；事件 16、物品 160 ×1 仍在。Research Findings: 本案例支持 opcode 4 依指定物品分支。Known Limitations: 合成入場與物品，未做限定 trace。Unverified Assumptions: 控制組物品使用參數、完整跳轉公式與自然可達性。Next Recommended Tasks: 沿相同 UI 操作驗證 opcode 26 所在事件 647 的物品 ID 187，並唯讀事件槽差分。
+
+## 2026-11-13：19 個 Unknown 原始候選事件首輪（最新）
+
+Phase: Phase 1／2 原版執行採樣。Status: **候選事件首輪完成，opcode 語意驗證仍未完成**。Completed Tasks: 以可逆第三槽依序載入並互動 19 個 Unknown 的原始候選事件；每案檢查標題頁、載入頁及事件 ID，保留到達點與所缺前置；一次只開一個 DOSBox-X 程序並逐案還原。Files Changed: `docs/validation/unknown-opcode-first-pass-20261113.md`、`scripts/Run-DOSBoxX-Unknown-FirstPass.ps1`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 19 個候選事件首輪、精確遊戲畫格、本機文字分類、事件槽唯讀記憶體、逐案六檔 SHA-256 還原。Test Results: 19 案均在修正頁面守門後成功載入與觸發；多數停在物品使用、對話或戰鬥前置，不能提高語意信心；剩餘 Unknown 數維持 19。Research Findings: 普通 Enter 不會替代「使用物品」事件操作，音效／瞬間清屏需音訊或影片證據。Known Limitations: 首輪腳本不處理選項、物品使用、戰鬥或全部對話；初版早送鍵試驗已排除。Unverified Assumptions: 各指令的完整參數與自然流程可達性。Next Recommended Tasks: 依[首輪逐項表](validation/unknown-opcode-first-pass-20261113.md)補專用前置及可區分量測，先處理物品使用路徑與可錄音的 opcode 67。
+
+## 2026-11-13：原版事件 821 的場景入場條件（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部 opcode 仍未驗收。Completed Tasks: 隔離第三槽執行事件 821，逐頁文字化檢查對話結束後唯讀比較四個世界場景的入場條件候選欄，測後關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-54-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原始事件、對話覆蓋層分類、世界場景同址唯讀記憶體、六檔 SHA-256 還原。Test Results: 第 47 次 Enter 後覆蓋層消失且三秒後仍消失；場景 2 `1→2`、4 `1→0`、38 `1→2`、75 不變。Research Findings: 本案例支持 opcode 54 批量改寫世界場景條件，且不同場景取不同值。Known Limitations: 只查四個場景，未走入口；入場為 Synthetic State。Unverified Assumptions: 全部 84 場景的映射及自然可達性。Next Recommended Tasks: 繼續其餘 19 個 Unknown，對可能修改資料的指令優先找可直接差分的原版欄位。
+
+## 2026-11-13：原版事件 567 的圖號終值（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單仍未驗收。Completed Tasks: 隔離第三槽執行事件 567，於後續對話時唯讀比較同一場景槽 8 的三個圖號欄，測後關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-27-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原始事件、精確遊戲畫格、事件槽同址唯讀前後差分、六檔 SHA-256 還原。Test Results: `27(8,6420,6448)` 後槽 8 欄位 5／6／7 均 `0→6448`；其他欄位不變。Research Findings: 本案例支持 opcode 27 設定事件動畫的圖號終值。Known Limitations: 未採集動畫每幀，合成入場。Unverified Assumptions: 其他場景／事件槽、速度及自然可達性。Next Recommended Tasks: 繼續其餘 20 個 Unknown，只選有可區分狀態的案例。
+
+## 2026-11-13：事件 225 的 opcode 25 保留 Unknown
+
+Phase: Phase 1／2 原版執行證據。Status: **未完成語意驗證**。Completed Tasks: 隔離第三槽執行事件 225，觀察對話前後精確遊戲畫格，測後還原六檔。Files Changed: `docs/validation/opcode-25-unresolved-dos-observation.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 事件槽唯讀核對、對話逐頁觀察、六檔 SHA-256 還原。Test Results: `z_580–582` 顯示草地對話及結束畫面，但未隔離指定物件位移。Research Findings: 此合成進場案例不足以確認 opcode 25 語意。Known Limitations: 畫面未提供目標物件座標；場景入場為 Synthetic State。Unverified Assumptions: 參數對象、起終座標與方向。Next Recommended Tasks: 在事件原場景定位座標與移動對象後重測；目前保持 Unknown。
+
+## 2026-11-13：原版事件 1017 的結局呈現（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版 opcode 仍未驗收。Completed Tasks: 隔離第三槽執行原始事件 1017，對話結束後觀察人物消失與自動切入結局敘事；關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-62-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版 DOSBox-X 事件互動、精確遊戲畫格與文字化狀態、事件槽唯讀記憶體、六檔 SHA-256 還原。Test Results: `z_578` 人物消失；無額外輸入後 `z_579` 顯示黑底紅字結局敘事。Research Findings: 本案例支持 `62(0,8054,8128,1,8130,8204)` 觸發結局呈現。Known Limitations: 合成入場，未追完結局動畫或存檔效果。Unverified Assumptions: 參數對應與自然可達性。Next Recommended Tasks: 繼續尚未確認的 22 個 opcode；選項與場景變化沿用精確畫格守門。
+
+## 2026-11-13：原版事件 115 的戰鬥選擇（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單仍未驗收。Completed Tasks: 同一隔離 DOSBox-X 程序比較原版事件 115 的 N／Y 兩路，戰鬥前停止，關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-5-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0039-reversible-event-sampling.md`、本檔。Tests Executed: 精確遊戲畫格、事件槽唯讀記憶體、N／Y 互動、六檔 SHA-256 還原。Test Results: N 顯示未準備並回室內，Y 顯示應戰對話並到戰鬥選人；初次誤入姓名頁已排除，不作指令證據。Research Findings: 本案例支持 `5(6,0)` 的是否戰鬥選擇。Known Limitations: 合成入場，未進行戰鬥，分類器不能辨識選項文字。Unverified Assumptions: 相對偏移公式、其他參數及自然可達性。Next Recommended Tasks: 繼續尚未確認的 opcode；標題頁須穩定並確認進入載入頁後才選第三槽。
+
+## 2026-11-13：原版事件 28 的角色用毒欄（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 隔離第三槽重播事件 28，讓角色 1 在隊以進入目標路徑；在後續戰鬥選人畫面唯讀比對角色 4 用毒候選欄，隨後關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-23-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 事件讀回與對話、精確遊戲畫格人工檢查、角色欄唯讀記憶體、六檔 SHA-256 還原。Test Results: 角色 4 欄位 `53→99`，畫面進入戰鬥選人；六檔還原基線。Research Findings: 本案例支持 `23(4,99)` 設定用毒候選值；讀數是戰鬥前中途狀態。Known Limitations: 入場與隊伍為 Synthetic State，戰鬥未執行。Unverified Assumptions: 其他角色／數值、自然可達性。Next Recommended Tasks: 繼續只對 Unknown opcode 採樣；對選項或戰鬥等未知 UI 先檢查精確遊戲畫格。
+
+## 原版事件 932 的隊伍清除（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部指令仍未驗收。Completed Tasks: 隔離第三槽重播原始事件 932，於對話與物品通知結束後唯讀比對執行中隊伍及載入存檔副本，測後還原六檔。Files Changed: `docs/validation/opcode-59-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版 DOSBox-X 事件互動、固定場景覆蓋層文字分類、精確位址唯讀隊伍、六檔 SHA-256 還原。Test Results: 第六次 Enter 後覆蓋層消失並保持消失；執行中隊伍 `[0,1,49,-1,-1,-1]→[0,-1,-1,-1,-1,-1]`，載入存檔副本不變。Research Findings: 本案例支持尾端 opcode 59 清除主角以外的隊員。Known Limitations: 合成入場與隊伍前置；覆蓋層分類非 OCR。Unverified Assumptions: 其他排列、關聯狀態、自然可達性。Next Recommended Tasks: 僅採樣尚未確認的 opcode，對需要分支的案例先找到可區分的原版前置。
+
+## 原版事件 289 的對話完成守門與角色欄位（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單與轉換邏輯尚未驗收。Completed Tasks: 以可逆第三槽重播原始事件 289，核對 opcode 35／41 的角色 36 欄位變化；另將該角色性別候選值合成為 0，證實 opcode 63 後成為 2。新增依覆蓋層狀態推進對話的腳本，對話消失並維持三秒後才讀最終記憶體；關閉唯一測試程序並還原六檔。Files Changed: `docs/validation/opcode-35-41-63-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/research/original-save-layout-candidate.md`、`docs/decisions/0039-reversible-event-sampling.md`、`docs/TODO.md`、`scripts/Advance-DOSBoxX-DialogueUntilClear.ps1`、`tools/analyzer/prepare_synthetic_event_slot.py`、本檔。Tests Executed: DOSBox-X 第三槽讀回／原始事件互動、遊戲專用畫格文字分類、同址角色／事件槽唯讀記憶體、六檔 SHA-256 還原。Test Results: 第 18 次 Enter 後覆蓋層消失，三秒後仍無覆蓋層；角色 36 性別候選 0→2、首槽武功 31→60／點數 0→100、物品 -1→78／數量 0→1；事件槽另經 opcode 3 指向 314。Research Findings: 原版武功首槽位於 182-byte 角色記錄相對 offset 126、點數候選 146；角色 49 先前 offset 128 是第二槽。Known Limitations: 覆蓋層分類非 OCR，未知選項／場景切換需人工檢查；合成前置不能證明自然可達。Unverified Assumptions: 其他角色、欄位邊界及參數變體。Next Recommended Tasks: 繼續尚未驗證的 opcode；事件 464 的 opcode 55 需能區分分支的原版案例或限定 trace。
+
+## 原版事件 673 的資質增加（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 隔離第三槽重播原始事件 673，文字化檢查全部對話完成，唯讀比較主角資質及事件槽；測後還原六檔。Files Changed: `docs/validation/opcode-34-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件、精確畫格覆蓋層狀態、主角與事件槽不停模記憶體、六檔 SHA-256 還原。Test Results: 主角資質候選 `72→75`，事件槽 `673→674`；前者對應 `34(0,3)`，後者屬前一條 opcode 3。Research Findings: 本案例支持 opcode 34 增加主角資質。Known Limitations: 只測 +3、角色 0；原版事件進場為 Synthetic State。Unverified Assumptions: 上限、負值、其他角色及自然流程可達性。Next Recommended Tasks: 選其他可觀測 Unknown opcode；已確認 opcode 不再換事件重驗。
+
+## 原版事件 20 的當前內力歸零（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 隔離第三槽重播原始事件 20，在首段與後續對話之間唯讀比對主角內力，避開後段戰鬥；測後還原六檔。Files Changed: `docs/validation/opcode-22-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件、精確遊戲畫格及文字化覆蓋層、主角執行中記憶體、六檔 SHA-256 還原。Test Results: CurrentMP／MaxMP `26/26→0/26`，HP `44/44` 未變；後續角色對話已出現，尚未進入戰鬥。Research Findings: 本案支持 opcode 22 將主角當前內力清零。Known Limitations: 只測一人隊伍；動畫、淡出及其他指令效果不在此案歸因。Unverified Assumptions: 同伴效果、自然可達性及其他上下文。Next Recommended Tasks: 未驗 opcode 優先選可在戰鬥前隔離的數值／分支案例；已確認 opcode 不再重驗。
+
+## 原版事件 445 的性別條件分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 隔離第三槽只改主角候選性別 `0`／`1`，重播原始事件 445 的 Y 路徑並比較後續對話；兩案還原六檔。Files Changed: `docs/validation/opcode-42-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件與 Y/N 互動、精確畫格差異、對話人工核對、六檔 SHA-256 還原。Test Results: 值 0 出現要求先找女性同伴的拒絕對話；值 1 出現答應同行對話。Research Findings: 本案支持 opcode 42 依候選性別值選擇分支。Known Limitations: 只改主角性別，未測男性主角與女性同伴。Unverified Assumptions: 是否掃描隊伍任一女性、完整跳轉公式及自然可達性。Next Recommended Tasks: 未知 opcode 優先選具不同可見後續結果的事件；已確認 opcode 不換事件重驗。
+
+## 原版事件 581 的武功與內力屬性（最新）
+
+Phase: Phase 1／2 原版格式及執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 在隔離第三槽重播事件 581 的一人分支，對角色 49 的原版 182-byte 記錄做完整前後差分，核對學會武功通知；測後還原六檔。Files Changed: `docs/validation/opcode-33-49-dos-observation.md`、`docs/research/original-save-layout-candidate.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件、文字化覆蓋層完成點、角色記錄全部 91 個 int16 差分、遊戲單畫格通知檢視、六檔 SHA-256 還原。Test Results: opcode `33(49,15,0)` 的通知為「虛竹 學會 天山六陽掌」，角色 49 offset 128 `0→15`；`49(49,2)` 對應的候選 MPType offset 80 `1→2`。Research Findings: 社群 208-byte 角色表的 Magic 起點 130 與原版實測 offset 128 不符。Known Limitations: 武功等級／其他槽、內力屬性在戰鬥中的實際效果未驗。Unverified Assumptions: 其他角色與參數、自然可達性及相對 offset 42 的 `90→92` 來源。Next Recommended Tasks: 不再重跑已確認的 33／49；追其他 Unknown opcode，並修正尚沿用社群 208-byte 後段偏移的候選規格。
+
+## 原版事件 581 的能力增加指令 45／46／47／48（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 利用同一有效事件 581 前後角色 49 記錄，逐項對照原始能力變更參數；不另開已確認指令的測試事件。Files Changed: `docs/validation/opcode-45-48-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版 DOSBox-X 事件 581、角色 49 不停模記憶體前後差分、通知畫格文字化守門、第三槽六檔 SHA-256 還原。Test Results: `46(49,300)` MP `21/21→321/321`；`48(49,200)` HP `38/38→238/238`；`47(49,30)` 攻擊 `14→44`；`45(49,20)` 速度 `30→50`。Research Findings: 四個參數與各欄位差額吻合，均可標局部 DOS 行為。Known Limitations: 後續 opcode 33／49 尚未量測對應欄位。Unverified Assumptions: 上下限、負增量、其他角色、自然可達性。Next Recommended Tasks: 從其他未驗 opcode 選可觀測案例；事件 581 只在追尚未驗的 33／49 時才重播。
+
+## 原版事件 950 的執行中隊伍離隊（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 在隔離第三槽合成角色 1 在隊並重播原始事件 950；對話起訖以文字化畫格確認，分別讀取載入存檔副本與執行中隊伍；測後還原六檔。Files Changed: `docs/validation/opcode-21-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: DOSBox-X 原版事件、精確畫格差異、不停模隊伍副本前後差分、六檔 SHA-256 還原。Test Results: 執行中隊伍 `[0,1,-1,-1,-1,-1]→[0,-1,-1,-1,-1,-1]`；載入存檔副本保持原值。Research Findings: 本案例支持 opcode 21 將角色 1 移出隊伍，先前「未見離隊」因讀錯副本已撤回。Known Limitations: 事件進場／隊伍前置為 Synthetic State；只驗角色 1 一案。Unverified Assumptions: 其他角色、不在隊時行為、隊伍壓縮及自然流程可達性。Next Recommended Tasks: 繼續其他 Unknown opcode，優先處理 55 的可區分分支；已確認 opcode 不重驗。
+
+## 原版角色資料尺寸修正與 opcode 10 加入隊伍（最新）
+
+Phase: Phase 1／2 原版格式及執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 以 R3 段界及多個 CP950 姓名核對原版角色記錄為 320 × 182 bytes，撤回社群 280 × 208 候選；重播原始事件 581，定位角色 49「虛竹」與真正執行中隊伍紀錄；測後還原第三槽六檔。Files Changed: `docs/research/original-save-layout-candidate.md`、`docs/validation/opcode-10-dos-observation.md`、`tools/analyzer/scan_dosbox_process_memory.py`、`tools/analyzer/prepare_synthetic_event_slot.py`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0039-reversible-event-sampling.md`、本檔。Tests Executed: 原版 DOSBox-X 事件 581、精確畫格文字化覆蓋層檢查、角色／隊伍不停模唯讀記憶體、六檔 SHA-256 還原。Test Results: 角色 49 HP `38→238`、MaxHP `38→238`、MP `21→321`、MaxMP `21→321`、攻擊 `14→44`、速度 `30→50`；另一執行中隊伍紀錄由一人變為包含角色 49，舊存檔副本仍顯示一人。Research Findings: 本案例支持 opcode 10 加入角色 49；先前 208-byte 讀數錯位及只讀存檔副本的負面判斷均撤回。Known Limitations: 此局部案例未驗其他角色、滿隊、角色攜帶物品或所有原版路徑。Unverified Assumptions: 其他參數變體、自然流程可達性；opcode 21 是否同樣因讀錯隊伍副本而被誤判。Next Recommended Tasks: 用執行中隊伍紀錄重查未解 opcode 21，並繼續未驗指令；已確認 opcode 不重驗。
+
+## 原版事件 464 的 opcode 55 對照仍未解（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **未完成**；opcode 55 維持 Unknown。Completed Tasks: 兩份隔離第三槽只變更場景 32 槽 2 的事件 ID（`-1`／`581`），重播原始事件 464；各案唯讀核對目標槽前後值並還原六檔。Files Changed: `docs/validation/opcode-55-unresolved-dos-observation.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件互動、不停模事件槽唯讀差分、六檔 SHA-256 還原。Test Results: 兩案槽 0 均被先頭腳本關閉，槽 2 皆變為 `862`；未形成 opcode 55 可區分分支。Research Findings: 社群比較語意在本案尚無原版證據。Known Limitations: 複合事件中的後續 opcode 3 造成最終寫入，無直接指令 trace。Unverified Assumptions: `55(2,-1,14,0)` 的參數／分支公式、其他事件適用性。Next Recommended Tasks: 選可見對話或獨立狀態結果的 opcode 55 原始事件，或限定 trace；不重驗已確認 opcode。
+
+## 已撤回：以錯誤角色尺寸判讀的 opcode 10（歷史紀錄）
+
+下方舊段落的 208-byte 角色間距與「隊伍未變」判斷已由本檔最新節及 [修正後證據](validation/opcode-10-dos-observation.md) 撤回，不得作目前結論。
+
+Phase: Phase 1／2 原版執行證據。Status: **未完成**；opcode 10 維持 Unknown。Completed Tasks: 在隔離第三槽一人隊伍跑過事件 581 的四段能力通知，文字化檢查通知覆蓋層清除及事件返回互動；唯讀比對隊伍與角色 49 候選紀錄；測後還原六檔。Files Changed: `docs/validation/opcode-10-unresolved-dos-observation.md`、`tools/analyzer/scan_dosbox_process_memory.py`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件、PNG 畫格差異分類、隊伍／角色候選記憶體、六檔 SHA-256 還原。Test Results: `z_450` 顯示「虛竹 內力增加 300」；`z_450–453` 有通知、`z_454–455` 無覆蓋層、`z_456` 返回原首段對話；隊伍候選值仍一人，角色 49 MaxMP 候選仍 360。Research Findings: 目前角色紀錄候選與可見通知互相矛盾，不能據此定義 opcode 10 的語意。Known Limitations: 未定位會隨通知更新的原版角色記憶體副本；未 trace 尾端 `33`、`49`、`10`。Unverified Assumptions: opcode 10 是否到達、角色記憶體布局及自然流程可達性。Next Recommended Tasks: 定位真正更新的角色紀錄或做限定範圍二進位 trace，再判定 10；其餘已確認 opcode 不重驗。
+
+## 對話完成點的文字化畫格守門（最新）
+
+Phase: Phase 1／2 原版執行驗證工具。Status: **局部完成**；opcode 21 仍未解。Completed Tasks: 新增固定場景 PNG 覆蓋層差異分類器，校準乾淨室內、對話、Y/N 選項及物品通知；補充事件 950 目標槽位觀察與 ADR 0039 作業規則。Files Changed: `tools/analyzer/classify_dosbox_game_frame.py`、`docs/validation/opcode-21-unresolved-dos-observation.md`、`docs/decisions/0039-reversible-event-sampling.md`、`docs/TODO.md`、本檔。Tests Executed: 用已知 `z_389`、`z_390`、`z_441`、`z_442`、`z_435`、`z_447`、`z_448` 畫格比對，Python 語法檢查及隔離第三槽還原。Test Results: 已知乾淨畫格區域差異 0–0.014；對話區 0.65–0.78，Y/N／通知區 0.15–0.51；六檔恢復基線。Research Findings: 物品通知仍屬事件中途，必須等覆蓋層清除後再讀最終值。Known Limitations: 只可同場景、同鏡頭的乾淨畫格作基準；不辨識文字、不證明事件已跑到腳本終點。Unverified Assumptions: 其他 UI 和場景適用同門檻；opcode 21 的效果。Next Recommended Tasks: 對未解 opcode 21 取得對話起訖與正確目標記憶體／限定 trace；已確認 opcode 不再換事件重驗。
+
+## 原版事件 96 的加入 Y/N 分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 相同隔離第三槽前置狀態重播原始事件 96 的 N／Y；兩案還原六檔。Files Changed: `docs/validation/opcode-9-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 原版事件互動、精確遊戲畫格、不停模隊伍／事件槽唯讀記憶體、六檔 SHA-256 還原。Test Results: opcode 9 畫面顯示加入 Y/N；N 為婉拒對話，Y 為答應對話；Y 案後續停在物品通知畫格，尚未跑到腳本終點。Research Findings: 本案例支持 opcode 9 控制 Y/N 後續分支，不直接證明角色已加入。Known Limitations: 角色加入可能屬後續 opcode；場景與事件指向為 Synthetic State。Unverified Assumptions: `6,0` 的完整相對跳轉公式、其他參數與自然流程可達性。Next Recommended Tasks: 優先追蹤未解的 opcode 21 與其他尚無原版證據的指令；已確認的 opcode 不再換事件重驗。
+
+## 原版事件 581 的滿隊條件分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 隔離第三槽以一人／六人隊伍重播原始事件 581；確認原始對話、執行中隊伍及場景事件槽；兩案均關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-20-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、本檔。Tests Executed: DOSBox-X 原版事件互動、遊戲專用畫格、不停模隊伍／事件槽唯讀記憶體、六檔 SHA-256 還原、Python 語法檢查。Test Results: 一人分支後續改寫場景 32 槽 2；六人分支顯示「你的隊伍已滿，無法再加入」，槽 2 及隊伍未變。Research Findings: 本案例支持 opcode 20 為滿隊條件分支，FishEdit「全體內力降為 0」描述與實測不符；事件槽修改屬後續 opcode 3。Known Limitations: 滿隊對話屬後續 opcode 1，原版事件為複合腳本，未逐一隔離參數。Unverified Assumptions: `0,6` 的個別作用、其他隊伍容量／排列、完整跳轉公式及自然可達性。Next Recommended Tasks: 驗證其他隊伍排列及剩餘未知 opcode；優先追蹤 21 的對話結束點。
+
+## 原版事件 37 的室內位置變化（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 以缺 ID 173 的隔離第三槽重播原始事件 37，跟隨第一段對話到位置切換及下一段對話；測後還原六檔。Files Changed: `docs/validation/opcode-19-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 原版 DOSBox-X 第三槽讀回／事件互動、精確遊戲畫格、六檔 SHA-256 還原。Test Results: `z_421` 在櫃檯區顯示缺道具對話；`z_422–423` 已到圍欄泥地區並出現下一段對話。Research Findings: 此案例支持兩段對話之間的 opcode 19 改變室內位置。Known Limitations: 尚未取得原版執行中的獨立局部座標讀數；動畫與淡出未單獨隔離。Unverified Assumptions: `30,49` 軸向、其他場景／參數變體、自然流程可達性。Next Recommended Tasks: 定位當前室內格位的唯讀記憶體地址，並繼續其他 opcode 原版對照。
+
+## 原版事件 990 的圖號條件分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 原始事件 990 以場景 80／事件 1 原圖號 6068 與合成 6066 兩案重播；兩案均還原第三槽六檔。Files Changed: `docs/validation/opcode-60-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、本檔。Tests Executed: DOSBox-X 原版事件讀回／互動、遊戲專用畫格、隊伍候選唯讀記憶體、六檔 SHA-256 還原。Test Results: 6068 顯示「神雕宮中」對話；6066 顯示「古墓」對話；合成角色 58 未見離隊。Research Findings: 此案例支持 opcode 60 對指定事件圖號條件分支。Known Limitations: 三個圖號欄位同時介入，未隔離個別欄；opcode 21 仍未解。Unverified Assumptions: 任一欄匹配規則、其他場景／事件、跳轉公式及自然可達性。Next Recommended Tasks: 各自只改一個圖號欄以判斷匹配範圍，並繼續未驗 opcode 的原版對照。
+
+## 原版事件 931 的住宿選擇與 HP 恢復（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單仍未驗收。Completed Tasks: 原始事件 931 的 Y/N 兩路重播；以 Synthetic State 將主角 HP 降至 1，唯讀比較同一執行中角色紀錄於住宿前後的值；兩案關閉唯一程序並還原六檔。Files Changed: `docs/validation/opcode-11-12-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`scripts/Send-DOSBoxX-Key.ps1`、本檔。Tests Executed: DOSBox-X 原版事件互動、精確遊戲畫格、主角執行中記憶體唯讀對照、六檔 SHA-256 還原。Test Results: N 回到室內；Y 顯示住宿與隔天兩段對話；主角 HP 在第一段對話期間為 1/44，關閉後於第二段對話為 44/44。Research Findings: 本案支持 opcode 11 的 Y/N 分支，以及其 Y 路徑中 opcode 12 的 HP 恢復效果；對話由後續 opcode 1 呈現。Known Limitations: 進場／事件指向與 HP 降低為 Synthetic State；未單獨隔離 opcode 14／40。Unverified Assumptions: 其他角色／數值、完整跳轉公式及自然住宿可達性。Next Recommended Tasks: 繼續其他未驗 opcode 原版對照，對 12 補 MP／同伴／受傷中毒邊界。
+
+## 已撤回：讀取載入存檔副本的 opcode 21 負面判斷（歷史紀錄）
+
+下方舊段落讀取的是載入存檔副本，未觀察執行中隊伍；現以 [修正後證據](validation/opcode-21-dos-observation.md) 為準。
+
+Phase: Phase 1／2 原版執行證據。Status: **未完成**；opcode 21 保持 Unknown。Completed Tasks: 隔離第三槽加入角色 1 並映射原始事件 950；確認原始對話可達、隊伍起始值及對話後唯讀值；測後還原六檔。Files Changed: `docs/validation/opcode-21-unresolved-dos-observation.md`、`docs/TODO.md`、本檔。Tests Executed: DOSBox-X 第三槽讀回、場景 32 進場、事件 950 互動、遊戲專用畫格、隊伍／事件槽唯讀記憶體、六檔 SHA-256 還原。Test Results: 對話出現，但同一執行中隊伍仍為 `[0,1,-1,-1,-1,-1]`；沒有把此結果標為指令語意。Research Findings: 合成角色在隊前置能載入，後續原版效果尚不明。Known Limitations: 尚未 trace 對話後指令、未用自然入隊進度。Unverified Assumptions: opcode 21 的參數長度、離隊語意及額外前置。Next Recommended Tasks: 對事件 950 的對話結束點做限定範圍 trace，或取得自然入隊／離隊存檔差分。
+
+## 原版事件 640 的攻擊條件分支（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 在隔離第三槽以原始事件 640 對照主角候選 Attack 28／75，確認兩種不同路徑；每案關閉唯一 DOSBox-X 測試程序並還原六檔基線。Files Changed: `docs/validation/opcode-29-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`docs/decisions/0039-reversible-event-sampling.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: 原版 DOSBox-X 第三槽讀回、場景 32 進場、事件 640 互動、精確遊戲畫格、不停模唯讀角色／背包／事件槽、六檔 SHA-256 還原。Test Results: Attack 28 顯示力氣不足對話且腳本仍為 640；Attack 75 後續修改事件槽為 `-1`、顯示拔劍對話並使背包新增 ID 110 ×1。Research Findings: 此案例支持 opcode 29 依攻擊數值分支；取得物品與事件修改屬後續 opcode 2／3。Known Limitations: 世界入口及事件指向為 Synthetic State；初次進場與互動格位校準失敗的嘗試不作指令證據。Unverified Assumptions: 上界 1000、其他角色／事件、完整跳轉公式及自然可達性。Next Recommended Tasks: 按未驗 opcode 採樣表繼續原版執行對照；必要時以限定範圍 trace 查 15／83。
+
+## 原版事件 27 的隊伍條件驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 以可逆第三槽分別重播原始事件 27 的角色 1 不在隊／合成加入隊伍槽 1；唯讀確認隊伍資料與場景 32 事件槽 1 腳本 ID。Files Changed: `docs/validation/opcode-16-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: 兩次 DOSBox-X 原版事件讀檔／互動、精確畫格、隊伍及事件槽唯讀記憶體、每次六檔 SHA-256 還原。Test Results: 無角色 1 時腳本 ID 維持 `-1`；角色 1 在隊時後續 opcode 3 將其改為 28；兩案的 NPC 動作圖像欄位均變動，不用於分支判定。Research Findings: 此案例支持 opcode 16 依指定角色隊伍成員資格分支。Known Limitations: 入隊為 Synthetic State；未測其他隊伍槽或自然加入。Unverified Assumptions: 相對跳轉公式與其他角色／事件。Next Recommended Tasks: 繼續其他 opcode 原版對照，必要時以指令 trace 確認跳轉公式。
+
+## 原版事件 458 的品德分支驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 用可逆第三槽將原始事件 458 映射到同一 NPC，分別以主角候選品德 50／合成 49 重播；49 已由執行中主角紀錄唯讀確認。Files Changed: `docs/validation/opcode-28-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、本檔。Tests Executed: 兩次 DOSBox-X 原版事件讀檔／互動、精確畫格、品德與事件槽唯讀記憶體核對、每次六檔 SHA-256 還原。Test Results: 50 顯示後續對話 `z_310`；49 的 `z_315–317` 無該對話，事件槽仍為 458；兩次測後皆關閉唯一視窗且第三槽還原。Research Findings: 此案例支持 opcode 28 的主角品德下界分支；候選偏移 5 對應 word 11 的 opcode 7。Known Limitations: 49 分支沒有逐指令 trace；不能從靜態尾段推論其進入戰鬥。Unverified Assumptions: 上界 100、其他角色、完整跳轉公式。Next Recommended Tasks: 對 28 做上界／其他角色案例，並繼續其他 opcode 的原版對照。
+
+## 原版事件 434 的圖層替換驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 以可逆第三槽在場景 32 第 0 層合成一格 990，執行原始事件 434；唯讀執行中圖層的同一格 990→994，層內計數亦 990 1→0、994 0→1。Files Changed: `docs/validation/opcode-38-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/prepare_synthetic_event_slot.py`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: 原版 DOSBox-X 隔離第三槽、精確遊戲畫格、同一圖層唯讀前後比對、六檔 SHA-256 還原。Test Results: 首次 Enter 只見 NPC 動作且格值仍 990；第二次 Enter 後同格為 994；測後唯一視窗關閉，第三槽恢復基線。Research Findings: 此案例支持 `38(-2,0,990,994)` 修改目前場景第 0 層相符格。Known Limitations: 僅合成一格 990，沒有驗證多格同值。Unverified Assumptions: 全層替換規則、其他層／場景與畫面刷新。Next Recommended Tasks: 對照更多原版 opcode；以多個相同圖號格確認 38 的替換範圍。
+
+## 原版事件 274 的圖層寫入驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；全部原版指令仍未驗收。Completed Tasks: 將原始事件 274 映射到隔離第三槽，唯讀定位場景 32 第 1 層執行中資料；第二條 `17(-2,1,12,22,2898)` 執行後，ID 2898 格數 0→1、零值格 3806→3805、列優先 `(12,22)` 由 0→2898。Files Changed: `docs/validation/opcode-17-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: 原版 DOSBox-X 隔離第三槽讀取／事件觸發、遊戲專用畫格、同一 host 圖層唯讀對照、六檔 SHA-256 還原。Test Results: 指定格與層內計數同時吻合，測後唯一視窗關閉且第三槽恢復基線。Research Findings: 此案例的寫入採列優先格位索引。Known Limitations: 第一條 `17(...,0)` 的目標原值已是 0，未能單獨證實效果。Unverified Assumptions: `-2` 的全部解析情境、其他場景與圖層、視覺刷新。Next Recommended Tasks: 持續逐 opcode 對照，選有非零原值的目標驗證其他 17 變體。
+
+## 原版事件 420 的場景條件驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單與轉換邏輯仍未驗收。Completed Tasks: 以可逆第三槽映射原始事件 420，唯讀比對同一執行中場景 75 候選紀錄，兩段對話後 EnCondition 1→0，座標 341、137 未變。Files Changed: `docs/validation/opcode-39-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔。Tests Executed: 唯一 DOSBox-X 視窗冷啟動／讀第三槽／事件互動、遊戲專用畫格、同址不停模記憶體對照、測後六檔 SHA-256 還原。Test Results: `z_289`／`z_292–293` 時條件為 1，`z_294` 返回室內時為 0；六檔還原為基線 SHA-256。Research Findings: `39(75)` 在此案例與場景 75 候選條件變更一致。Known Limitations: 場景／事件映射為 Synthetic State；尚未親自走入場景 75。Unverified Assumptions: EnCondition 0 對全部場景的可進入語意、其他 opcode 39 參數變體。Next Recommended Tasks: 實際入口驗收，並按採樣表繼續逐 opcode 原版對照。
+
+## 原版事件 636／497 的局部分支與數值驗證（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；完整指令清單與轉換邏輯仍未驗收。
+
+Completed Tasks: 原始事件 636 的 `43(110,6,0)` 使用無 ID 110／ID 110 ×1 兩種隔離第三槽前置，觀察到不同對話。原始事件 497 在取得 ID 57 提示關閉前後，唯讀比較同一執行中主角紀錄，候選品德 50→49，與末段 `37(-1)` 相符。每案只保留一個精確 DOSBox-X 視窗，結束後依 manifest 還原六個第三槽檔案。
+
+Files Changed: `docs/validation/opcode-43-dos-observation.md`、`docs/validation/opcode-37-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、`tools/analyzer/scan_dosbox_process_memory.py`、本檔；其餘本階段未提交變更仍保留。Tests Executed: DOSBox-X 2026.10.01 冷啟動、隔離第三槽讀取、原版事件互動、遊戲專用畫格、執行中記憶體唯讀前後對照、六檔 SHA-256 還原核對。Test Results: ID 110 缺／有分別顯示不同對話；同一主角候選位址在事件 497 取得提示仍開啟時為品德 50，關閉後為 49，聲望維持 0。
+
+Research Findings: 43 在此事件依道具是否持有分支；37 在此事件使主角候選品德減一。Known Limitations: 場景／事件映射及道具前置為 Synthetic State；未逐指令 trace；只驗證這兩個局部案例。Unverified Assumptions: 43 對零數量的判斷、37 上下界與其他參數、尚未實測的 opcode。Next Recommended Tasks: 按逐 opcode 採樣表持續原版執行對照；對 15／83 做限定範圍 trace；證據不足的轉換維持局部停止。
+
+## 原版單指令事件 692／825／828（最新）
+
+Phase: Phase 1／2 原版執行證據。Status: **局部完成**；整體 opcode 驗證仍未完成。
+
+Completed Tasks: 在隔離第三槽分別將同一 NPC 指向未修改的原始事件 692、825、828。原版事件 692（opcode 51）顯示多段人物對話；事件 825（opcode 52）顯示品德 50；事件 828（opcode 53）顯示聲望 0。三次均只維持一個 DOSBox-X 程序，測後關閉並以 SHA-256 備份還原第三槽。
+
+Files Changed: `docs/validation/opcode-51-53-dos-observation.md`、`docs/research/event-opcode-coverage.md`、`docs/TODO.md`、本檔。Tests Executed: 三次原版 DOSBox-X 冷啟動／讀第三槽／事件互動與遊戲專用畫格；R3 主角候選 stat bytes 讀取；三次 `--restore` 雜湊核對。Test Results: 畫格 `z_240–243.raw1.png`、`z_229.raw1.png`、`z_235.raw1.png` 分別支持上述局部效果；品德候選 offset 948 為 50，聲望候選 offset 954 為 0。
+
+Research Findings: 51 在此案例顯示對話；52／53 的畫面數字與兩個候選角色欄位一致。Known Limitations: 場景／事件映射為 Synthetic State；51 的隨機性和 52／53 的全部數值範圍未驗。Unverified Assumptions: 社群實作的隨機選句方式、原版 51 的所有文本範圍、其他 opcode 語意。Next Recommended Tasks: 使用下方採樣候選表繼續逐 opcode 原版對照；維持單一視窗、可逆存檔及前後狀態證據；必要時追蹤 15／83 的 DOS 指令位址。
+
+## 原版事件 460／675／676、指令 50 矩陣、事件 190／37／497
+
+Phase: Phase 1／2 原版執行證據；Phase 3／6 整體仍未驗收。Status: **部分完成**。原版遊戲內存檔證實事件 460 將場景 32／槽 0 指向 675；非暫停記憶體讀取證實事件 675 執行後同槽為 676。事件 676 的指定指令 50 案例矩陣已實測。原始事件 190 的敗北路徑 `15,83` 兩次導向死亡／讀檔頁。原始事件 37 已完成有／無 ID 173 的指令 18 分支對照。原始事件 497 的首條指令 `2(57,1)` 增加物品。0–67 指令的完整原版驗證仍未完成。
+
+Completed Tasks: 建立可逆的隔離第三槽合成起點及 SHA-256／offset manifest；單一 DOSBox-X 視窗中觸發場景 23／32 的事件槽 0；確認原版存檔 R 欄位順序為 Y、X；事件 460 後 D3 byte 140804 從 673 變 675，執行中場景 32 槽 0 從 675 變 676；指令 50 全缺、全有、五種單項缺失、ID 140 零數量、反向槽順序、額外 ID 200 全部取得畫面及唯讀背包證據；原始事件 190 的 1 HP 敗北路徑重播兩次，均顯示死亡／讀檔頁；原始事件 0 的 `0,-1` 對照仍在場景；原始事件 37 有 ID 173 時事件槽 37→`-1`，無 173 時顯示不同對話且槽仍為 37；原始事件 497 首條指令增加 ID 57 ×1。畫格保留在 ignored 本機目錄，詳見四份 opcode DOS observation。
+
+Files Changed: `tools/analyzer/prepare_synthetic_event_slot.py`、`tools/analyzer/scan_dosbox_process_memory.py`、`tools/analyzer/build_original_opcode_replay_plan.py`、`scripts/Capture-DOSBoxX-GameFrame.ps1`、`scripts/Send-DOSBoxX-RightClick.ps1`、`docs/validation/opcode-2-dos-observation.md`、`docs/validation/opcode-50-dos-observation.md`、`docs/validation/opcode-15-dos-observation.md`、`docs/validation/opcode-18-dos-observation.md`、`docs/validation/opcode-15-50-cases.md`、`docs/research/event-opcode-coverage.md`、`docs/research/event-opcode-replay-candidates.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0039-reversible-event-sampling.md`、本檔及 `docs/TODO.md`。其他先前未提交檔案保留原狀。
+
+Tests Executed: 原版 DOSBox-X 2026.10.01 隔離第三槽反覆冷啟動／讀檔／事件互動；原版遊戲內存檔前後 D3 位元組與 SHA-256 比對；不停模唯讀 `ReadProcessMemory` 搜尋事件槽／背包；每組測後 `--restore` 雜湊核對；靜態採樣表生成並核對 68 列；Python 語法與 `git diff --check`。Test Results: 指令 50 指定案例矩陣均與畫面／狀態相符；事件 190 兩次敗北後均到死亡／讀檔頁；事件 0 返回室內且仍可移動；事件 37 的有／無 ID 173 對照出現不同對話與事件欄位結果；事件 497 從無 ID 57 變為 `(57,1)`，畫面顯示取得提示。DOSBox-X state 讀回仍不可靠；未使用凍結或 breakpoint。事件 37 與 497 測後均已關閉唯一視窗並還原第三槽。
+
+Research Findings: `R3.GRP` offset 4/6 是候選 My/Mx，已由遊戲內存檔與相鄰入口切場景交叉核對；scene 23／32 的候選進入條件原值 1，在合成副本設 0 後可從相鄰格進入。執行中背包有一份會變的候選副本及一份保持載入值的副本。事件 676 的條件在本案例接受 `(140,0)`，反向槽序與無關 ID 200 不妨礙成立。事件 37 有／無 ID 173 走不同分支。事件 497 以第一條 `2(57,1)` 增加活躍背包項目。Known Limitations: 場景入場、事件改指向與背包／HP 為 Synthetic State；自然可達性及入場條件 1 的解鎖規則未證實；只取得少數 opcode 的局部 DOS 案例。Unverified Assumptions: `83` 是否為原版 opcode 15 參數、15 是否消耗它、後續 7 是否執行，以及所有未實測 opcode 的語意。Next Recommended Tasks: 針對 15／83 做限定範圍 DOS 指令 trace；擴充逐 opcode 原版實驗矩陣；在證據足夠時實作 adapter。
+
+## 遊戲內進度一恢復（最新）
+
+Phase: Phase 1／2 原版互動查證。Status: 在唯一新 SDL2 session PID 15196 由原版主選單載入進度一，已到大地圖；opcode 15／50 原版效果仍未驗證。Completed Tasks: 確認標題畫面；一次 Down 前後畫格比對證實反白由第一列移至「載入進度」第二列。進入載入選單後以畫格亮度確認第一列「進度一」，送 Enter；log 實際開啟 `s1.grp`、`d1.grp`、`r1.grp`，取得大地圖基線 `z_045.raw1.png`。Files Changed: PROGRESS、TODO、DOSBox-X 驗證紀錄。Tests Executed / Test Results: 單一隔離原版互動讀檔、日誌與遊戲畫格核對，成功載入進度一；沒有執行自動化測試。Research Findings: event 676 仍需事件 460→675 啟用鏈，當前只是可重播起點。Known Limitations: 尚未到達 opcode 15／50 觸發點；DOSBox-X state 讀回在 SDL1／SDL2 都曾崩潰。Unverified Assumptions: 現有進度一是否自然可到達這些事件，需依原版路線驗證。Next Recommended Tasks: 以進度一作大地圖起點，確認路線與事件旗標，依 `docs/validation/opcode-15-50-cases.md` 執行可到達案例；日常觀察保持遊戲執行，只有二進位追蹤或完整記憶體差分時短暫凍結。
+
+## SDL1 slot 3 保存與讀回結果（最新）
+
+Phase: Phase 1／2 原版執行環境。Status: 已成功保存 SDL1 模擬器 slot 3，但同 build 讀回後 DOSBox-X 以 `0xc0000005` 崩潰；目前沒有遊戲視窗。Completed Tasks: 找到獨立程序 PID 9152 的 `Save state` 註解對話框，留空按 OK；產生 `save/3.sav` 451,838 bytes，SHA-256 `A55E6B6D47AB6B0677E9444D905A7510BF227C6004A3D5EE6E53153A879515AF`。同一 SDL1 PID 9760 載入 slot 3，log 記錄 `Loaded. (Slot 3)`；隨後視窗消失，Windows Application Error 1000 記錄 19:59:14 `0xc0000005`。Files Changed: PROGRESS、TODO、DOSBox-X 驗證紀錄。Tests Executed / Test Results: 真實 SDL1 state save/load、狀態檔 hash、程序／視窗與 WER 核對；保存成功，恢復可玩進度失敗。Research Findings: 保存註解框是獨立 PID/HWND，僅擷取主遊戲視窗會漏掉。Known Limitations: SDL1 及 SDL2 均曾在 state 載入後崩潰；原因尚未定位。Unverified Assumptions: 尚不能判定崩潰是 DOSBox-X 本體、此遊戲或目前設定組合造成。Next Recommended Tasks: 不再用損壞的 state restore 當事件採樣前置；在單一新 session 以原版遊戲內進度檔讀取，再以不暫停的畫面／記憶體觀察執行 opcode 案例；另外隔離分析 state crash。
+
+## SDL1 空白狀態槽驗證（最新）
+
+Phase: Phase 1／2 局部原版執行環境。Status: 單一 DOSBox-X SDL1 session PID 9760 仍在標題畫面；slot 3 已選取，但 Save state 未產生檔案，讀回尚未執行。
+
+Completed Tasks: 確認標題畫面及唯一視窗。由原生選單確認 slot 2 已選、slot 3 空白；選取 slot 3 後，日誌記錄 `Active save slot: 3 [Empty]`。動態解析並送出 Save state menu command 5199，另依選單快捷鍵對精確 HWND 送 F11+S；兩次均未產生 `save/3.sav` 或保存日誌。異常時以精確視窗 GDI 擷取確認仍是標題畫面，沒有可見警告或備註框。Files Changed: `docs/PROGRESS.md`、`docs/TODO.md`、`docs/validation/dosbox-x-debugger-and-sampling.md`。
+
+Tests Executed / Test Results: 實際 DOSBox-X SDL1 menu／快捷鍵操作、slot 3 檔案與 log 檢查、目標視窗畫面檢查；Save state 未通過。桌面控制工具及 Windows Graphics Capture 在後段回報 `GetCursorPos Access denied`／`CreateForMonitor 0x80070057`；精確視窗 GDI 擷取成功。未執行自動化測試。
+
+Research Findings: slot 3 選槽已成功；單純 Windows `WM_COMMAND`／投遞 F11+S 成功，不代表 DOSBox-X 實際完成保存。Known Limitations: SDL1 slot 3 尚無 checkpoint；既有 SDL2 slot 1／2 載入曾以 `0xc0000005` 結束；尚未進入原版 opcode 採樣。Unverified Assumptions: SDL1 保存命令未生效的原因不明；畫面沒有可見提示。Next Recommended Tasks: 修復精確視窗輸入或切回可用的同 build 控制路徑，先實測一個同 build Save/Load checkpoint，再進行 opcode 15／50 原版案例。異常先看畫面，不連續盲送輸入。
+
+## Load state 警告畫面查證（最新）
+
+Phase: Phase 1／2 局部環境查證。Status: 已查明並取消 SDL2 → SDL1 的跨 build 載入警告，同一 PID 9760 已移除 PAUSED；尚未恢復 checkpoint。
+
+Completed Tasks: 依使用者要求先查看異常畫面。實際警告是 saved `2026.10.01 (SDL2)`、current `2026.10.01 (SDL1)`，選 No 後標題恢復正常，等待中的 HELP 亦輸出至 log。將異常先讀畫面、檢查 modal、載入前核對 SDL build 寫入 ADR0038。Files Changed: PROGRESS、TODO、ADR0038、DOSBox-X 驗證紀錄。
+
+Tests Executed / Test Results: 只對唯一 DOSBox-X 視窗讀取畫面並取消已辨識警告；未送遊戲鍵。以視窗 title 和 log 確認取消後解除等待；未跑自動化測試。Research Findings: 此次非 SDL2 的 PAUSED 是 build mismatch 對話框等待確認。Known Limitations: 先前 SDL2 WER crash 仍未解；不能當成同一原因。Unverified Assumptions: checkpoint 能否由原 SDL2 build 穩定恢復仍待驗證。Next Recommended Tasks: 保持單一 session；同一 build 的 state 與 config 必須配對，不強制跨 SDL 載入；之後再處理 SDL2 restore 與 opcode 採樣。
+
+## DOSBox-X 權限與狀態載入追查（最新）
+
+Phase: Phase 1／2 原版執行環境查證；Phase 3／6 整體未驗收。Status: 已用提升權限方式成功啟動及控制 DOSBox-X；目前只保留一個 session-002 程序 PID 9760，視窗顯示 `PAUSED`。狀態載入是否完成尚未確認。
+
+Completed Tasks: 更正先前把受限權限查不到程序誤判為「已退出」的錯誤。SDL2 build 載入 slot 1 與 fresh slot 2 後都出現 WER `0xc0000005`；非 SDL2 build PID 9760 目前仍活著、視窗可回應，log 停在 `Loading state from slot: 2`。Debugger loopback 連線目前建立，但 HELP 回應尚未取得。沒有新增視窗，沒有送遊戲鍵或擷取圖片。
+
+Files Changed: `docs/PROGRESS.md`、`docs/TODO.md`、`docs/validation/dosbox-x-debugger-and-sampling.md`。此前已有的 opcode 分批報告、決策與 scripts 仍屬未提交工作目錄變更。
+
+Tests Executed: 提升權限程序／HWND／選單唯讀盤點；檢查 DOSBox-X log、WER 1000／1001 與 loopback TCP 狀態；`git diff --check`。未執行遊戲鍵盤操作、圖片擷取或自動化測試。
+
+Test Results: 提升權限程序盤點確認 PID 9760、HWND `0x22086C`，title `DOSBox-X 2026.10.01: Z - 20000 cycles/ms PAUSED`。一般權限的 process lookup 不完整，不能用來判斷提升權限程序已退出。SDL2 版 crash 有 WER 證據；非 SDL2 版目前仍存活且載入結果未定。
+
+Research Findings: DOSBox-X 可由本工具提升權限啟動，因此不需要使用者代開。此次主要阻礙是 SDL2 state-load crash 及非 SDL2 的 paused／loading 未完成，不是啟動權限。現有進度仍保存在 slot 1 與 slot 2 的檢查點檔案中。
+
+Known Limitations: 尚未成功證明從 DOSBox-X emulator state 恢復到可玩進度；Opcode 15／50 的原版效果仍未採樣。現存 PID 9760 未確認是否完成 slot 2 載入，應避免另開視窗或向狀態不明的遊戲送鍵。
+
+Unverified Assumptions: 非 SDL2 build 的 `PAUSED` 可能是載入狀態的一部分，但 log 沒有 `Loaded` 訊息，不能據此當成已恢復。Debugger loopback 已建立不代表 HELP 命令已成功回覆。
+
+Next Recommended Tasks: 先用唯一的 PID 9760 查明目前 debugger 連線／paused 狀態；若不能恢復，記錄並安全結束該 session，再於啟動前先準備好 debugger bridge，單獨測試一個隔離 session 的 emulator-state 存取。成功恢復後才跑可重播案例與 opcode 15／50 採樣。每個鍵盤輸入間隔至少一秒；預期結果不逐次讀圖，只有非預期或模糊時才擷取遊戲畫格。
+
+## DOSBox-X 狀態檢查點與 R3 座標偏移介入測試（前次 session）
+
+Phase: Phase 1／2 局部原版資料格式查證；Phase 3／6 整體未驗收。Status: 只開一個 session-002；確認原版載入介面選取三列且第三列會載入 R3。只改隔離副本 `R3.GRP` offset 6（235→245）後，載入位置／地圖畫面改變；這證實 offset 6 會影響大地圖載入位置，尚未證明欄位軸名與正方向。測試後六個 R3/S3/D3 檔以備份 hash 還原。DOSBox-X 完整狀態保存於 `assets/generated/dosbox-x/session-002/save/1.sav`，981,563 bytes、SHA-256 `73648B6068EA38737266D72845A66AF549D78714E82C3EB8E840AC0021E73747`。唯一測試視窗已關閉，沒有活躍 session。
+
+Completed Tasks: 以精確標題畫面和逐次一列選擇驗證載入介面；DOSBox-X log 確認選第三列實際開啟 `S3.GRP`、`D3.GRP`、`R3.GRP`。建立合成狀態備份，只修改 R3.GRP offset 6，讀回地圖後確認畫面位置不同，並還原 R3/S3/D3 六個檔案至基線 hash。建立 DOSBox-X Capture slot 1 狀態檢查點。移除無法透過原版三列選單選取的合成 R4 檔案，保留 manifest 標示為不可載入測試。
+
+Files Changed: `docs/decisions/0037-nonblocking-dosbox-observation.md`、`docs/decisions/0038-session-state-preflight.md`、`docs/research/original-save-layout-candidate.md`、`docs/research/event-opcode-semantics-second-batch.md`、`docs/research/opcode-15-50-status.md`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/PROGRESS.md`、`docs/TODO.md`。Ignored local evidence: `session-002/save/1.sav`, coordinate-test manifests and frames.
+
+Tests Executed: 沒有執行自動化測試。互動操作以 DOSBox-X 遊戲專用 raw frame 和 log 證據進行；使用者指示每個輸入至少間隔一秒，預期結果不逐步擷取圖片，僅非預期／模糊時才擷取。DOSBox-X save state 儲存已執行，尚未跨冷啟動載入測試。
+
+Test Results: `session-002/dosbox-x.log` 確認 R3 載入。offset 6 單變量修改後地圖明顯不同；基線和合成 raw frames 為 `z_033.raw1.png`、`z_041.raw1.png`，同次操作的 R3/S3/D3 六檔 hash 已全部恢復相同。state slot 1 已存在，檔案 hash/bytes 已記錄。原版選單只觀察到三列，R4 不當作可用槽。沒有操作另一個遊戲視窗。
+
+Research Findings: DOS 執行時對 R3.GRP offset 6 做 10 的差異會改變載入後大地圖角色／底圖位置；offset6 的具體 X/Y 名稱、軸方向、比例仍 Unknown。DOSBox-X 建置版本的 Capture 功能有 Save state／Load state，slot1 成功產生 `save/1.sav`。使用者確認手動 Esc 開遊戲選單和 Exit Y/N；背景 PostMessage 試送 Escape 未能重現畫面，記為輸入自動化限制。
+
+Known Limitations: DOSBox-X slot 1 儲存已產生但尚未由另一啟動 session 成功載入；在驗證前仍不能說 restore path 已實測完整。原版 UI 選槽雖可確認到 R3，原版檔案是否同版本原始上限 exactly 3 仍只依實際循環觀察。R3 offset 6 只驗證影響位置，軸向／命名未明。Opcode 3–15 的 handler 對照為 community 靜態研究，不是 DOS 原版語意驗收。
+
+Unverified Assumptions: DOSBox-X 的 slot1 state file 跨啟動載入後會恢復到相同 R3 合成地圖位置；R3 offset 6 是 community 欄位候選 `Mx`，但真實軸名／方向仍待另一個座標單變量介入確認。Opcode 15 尾字 83 的原版含義，以及 opcode7 和 KDEF terminator `-1` 的差異仍未知。
+
+Next Recommended Tasks: 下一個互動 session 只啟動一個 DOSBox-X，先用 Capture→Load state slot1 恢復進度，檢查輸出／狀態而不重建遊戲存檔。之後使用不同獨立槽／checkpoint 測 offset 4 或另一個候選座標欄位，確定軸方向；避免修改基線。繼續批次完成 opcode 16–67 的來源／控制流靜態矩陣，挑可重播事件驗證 15／50；每鍵至少等 1 秒，圖片只在結果非預期或不明時讀取。
+
+## 存檔欄位測試操作修正（追加）
+
+Phase: Phase 1／2 局部格式查證；Phase 3／6 整體未驗收。Status: 合成 R4 存檔已建立，但槽位導航失敗；DOSBox-X log 明確顯示實際載入 R1，故尚無座標欄位遊戲內證據。一次低權限查詢未找到高權限 PID 21252，被錯誤當成 session 不存在而開出重複 PID 23688；已關閉該重複視窗。使用者隨後關閉所有 DOSBox-X 視窗，因此目前沒有遊戲 session。使用者確認原版 Esc 開啟遊戲選單，選「離開遊戲」後會詢問 Y/N，也可用左鍵選離開；已作為 user-observed evidence 記錄，並取代先前把黑畫面當作未知退出的紀錄。此操作修正已寫入 ADR0038；以後只啟動一個隔離 session，先辨識畫面再送鍵。
+
+Completed Tasks: 確認 community `MenuLoadAtBeginning` 有六項選擇（進度一至五、自動檔），這只描述 community 版本；DOSBox-X log 證實先前載入的是 R1 而非合成 R4。確認並關閉本輪新增的重複 PID 23688。將「低權限找不到不等於 process 不存在、不可因重試建立重複 session」補入 ADR0038。建立 opcode 3–15 第二批來源對照；DOS 行為仍 Unknown。記錄使用者確認的 Esc／退出選單操作。
+
+Files Changed: `docs/decisions/0038-session-state-preflight.md`、`docs/research/original-save-layout-candidate.md`、`docs/research/event-opcode-semantics-second-batch.md`、`docs/validation/dosbox-x-debugger-and-sampling.md`、本進度。
+
+Tests Executed: 未執行遊戲測試；未向任何視窗送鍵。只檢視既有 DOSBox-X log、process/window inventory、本機事件 corpus 與 pinned community handler/dispatcher。
+
+Test Results: 沒有 R4 載入證據；log 反而確認載入 `r1.grp`。合成 R4 座標修改尚未驗證。重複 PID 23688 已關閉；使用者確認兩個遊戲視窗已全部關閉，現在沒有活躍 session。Opcode 15 的 114 筆 candidate args 全為 `83`；社群 Pascal handler 不讀此字、僅顯示失敗畫面並結束當前 event loop。以上是靜態/候選證據，非 DOS 語意驗證。
+
+Research Findings: 載入選單有「進度一、二、三、四、五、自動檔」六列（僅 community source）。原版選取仍須靠本機畫面與實際開啟檔名確認。Opcode 15 候選參數 83 在 corpus 114/114 相同；community dispatcher 只前進一個 word 後 break，handler 為無參數並畫失敗畫面。使用者已確認 Esc 是開啟遊戲選單，離開選項再詢問 Y/N。權限不足造成 PID 查詢失敗時，不應重啟遊戲。
+
+Known Limitations: session-002的選單輸入尚未逐鍵成功確認；未確認 `R4.GRP` 是否能被遊戲載入，未驗證候選 Mx offset 6。使用者確認的退出操作尚無本輪 game-only frame/log capture。Opcode 3–15 社群行為整理不等於 DOS 原版驗證；opcode15 的 83 意義、opcode7與終止符 `-1` 的原版區別仍未知。
+
+Unverified Assumptions: 原版六列載入選單對鍵盤操作方式及選中列視覺標記；合成 R4 的載入相容性與 `Mx` 遊戲座標作用皆未知。所有已知社群 handler 對應的 DOS opcode 行為仍須獨立驗證。
+
+Next Recommended Tasks: 使用者已關閉所有視窗；下一次互動驗證時只啟動一個隔離 session，先 capture title，再逐鍵確認選擇並用實際開啟的 slot 檔名為準。優先驗證合法讀檔與合成 R4；接著建立能重播的 opcode 15 事件案例。繼續逐批完成 opcode 0–67 handler/source 對照，同時將所有 DOS 未驗證項目維持 Unknown；用戶確認的 Escape/Exit 行為已記錄，無需重測該按鍵。
+
+## 存檔欄位定位：離線 bytes 候選地圖
+
+Phase: Phase 1／2 格式查證局部；Phase 3／6 整體未驗收。Status: 本次收到新指令後先確認兩個 DOSBox-X session、精確視窗標題、session-002遊戲畫面與程序回應狀態，再做離線檔案分析；沒有送鍵、凍結或寫存檔。session-002 PID `17944`／HWND `0x330944` 仍在遊戲標題選單。已由本機原始 save bytes 建立背包、角色、隊伍、座標與武功欄位候選表，不把社群 source 等同原版。
+
+Completed Tasks: 解析 session-002 的 `RANGER.IDX` 實際為24 bytes、六個 little-endian uint32 offsets `[836,59076,97076,101444,114092,114242]`；核對 `RANGER.GRP` 前836 bytes可按12個short header、6個隊伍short及200×4-byte物品記錄整除。當時把角色區間 `[836,59076)` 誤判為280×208 bytes，**已於 2026-11-12 依逐筆姓名改正為 320×182 bytes**；下述基於 208-byte 間距的角色 absolute offsets 均撤回。當時依社群 `TRole` candidate field order 推算基本屬性、武功／等級、內功／等級等欄位；後段偏移仍需原版重查。記錄社群 LoadR 讀8個 IDX offsets、而本機只有6個及路徑不同，明確禁止照社群程式直接寫回。確認 `S1.GRP`、`D1.GRP` 長度與社群陣列大小公式吻合，但語意仍待驗。新增非連續操作前確認即時視窗／畫面／guest狀態的 ADR0038。見 `docs/research/original-save-layout-candidate.md`。
+
+Files Changed: `docs/research/original-save-layout-candidate.md`、`docs/decisions/0038-session-state-preflight.md`、`docs/PROGRESS.md`、`docs/TODO.md`。
+
+Tests Executed: 未執行測試；僅做唯讀狀態檢查、hash／檔案長度及 bytes 結構分析，並擷取遊戲專用原始畫格。
+
+Test Results: session-002程序 `Responding=True`，raw capture顯示遊戲標題選單。RANGER.IDX及GRP、R1.GRP、S1.GRP、D1.GRP的長度和SHA-256已記錄於候選表。沒有修改存檔，也沒有暫停主模擬。
+
+Research Findings: 背包候選區從slot GRP offset36開始，每筆4 bytes，ID/count候選分別為+0/+2；主角候選record0自836起，每筆208 bytes；隊伍表候選在24..35；角色武功ID/level候選在record內130..149及150..169。當前RANGER.IDX實際24 bytes，而社群 Pascal LoadR讀8個uint32，兩者格式不完全相容，需以DOS遊戲前後合法存檔證據裁定。
+
+Known Limitations: 社群 record names/order與本機 bytes尺寸相符，不足以證明原版欄位意義、座標軸、slot ID映射、空白物品處理或事件資料更新。物品數量的memory address尚未定位；也沒有取得加入同伴／學習武功前後存檔差分。session-002的debugger console目前未在其視窗清單中確認；不可用session-001的debugger狀態替代。
+
+Unverified Assumptions: `RANGER.IDX`前六值依序對應角色、物品、場景、武功等段界的解讀；R*.GRP header offsets 2/4/6/8/10分別為場景、地圖或玩家座標欄位；角色索引0為可玩主角；每筆物品欄位是 signed int16 `(ID, count)`；角色record中標準與內功數組的偏移完全相同於community TRole。以上均待實際合法存檔差分確認。
+
+Next Recommended Tasks: 依當下遊戲畫面先逐鍵確認標題選單，不沿用上一輪選項狀態；透過UI建立一個新的合法測試存檔槽及完整before hash。然後每次只改一類狀態（物品、隊伍、武功、座標）並另存到新槽，做前後檔案差分與遊戲畫面核對。若需定位runtime memory address，僅在操作前後完整快照期間短暫凍結，中間保持Running。確認欄位後才實作獨立的 synthetic-save patcher，且只修改副本。
+
+## Opcode 逐項釐清：第一批靜態來源對照
+
+Phase: Phase 3 局部研究；Phase 3／6 整體未驗收。Status: 已完成 0、1、2、16、18、32 六條常見指令的第一輪來源分層；只記錄 FishEdit 候選格式與 `kys-jedisdl` 社群實作，DOS 原版效果仍標為 Unknown。session-002 標題畫面已重啟確認；嘗試 `Down` + `Enter` 後回到 `C:\>`，所以未進入載入選單或進行 opcode 回放。20 個隔離存檔槽檔案 SHA-256 仍與基線一致；無 breakpoint、無存檔寫入。
+
+Completed Tasks: 對照實際處理器與 dispatcher：0 在需要時重建場景再 redraw；1 依模式畫對話並等待按鍵；2 呼叫 32 修改物品後額外畫取得／失去提示；16 檢查六個隊伍欄並回傳分支偏移；18 按物品 ID 是否存在選分支（handler 未檢查數量）；32 執行物品數量增減及整理。擷取六個候選資料樣本的 event ID、KDEF bytes offset、指令 offset、args 與 event SHA-256；清楚標明是 FishEdit 候選解碼。見 `docs/research/event-opcode-semantics-first-batch.md`。
+
+Files Changed: `docs/research/event-opcode-semantics-first-batch.md`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/PROGRESS.md`、`docs/TODO.md`。
+
+Tests Executed: 未執行測試；本次為靜態文件與程式碼查證。另做 session-002 存檔槽 20 檔 baseline SHA-256 比對，以及遊戲專用 raw-frame 擷取。
+
+Test Results: 存檔槽 20 檔全部與 baseline hash 相符；遊戲專用畫面成功擷取，重啟後確認停在標題畫面。標題 `Down` + `Enter` 的結果是 DOS `C:\>`，故按鍵選項解讀失敗，需逐鍵確認。`git diff --check` 通過；僅見工作樹 LF→CRLF 提示。
+
+Research Findings: 在社群實作中，Opcode 2 與 32 不是單純重複：兩者都走物品更新，但 2 會畫提示並等按鍵，32 的 handler 本身不畫該提示。Opcode 16／18 的 handler 回傳偏移量，dispatcher 再加固定指令寬度；此為社群來源控制流，不是 DOS 原版已證明的分支公式。社群 title handler 候選索引是 0=新遊戲、1=載入、2=退出，但 session-002 的 `Down` + `Enter` 實測結果與預期載入不符，不能直接套用此選單模型。
+
+Known Limitations: FishEdit labels 和 Pascal handler 都不能證明 DOS 執行效果。Opcode 18 只出現 2 次。沒有確認可重播存檔、物品記憶體位址、原版按鍵後頁面結果或原版分支目標。標題選單 `Down` + `Enter` 回到 DOS prompt，未辨認選取位置；session-002 已重啟，現停在 title。
+
+Unverified Assumptions: 原版是否與 FishEdit／社群 Pascal 的參數含義、inventory semantics、item-presence predicate 及 relative-branch formula 相同，全部未驗證。
+
+Next Recommended Tasks: 先把 session-002 標題選單輸入逐鍵確認，成功進入存檔選擇後載入既有合法進度；之後挑選可重現且能觀察物品變化的 Opcode 2／32 案例。一般測試保持 guest Running，以遊戲頁面及已知位址的唯讀物品數比較；若位址未知，依 ADR0037 僅在操作前後一致快照期間短暫凍結。另可挑一個隊伍條件或道具條件作分支回放。不可把社群程式碼行為當成測試預期。
 
 ## DOSBox-X 自動驗證前置與 Opcode 覆蓋盤點（最新）
 
-Phase: Phase 1／2 原版驗證（debugger 操作前置局部完成）；Phase 3／6 局部研究，整體未驗收。Status: 六個指定按鍵於 session-001 可見生效；隔離 session-002 的 debugger TCP PING／EXEC 成功，已設置並列出 breakpoint。實際中斷停止、建立新存檔及事件跳轉仍未驗收，因此尚未宣稱全指令可玩。
+Phase: Phase 1／2 原版驗證（debugger 操作前置局部完成）；Phase 3／6 局部研究，整體未驗收。Status: 已建立跨遊戲 DOSBox-X operator skill；逐項釐清事件指令的前置條件已滿足，可以開始，不代表指令語意已驗證。六個指定按鍵於 session-001 可見生效；session-002 debugger TCP PING／EXEC 成功。Debugger console 定向文字讀取與兩個 session 的遊戲畫格擷取已驗證；移除造成反覆中斷的三個暫存 breakpoint，session-002 目前為 Running。清除後鍵盤延遲是否改善尚未重新測試。實際建立新存檔及事件跳轉仍未驗收，因此尚未宣稱全指令可玩。
 
-Completed Tasks: 建立 `session-002` 原版資料副本，核對 20 個 root-level RANGER/R1–R3/S1–S3/D1–D3 存檔檔案 SHA-256 與 session-001 初始副本一致；產生 ignored baseline manifest。新增 DOSBox-X loopback debugger 控制橋、session-002 啟動器、protocol 單元測試。新增 opcode 覆蓋產生器及來源標籤表，盤點 68 個 opcode 的候選字數、FishEdit描述、社群 Pascal dispatcher、出現次數與目前 Runtime 覆蓋。修正文檔先前錯稱 Pascal dispatcher 沒有 opcode 15 的結論。實際 handshake 後 HELP／CPU／BPLIST 有回應；BPINT 21 4B、BP 0160:001D543E 被接受並列在 breakpoint 清單；新增 PING／BREAK bridge 動作。
+Completed Tasks: 建立 `session-002` 原版資料副本，核對 20 個 root-level RANGER/R1–R3/S1–S3/D1–D3 存檔檔案 SHA-256 與 session-001 初始副本一致；產生 ignored baseline manifest。新增 DOSBox-X loopback debugger 控制橋、session-002 啟動器、protocol 單元測試。新增 opcode 覆蓋產生器及來源標籤表，盤點 68 個 opcode 的候選字數、FishEdit描述、社群 Pascal dispatcher、出現次數與目前 Runtime 覆蓋。修正文檔先前錯稱 Pascal dispatcher 沒有 opcode 15 的結論。實際 handshake 後 HELP／CPU／BPLIST 有回應；BPINT 21 4B、BP 0160:001D543E 被接受且列在 breakpoint 清單；新增 PING／BREAK bridge 動作。新增 `scripts/Get-DOSBoxX-WindowInventory.ps1` 以 HWND/PID/title/class 對應兩種視窗，及 `scripts/Capture-DOSBoxX-GameFrame.ps1` 以精確 HWND 擷取遊戲畫格；session-001、session-002 在 Run Normal 下均成功產生 game-only PNG。Session-002 用戶端 Run Normal 後標題改變，工具重列視窗後使用新標題成功擷取，並觀察到 foreground HWND 擷取前後相同。以 BPLIST 確認並移除本次建立的三個臨時 breakpoint，清單現為空。定立非暫停式觀察規則：一般驗收優先唯讀記憶體物品數與頁面變化，勿用 breakpoint 暫停主模擬；見 ADR0037。新增並安裝跨遊戲技能 `~/.codex/skills/dosbox-x-operator`，涵蓋啟動、操作、遊戲畫格、debugger 與記憶體觀察。盤點 1,018 個事件已有候選指令切分、來源版本／bytes／offset／hash 與引用結果；確認可開始逐 opcode 語意釐清，見 `event-opcode-coverage.md`、`full-original-event-corpus.md`。透過定向 accessibility 讀取 debugger console 文字，取得 resize surface 記錄與 Running 狀態。
 
-Files Changed: `tools/validator/dosbox-x-debugger-control.mjs`、`tools/validator/dosbox-x-debugger-protocol.mjs`、`tools/analyzer/build_event_opcode_catalog.py`、`scripts/Start-DOSBox-X-Session-002.cmd`、`scripts/Send-DOSBoxX-Key.ps1`、`tests/unit/dosbox-x-debugger-protocol.test.mjs`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/research/event-opcode-coverage.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0036-dosbox-x-event-sampling.md`、本進度及 TODO。`assets/generated/dosbox-x/session-002` 只為 ignored 本機資料，未加入版控。
+Files Changed: `~/.codex/skills/dosbox-x-operator/SKILL.md`、`~/.codex/skills/dosbox-x-operator/agents/openai.yaml`、`tools/validator/dosbox-x-debugger-control.mjs`、`tools/validator/dosbox-x-debugger-protocol.mjs`、`tools/analyzer/build_event_opcode_catalog.py`、`scripts/Start-DOSBox-X-Session-002.cmd`、`scripts/Send-DOSBoxX-Key.ps1`、`scripts/Get-DOSBoxX-WindowInventory.ps1`、`scripts/Capture-DOSBoxX-GameFrame.ps1`、`tests/unit/dosbox-x-debugger-protocol.test.mjs`、`docs/validation/dosbox-x-debugger-and-sampling.md`、`docs/research/event-opcode-coverage.md`、`docs/research/opcode-15-50-status.md`、`docs/decisions/0036-dosbox-x-event-sampling.md`、`docs/decisions/0037-nonblocking-dosbox-observation.md`、本進度及 TODO。`assets/generated/dosbox-x/session-002` 只為 ignored 本機資料，未加入版控。
 
 Tests Executed: debugger protocol Node unit tests；完整 Node unit suite；Python unit suite；shared JSON Schema 匯出同步；session-001/session-002存檔檔案雜湊對照；FishEdit 0.72 指令表形狀及全部事件記錄統計；loopback PING／HELP／CPU／BPLIST／BPINT／BP／BREAK 真實 debugger 請求；git diff whitespace check。
 
-Test Results: debugger protocol unit tests 3/3 通過；完整 Node suite 67/67 通過。Python 14/14 通過（TMP/TEMP 指向工作區暫存目錄後）。68 條候選 opcode 切分覆蓋 1,018 events、13,315 opcode 指令和 1,018 個 `-1` 結尾記錄。DOSBox-X 鍵盤輸入以 elevated PowerShell 將 WM_KEYDOWN／UP 投遞至精確視窗：方向鍵在 session-001 選單與地圖產生可見反應，Enter 開啟進度槽並載入既有進度一，Esc 後畫面轉黑（語意未知）。session-002 真實 debugger PING 回 PONG；EXEC HELP／CPU／BPLIST 成功；BPINT／BP 指令接受且 BPLIST 列出。RUN 回 OK 僅代表接受；BREAK 回應 acknowledged，但畫面仍顯示 RUN；此 runtime 的 STEPIN 回 command not recognized。因此 breakpoint 實際停住與單步目前尚未證明。session-002 遊戲視窗持續黑畫面，定向 Up 投遞沒有可見遊戲反應。CUA click／pressKey 仍回報 access denied。沒有新建存檔。pnpm typecheck／build 先前被工作區 realpath EPERM 阻擋。
+Test Results: debugger protocol unit tests 3/3 通過；完整 Node suite 67/67 通過。Python 14/14 通過（TMP/TEMP 指向工作區暫存目錄後）。Skill creator 的 `quick_validate.py` 因目前 Python 環境缺少 PyYAML (`yaml`) 未能啟動；已對全域安裝的技能做標題／frontmatter／placeholder 手動結構檢查通過。68 條候選 opcode 切分覆蓋 1,018 events、13,315 opcode 指令和 1,018 個 `-1` 結尾記錄。DOSBox-X 鍵盤輸入以 elevated PowerShell 將 WM_KEYDOWN／UP 投遞至精確視窗：方向鍵在 session-001 選單與地圖產生可見反應，Enter 開啟進度槽並載入既有進度一，Esc 後畫面轉黑（語意未知）。session-002 debugger TCP command/BPLIST 成功。Session-002 GUI Run Normal 後 console 出現 I->／(Running) 交替，使用者回報鍵盤延遲；BPLIST 確認 `BP 0160:1D543E`、`BPINT 21`、`BPINT 21 AH=4B` 三個 breakpoint。依次 BPDEL 後 BPLIST 空，accessibility console 顯示 `(Running)`；鍵盤清除後尚未重測。raw capture helper 先因舊 DEBUGGER 標題遭安全拒絕，再以更新後的精確標題成功產出 session-002 `z_001.raw1.png`（11,559 bytes），檢視為原版標題畫面；foreground HWND 擷取前後 `0x2042C` 相同。debugger console accessibility text read 取得 surface resize 記錄。沒有新建存檔。pnpm typecheck／build 先前被工作區 realpath EPERM 阻擋。
 
 Research Findings: DOSBox-X 2026.10.01 官方 debugger README 提供 `BP`、`BPINT`、`BPLIST`、`RUN`、`MEMREAD` 與 loopback 控制協定。遊戲原始 DOS 副本把 RANGER/R1–R3/S1–S3/D1–D3 存檔檔案放遊戲根目錄；社群 Pascal `LoadR`/`SaveR` 使用 `save/` 目錄，路徑差異不可直接混用。Opcode parser 只做結構/對話引用；通用 game-core IR 也不等於原版 opcode adapter。FishEdit文件只提供 43 條語意描述，全部 DOS 執行效果仍未知。Opcode 7 在645處後面還接其他候選記錄共643處，不能把整個線性資料尾端都丟棄；完整Runtime要保留尾碼並建模分支可達性。
 
-Known Limitations: 本輪按鍵畫面驗證使用 session-001 的既有進度一；session-002 的 debugger 模式視窗持續黑畫面，定向鍵沒有可見反應，尚未在該 session 建立新存檔。Break acknowledgement 未能藉單步證明 CPU 停止。Esc 的黑畫面狀態未判明是切換、淡出或退出。桌面控制器 API 仍被 access denied 阻止，但精確視窗 PostMessage 路徑在可見 session-001 可用。社群引擎存檔 offset 不能直接當 DOS 原版已驗證規格。dialogue-only parser 只讀Opcode 0/1，且僅容許 7 或 -1 是末字，並不建模 Opcode 7 在事件中間的 control flow；其餘Opcode效果未接入Runtime。Opcode 15／50 的原版行為仍未知。
+Known Limitations: 本輪按鍵畫面驗證使用 session-001 的既有進度一；session-002 已在 Run Normal 下成功擷取原版標題畫面，但移除測試 breakpoint 後的鍵盤反應尚未重測；尚未在該 session 建立新存檔。`BP 0160:1D543E`、`BPINT 21`、`BPINT 21 AH=4B` 曾造成反覆停住/恢復的合理解釋，已移除且 BPLIST 為空。Break acknowledgement 未能藉單步證明 CPU 停止。Esc 後黑畫面狀態未判明是切換、淡出或退出。桌面控制器 API 仍被 access denied 阻止，但精確視窗 PostMessage 路徑在可見 session-001 可用。社群引擎存檔 offset 不能直接當 DOS 原版已驗證規格。dialogue-only parser 只讀Opcode 0/1，且僅容許 7 或 -1 是末字，並不建模 Opcode 7 在事件中間的 control flow；其餘Opcode效果未接入Runtime。Opcode 15／50 的原版行為仍未知。
 
 Unverified Assumptions: `BREAK` acknowledgement 是否讓 runtime 從 RUN 狀態停住仍未確認；Esc 後黑畫面原因未知；存檔可否透過合法狀態複製出特定事件前置尚未確認。
 
-Next Recommended Tasks: 先釐清 session-002 的 BREAK／BP 停止狀態，或用支援此 runtime 的手動 debugger interrupt；之後在 session-002 重跑六鍵並保存畫面證據、透過遊戲 UI 寫入／讀回獨立存檔 slot，再建立事件前置採樣副本。逐 opcode 補足參數語意、state effects、跳轉公式、失敗行為與證據等級，再實作受控 adapter；未知指令必須停止事件且不提交部分狀態。
+Next Recommended Tasks: 開始逐 opcode 語意釐清，不等待整套參考引擎或 15／50 結案。先建立每條指令的參數欄位、來源、讀寫狀態、分支／控制流、可見效果、信心等級與可重播案例；候選寬度及社群程式碼只作線索，不標成原版驗證。一般案例保持運行，以唯讀物品數與頁面差異取證；只有指令追蹤／反組譯或完整操作前後記憶體差分定位時才依 ADR0037 短暫凍結。為後續狀態效果的原版驗證，另行建立合法遊戲存檔並定位物品數記憶體；這些工作不阻擋已有來源的 opcode 逐項分析。未知指令須隔離，不阻擋其他已能取證的指令。
 
 # 進度 — 2026-11-04
 
@@ -556,3 +1004,23 @@ Phase 8 局部：依完整遮罩格型眾數按寬深分組，新增可續跑 ba
 Phase 7 局部：整理地圖／室內遊玩區為單一寬畫面，行跡與行囊改為遊戲場景內浮層；對話框增加半身人物造型佔位，item schema加入相容舊內容包的選填description，行囊可選道具並顯示說明。當前為CSS造型佔位，未接入原版角色肖像；戰鬥配置未改。pnpm run typecheck與web build通過；未跑測試。
 
 Phase 7／8 局部：本機測試啟動改為直接載入完整原版衍生世界包（480×480、958圖片ID、地表／surface／building投影），不再預設Mock或單場景對話切片。Chromium單次冷啟動至完整世界標籤563ms，座標X358/Y229，canvas 1、pageerror 0。這是完整地圖資源包效能，不是完整劇情／道具／戰鬥轉換；原版事件只在手動匯入已解析切片時可用，現包道具0。
+
+## 2026-11-11：opcode 50–67 靜態對照與操作規則
+
+Phase: Phase 3 局部研究；Phase 3／6 整體未驗收。Status: 完成 50–67 最後一批 community source 靜態比對；原版執行語意仍為 Unknown。
+
+Completed Tasks: 逐條記錄 opcode 50–67 community handler 的候選參數寬度／出現數、讀寫或分支效果、畫面／音效／輸入等待及 dispatcher 前進方式。釐清 opcode 50 有五物品檢查與擴展指令兩種來源路徑，opcode 65 在該 dispatcher 只有一字跳過而無 handler，opcode 62 是此區段唯一明確結束事件迴圈的 opcode。依使用者操作規則記錄每個鍵盤輸入至少間隔一秒；預期操作不逐次擷取圖片，只在觀察不符或不明確時讀取遊戲畫格；回到已保存進度優先使用 DOSBox-X Capture state，而非重建遊戲存檔狀態。
+
+Files Changed: `docs/research/event-opcode-semantics-fifth-batch.md`、`docs/PROGRESS.md`、`docs/TODO.md`。
+
+Tests Executed: 靜態核對 pinned Pascal handler／dispatcher、FishEdit候選寬度與本機 opcode 覆蓋數；檢查行號引用及文件 diff。未啟動 DOSBox-X、未讀取圖片、未執行遊戲測試或程式測試。
+
+Test Results: `git diff --check` 通過；沒有產生 DOS 原版語意驗證結果。
+
+Research Findings: 社群實作 opcode 50 高參數值走五項物品 ID 檢查，低參數值分派到 `instruct_50e`；opcode 62 進入 ending flow 並停止事件迴圈；65 僅遞增指令索引；其餘記錄見 fifth-batch 報告。以上均非 Original Verified。
+
+Known Limitations: Opcode 15／50 尚未原版重播；狀態恢復仍未驗收。提升權限啟動可成功進入標題頁。SDL2 build 載入 slot 1，以及同程序新存的 slot 2 後都記錄 `Loaded`，接著程序以 WER 1000／1001、`0xc0000005` 結束。非 SDL2 build 的 PID 9760 仍活著且回應，唯一視窗顯示 `PAUSED`，日誌停在 slot 2 `Loading state`；尚無完成或崩潰證據。受限權限的程序查詢看不到提升權限程序，不能以此判斷程序不存在。opcode 來源仍是 pinned community implementation；FishEdit 描述與原版語意可能不同。期間未向遊戲送鍵、未讀取圖片、checkpoint 檔案未變。
+
+Unverified Assumptions: 所有 FishEdit 參數名、候選資料切分、相對分支單位、畫面與 state effect 在 DOS 原版是否相同。
+
+Next Recommended Tasks: 先用提升權限檢查並處理唯一現存 PID 9760：確認 debugger bridge 能否回應、釐清 `PAUSED`／`Loading state` 是否完成；不得因一般權限查不到程序就另開視窗。若需重啟，先保存可用狀態並確保 loopback bridge 在 DOSBox-X 啟動前已監聽。恢復可玩狀態後，以可重播案例採樣 opcode 15／50。每個鍵盤輸入間隔至少一秒；預期操作不讀圖，只在非預期或模糊時擷取遊戲畫格。之後把逐 opcode 的來源、bytes、state effects、Original 驗證狀態合併成總矩陣。

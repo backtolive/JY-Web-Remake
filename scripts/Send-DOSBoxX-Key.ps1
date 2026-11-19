@@ -1,12 +1,14 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Up', 'Down', 'Left', 'Right', 'Escape', 'Enter')]
+    [ValidateSet('Up', 'Down', 'Left', 'Right', 'Escape', 'Enter', 'Space', 'Y', 'N', 'Z', 'C', 'O', 'M', 'Period')]
     [string]$Key,
 
     [Parameter(Mandatory = $true)]
     [string]$WindowTitle,
 
-    [long]$WindowHandle = 0
+    [long]$WindowHandle = 0,
+
+    [ValidateRange(40,500)][int]$HoldMs = 40
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,6 +60,14 @@ $keyInfo = @{
     Right = @{ VirtualKey = 0x27; Extended = $true }
     Escape = @{ VirtualKey = 0x1B; Extended = $false }
     Enter = @{ VirtualKey = 0x0D; Extended = $false }
+    Space = @{ VirtualKey = 0x20; Extended = $false }
+    Y = @{ VirtualKey = 0x59; Extended = $false }
+    N = @{ VirtualKey = 0x4E; Extended = $false }
+    Z = @{ VirtualKey = 0x5A; Extended = $false }
+    C = @{ VirtualKey = 0x43; Extended = $false }
+    O = @{ VirtualKey = 0x4F; Extended = $false }
+    M = @{ VirtualKey = 0x4D; Extended = $false }
+    Period = @{ VirtualKey = 0xBE; Extended = $false }
 }[$Key]
 $scanCode = [DosBoxKeyMessage_20261111]::MapVirtualKey([uint32]$keyInfo.VirtualKey, 0)
 $flags = ([long]1) -bor (([long]$scanCode) -shl 16)
@@ -69,7 +79,7 @@ $target = $windows[0]
 if (-not [DosBoxKeyMessage_20261111]::PostMessage($target.Hwnd, 0x0100, [IntPtr]::new([long]$keyInfo.VirtualKey), $keyDownLParam)) {
     throw "PostMessage WM_KEYDOWN failed for HWND 0x$('{0:X}' -f $target.Hwnd.ToInt64()); Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
 }
-Start-Sleep -Milliseconds 40
+Start-Sleep -Milliseconds $HoldMs
 if (-not [DosBoxKeyMessage_20261111]::PostMessage($target.Hwnd, 0x0101, [IntPtr]::new([long]$keyInfo.VirtualKey), $keyUpLParam)) {
     throw "PostMessage WM_KEYUP failed for HWND 0x$('{0:X}' -f $target.Hwnd.ToInt64()); Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())."
 }

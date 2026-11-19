@@ -14,6 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "analyzer"))
 from audit_fishedit_layout import source_table
 
+VERIFIED_DOS_55_KDEF_SHA256 = "135c5e097a7fe561ee931046e1bebf55de9b469678e3d111d8e9f2c6bb600e06"
+VERIFIED_DOS_55_KDEF_INDEX_SHA256 = "bf02eccf1dab01fd0ae033cdf807f56b978a71a6c2ab9be05e366239b485104b"
+DOS_55_EVIDENCE = "docs/validation/opcode-55-original-event464-trace-20261114.md"
+DOS_3_AFTER_55_EVIDENCE = "docs/validation/opcode-3-after-55-event464-fields-20261115.md"
+
 
 def sha256(data):
     return hashlib.sha256(data).hexdigest()
@@ -58,7 +63,7 @@ def talk_tokens(raw):
             "terminalOffset": len(raw) - 1, "transformedPayloadSha256": sha256(payload)}
 
 
-def convert_event(event_id, source_offset, raw, table):
+def convert_event(event_id, source_offset, raw, table, *, verified_dos_55=False):
     if len(raw) % 2:
         raise ValueError(f"EVENT_ALIGNMENT:{event_id}")
     words = struct.unpack("<" + "h" * (len(raw) // 2), raw)
@@ -86,6 +91,36 @@ def convert_event(event_id, source_offset, raw, table):
         if targets:
             item["candidateBranchTargets"] = targets
             item["branchSemantics"] = "unverified"
+        if opcode == 55 and verified_dos_55:
+            if args[1:] != [-1, 14, 0] or cursor + 5 >= len(words) or words[cursor + 5] != 3:
+                raise ValueError(f"DOS_55_EVIDENCE_SCOPE:{event_id}@{cursor}")
+            # This DOS build took five words, then the helper returned -1.
+            # The resulting cursor lands on the final candidate parameter (0).
+            item["originalDosCursor"] = {
+                "nextWordOffset": cursor + 4,
+                "nextWordValue": words[cursor + 4],
+                "evidence": "Verified Original" if event_id == 464 else "Inferred from same-shape source bytes",
+                "evidencePath": DOS_55_EVIDENCE,
+                "runtimeEffectVerified": event_id == 464,
+            }
+        if opcode == 3 and verified_dos_55 and instructions and instructions[-1]["opcode"] == 55:
+            previous = instructions[-1]
+            if len(args) != 13 or args[0] != -2 or args[2:4] != [-2, -2] or args[5:] != [-1, -1, -2, -2, -2, -2, -2, -2]:
+                raise ValueError(f"DOS_3_AFTER_55_EVIDENCE_SCOPE:{event_id}@{cursor}")
+            # These are observed writes, not a generic interpretation of all
+            # thirteen arguments. The -2 fields still lack a contrast probe.
+            first_verified_update = event_id == 464 and cursor == 33
+            item["originalDosEventUpdate"] = {
+                "sceneSelector": -2,
+                "precedingOpcode55CheckedSlot": previous["args"][0],
+                "targetSlot": args[1],
+                "candidateFieldWrites": {"2": args[4], "3": -1, "4": -1},
+                "eventIdWriteEvidence": "Verified Original" if event_id == 464 else "Inferred from same-shape source bytes",
+                "negativeOneWriteEvidence": "Verified Original" if first_verified_update else "Inferred from same-shape source bytes",
+                "pictureFieldsFiveAndSixPreservedEvidence": "Verified Original" if first_verified_update else "Unknown",
+                "evidencePath": DOS_3_AFTER_55_EVIDENCE,
+                "executable": False,
+            }
         if opcode == 1 and len(args) == 3:
             item["dialogueRef"] = {"talkId": args[0], "portraitId": args[1], "side": args[2]}
         if opcode == 50:
@@ -102,6 +137,8 @@ def convert_corpus(original_dir, source_checkout):
     table = rows
     files = {name: (original_dir / name).read_bytes() for name in
              ("KDEF.IDX", "KDEF.GRP", "TALK.IDX", "TALK.GRP", "RANGER.IDX", "RANGER.GRP", "ALLDEF.GRP")}
+    verified_dos_55 = (sha256(files["KDEF.GRP"]) == VERIFIED_DOS_55_KDEF_SHA256
+                       and sha256(files["KDEF.IDX"]) == VERIFIED_DOS_55_KDEF_INDEX_SHA256)
     event_ranges = ranges_from_index(files["KDEF.IDX"], len(files["KDEF.GRP"]))
     talk_ranges = ranges_from_index(files["TALK.IDX"], len(files["TALK.GRP"]))
     talks = []
@@ -114,7 +151,7 @@ def convert_corpus(original_dir, source_checkout):
     events = []
     for event_id, (start, end) in enumerate(event_ranges):
         raw = files["KDEF.GRP"][start:end]
-        instructions = convert_event(event_id, start, raw, table)
+        instructions = convert_event(event_id, start, raw, table, verified_dos_55=verified_dos_55)
         events.append({"id": f"original.jy:event/{event_id}", "eventId": event_id,
                        "sourceFile": "KDEF.GRP", "sourceOffset": start, "byteLength": len(raw),
                        "sha256": sha256(raw), "rawBase64": base64.b64encode(raw).decode("ascii"),
@@ -140,7 +177,12 @@ def convert_corpus(original_dir, source_checkout):
                    "sourceFile": "ALLDEF.GRP", "sourceOffset": offset}
             (refs if event_id < len(events) else bad_refs).append(row)
 
-    return {"schemaVersion": 1, "converterVersion": "0.1.0", "classification": "original-derived-local",
+    dos_55_count = sum("originalDosCursor" in instruction for event in events for instruction in event["instructions"])
+    dos_3_after_55_count = sum("originalDosEventUpdate" in instruction for event in events for instruction in event["instructions"])
+    if verified_dos_55 and (dos_55_count != 28 or dos_3_after_55_count != 28):
+        raise ValueError(f"DOS_55_EVIDENCE_COUNT:{dos_55_count}:{dos_3_after_55_count}")
+
+    return {"schemaVersion": 1, "converterVersion": "0.3.0", "classification": "original-derived-local",
             "confidence": "Community Implementation", "executable": False,
             "layoutSource": {"repository": "scarsty/kys-tools", "commit": "1d439afe76dae41c821065c3a33c1c6709dc7fce",
                              "tableSha256": table_hash},
@@ -149,11 +191,15 @@ def convert_corpus(original_dir, source_checkout):
             "summary": {"events": len(events), "instructions": sum(len(e["instructions"]) for e in events),
                         "dialogues": len(talks), "talkDecodeFailures": sum(not t["decoded"] for t in talks),
                         "dynamicOpcode50": sum(i["opcode"] == 50 for e in events for i in e["instructions"]),
-                        "currentInteractionReferences": len(refs), "invalidCurrentInteractionReferences": len(bad_refs)},
+                        "currentInteractionReferences": len(refs), "invalidCurrentInteractionReferences": len(bad_refs),
+                        "scopedDosOpcode55Cursors": dos_55_count,
+                        "scopedDosOpcode3After55Updates": dos_3_after_55_count},
             "eventReferences": refs, "invalidEventReferences": bad_refs,
             "limits": ["Instruction boundaries are FishEdit-derived, not verified against original DOS execution.",
                        "Opcode arguments are preserved without assigning state effects.",
-                       "Opcode 50, branches, reachability, automatic triggers, and post-event state are not interpreted."],
+                       "Opcode 50, branches, reachability, automatic triggers, and post-event state are not interpreted.",
+                       "Opcode 55 cursor annotations apply only to the pinned KDEF/IDX hashes; 24 of 28 occurrences have identical source bytes but no individual DOS replay.",
+                       "Opcode 3 updates after opcode 55 are scoped observations, not general opcode 3 semantics or executable events."],
             "events": events, "talks": talks}
 
 

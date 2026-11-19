@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://jy-web-remake.local/schema/controlled-event-save-v3.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 3
+    },
+    "runtimeVersion": {
+      "const": "0.3.0"
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "maxLength": 80
+        },
+        "version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 2
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "mapId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+              "maxLength": 160
+            },
+            "x": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "mapId",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        "decision": {
+          "$ref": "https://jy-web-remake.local/schema/decision-state-v1.json"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "pc": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "waiting": {
+                  "enum": [
+                    "dialogue",
+                    "choice",
+                    "external"
+                  ]
+                }
+              },
+              "required": [
+                "eventId",
+                "pc",
+                "waiting"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "rngState": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        },
+        "nextRequest": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000
+        },
+        "pending": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "const": 1
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "command": {
+                  "$ref": "https://jy-web-remake.local/schema/controlled-command-v1.json"
+                }
+              },
+              "required": [
+                "schemaVersion",
+                "requestId",
+                "command"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "location",
+        "decision",
+        "cursor",
+        "rngState",
+        "nextRequest",
+        "pending"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runtimeVersion",
+    "content",
+    "state"
+  ],
+  "additionalProperties": false
+}

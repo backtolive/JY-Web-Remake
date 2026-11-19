@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://jy-web-remake.local/schema/controlled-command-v1.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "battle"
+        },
+        "encounterId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "kind",
+        "encounterId"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "animation"
+        },
+        "animationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "kind",
+        "animationId"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "transition"
+        },
+        "destination": {
+          "type": "object",
+          "properties": {
+            "mapId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+              "maxLength": 160
+            },
+            "x": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "mapId",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "destination"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "selection"
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+            "maxLength": 160
+          },
+          "maxItems": 32,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "kind",
+        "candidates"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

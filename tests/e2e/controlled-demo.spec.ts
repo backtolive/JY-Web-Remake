@@ -1,0 +1,47 @@
+import { test, expect } from '@playwright/test';
+
+test('Mock controlled event resumes after reload and updates the visible map only after transition', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByRole('heading', { name: '練功房', exact: true })).toBeVisible();
+  await page.getByText('內容與測試設定', { exact: true }).click();
+  await page.getByRole('button', { name: '試玩受控事件 · Mock' }).click();
+  const demo = page.getByRole('region', { name: 'Mock 受控事件測試' });
+  await expect(demo).toContainText('這是一段受控命令測試');
+  await demo.getByRole('button', { name: '繼續' }).click();
+  await expect(demo).toContainText('Mock 練習戰鬥');
+  await demo.getByRole('button', { name: '儲存此測試' }).click();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '練功房', exact: true })).toBeVisible();
+  await page.getByText('內容與測試設定', { exact: true }).click();
+  await page.getByRole('button', { name: '試玩受控事件 · Mock' }).click();
+  await expect(demo).toContainText('這是一段受控命令測試');
+  await demo.getByRole('button', { name: '讀取此測試' }).click();
+  await expect(demo).toContainText('Mock 練習戰鬥');
+  await demo.getByRole('button', { name: '模擬勝利' }).click();
+  await expect(demo).toContainText('Mock 開門光效');
+  await expect(demo.getByRole('button', { name: '完成切換場景' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '練功房', exact: true })).toBeVisible();
+  await demo.getByRole('button', { name: '完成切換場景' }).click();
+  await expect(page.getByRole('heading', { name: '庭院', exact: true })).toBeVisible();
+  await demo.getByRole('button', { name: 'Mock 同伴乙' }).click();
+  await expect(demo).toContainText('Mock 事件已結束');
+  await expect(demo).toContainText('勝利旗標：是');
+  await expect(demo).toContainText('同伴：Mock 同伴乙');
+  await demo.getByRole('button', { name: '離開測試' }).click();
+  await expect(page.getByRole('heading', { name: '庭院', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '存檔', exact: true }).click();
+  await page.getByRole('button', { name: '儲存進度', exact: true }).click();
+  const saved = await page.evaluate(() => Object.entries(localStorage).find(([key]) => key.startsWith('jy.web.session.v4:'))?.[1]);
+  expect(JSON.parse(saved!).schemaVersion).toBe(4);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '練功房', exact: true })).toBeVisible();
+  await page.locator('input[aria-label="選擇存檔"]').setInputFiles({
+    name: 'mock-session-v4.json', mimeType: 'application/json', buffer: Buffer.from(saved!),
+  });
+  await expect(page.getByRole('heading', { name: '庭院', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '練功房', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '存檔', exact: true }).click();
+  await page.getByRole('button', { name: '讀取進度', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '庭院', exact: true })).toBeVisible();
+});

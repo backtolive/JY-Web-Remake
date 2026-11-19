@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://jy-web-remake.local/schema/decision-event-save-v2.json",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "runtimeVersion": {
+      "const": "0.2.0"
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "maxLength": 80
+        },
+        "version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "mapId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+              "maxLength": 160
+            },
+            "x": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "mapId",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        "decision": {
+          "$ref": "https://jy-web-remake.local/schema/decision-state-v1.json"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "pc": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "waiting": {
+                  "enum": [
+                    "dialogue",
+                    "choice"
+                  ]
+                }
+              },
+              "required": [
+                "eventId",
+                "pc",
+                "waiting"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "location",
+        "decision",
+        "cursor"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "runtimeVersion",
+    "content",
+    "state"
+  ],
+  "additionalProperties": false
+}
