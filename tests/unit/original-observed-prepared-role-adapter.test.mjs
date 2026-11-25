@@ -1,0 +1,6 @@
+import test from'node:test';import assert from'node:assert/strict';import{existsSync}from'node:fs';import{readFile}from'node:fs/promises';import{readOriginalRoleInt16}from'../../packages/game-data/src/original-role-records.ts';import{bindOriginalPreparedRole,createOriginalPreparedRoleState,applyOriginalPreparedRole}from'../../tools/extractor/original-observed-prepared-role-adapter.mjs';
+const names=['KDEF.IDX','KDEF.GRP','RANGER.IDX','RANGER.GRP'],available=names.every(n=>existsSync(`original/dos/${n}`)),sources=async()=>Object.fromEntries(await Promise.all(names.map(async n=>[n,new Uint8Array(await readFile(`original/dos/${n}`))])));
+test('events 20 and 931 reproduce only their explicit prepared MP and HP samples',{skip:!available&&'Original data is local.'},async()=>{const s=await sources();
+ const a=await bindOriginalPreparedRole(s,20),ap=createOriginalPreparedRoleState(a),an=applyOriginalPreparedRole(a,ap);assert.deepEqual([82,84].map(o=>readOriginalRoleInt16(a.table,ap,0,o)),[26,26]);assert.deepEqual([82,84].map(o=>readOriginalRoleInt16(a.table,an,0,o)),[0,26]);
+ const b=await bindOriginalPreparedRole(s,931),bp=createOriginalPreparedRoleState(b),bn=applyOriginalPreparedRole(b,bp);assert.deepEqual([34,36].map(o=>readOriginalRoleInt16(b.table,bp,0,o)),[1,44]);assert.deepEqual([34,36].map(o=>readOriginalRoleInt16(b.table,bn,0,o)),[44,44]);
+});

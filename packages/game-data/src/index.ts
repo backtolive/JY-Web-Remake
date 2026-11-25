@@ -11,6 +11,12 @@ export type { OriginalEventSlotTable, OriginalEventSlotOverlay } from './origina
 export { openOriginalRoleTable, createOriginalRoleOverlay, originalRoleFieldSourceOffset,
   readOriginalRoleRecord, readOriginalRoleInt16, updateOriginalRoleInt16 } from './original-role-records.ts';
 export type { OriginalRoleTable, OriginalRoleOverlay } from './original-role-records.ts';
+export { openOriginalSceneLayerTable, createOriginalSceneLayerOverlay,
+  readOriginalSceneLayerCell, updateOriginalSceneLayerCells } from './original-scene-layers.ts';
+export type { OriginalSceneLayerTable, OriginalSceneLayerOverlay } from './original-scene-layers.ts';
+export { openOriginalSceneRecordTable, createOriginalSceneRecordOverlay, readOriginalSceneRecord,
+  readOriginalSceneRecordInt16, updateOriginalSceneRecordInt16 } from './original-scene-records.ts';
+export type { OriginalSceneRecordTable, OriginalSceneRecordOverlay } from './original-scene-records.ts';
 export { resolveOriginalEventAtCell } from './original-event-reference.ts';
 export type { OriginalEventReferenceField, OriginalEventReference } from './original-event-reference.ts';
 export { ORIGINAL_EVENT_CHECKPOINT_VERSION, serializeOriginalEventSlotCheckpoint,

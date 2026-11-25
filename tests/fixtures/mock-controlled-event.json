@@ -6,12 +6,25 @@
   "entry": { "mapId": "mock.wuxia:map/room", "x": 1, "y": 1 },
   "decision": { "schemaVersion": 1, "domains": {
     "mock.controlled:flags": { "kind": "boolean", "default": false, "allowedKeys": ["mock.controlled:trial/won"] },
+    "mock.controlled:exchange": { "kind": "integer", "default": 0, "min": 0, "max": 1,
+      "allowedKeys": ["mock.controlled:material", "mock.controlled:reward"] },
     "mock.controlled:party": { "kind": "list", "default": [], "maxItems": 2, "unique": true,
       "allowedKeys": ["mock.controlled:members"],
       "allowedValues": ["mock.controlled:character/a", "mock.controlled:character/b"] }
   } },
-  "dialogues": { "mock.controlled:talk/start": { "speaker": "Mock 引路人", "text": "這是一段受控命令測試。依序試玩模擬戰鬥、動畫、切圖與選人。" } },
-  "events": { "mock.controlled:event/trial": { "steps": [
+  "dialogues": { "mock.controlled:talk/start": { "speaker": "Mock 引路人", "text": "這是一段受控命令測試。依序試玩模擬戰鬥、動畫、切圖與選人。" },
+    "mock.controlled:talk/exchange": { "speaker": "Mock 交換商人", "text": "帶同伴乙與一份材料來，就能兌換一份獎勵。" } },
+  "events": {
+    "mock.controlled:event/exchange": { "steps": [
+      {"op":"say","dialogueId":"mock.controlled:talk/exchange"},
+      {"op":"choice","options":[{"id":"mock.controlled:choice/claim","text":"交換道具","target":2},{"id":"mock.controlled:choice/failure","text":"模擬獎勵入帳失敗","target":4},{"id":"mock.controlled:choice/leave","text":"離開交換","target":6}]},
+      {"op":"decide","plan":{"schemaVersion":1,"cases":[{"when":{"op":"all","conditions":[{"op":"compare","left":{"kind":"read","ref":{"domain":"mock.controlled:exchange","key":"mock.controlled:material"}},"relation":"ge","right":{"kind":"literal","value":1}},{"op":"compare","left":{"kind":"read","ref":{"domain":"mock.controlled:exchange","key":"mock.controlled:reward"}},"relation":"eq","right":{"kind":"literal","value":0}},{"op":"contains","list":{"kind":"read","ref":{"domain":"mock.controlled:party","key":"mock.controlled:members"}},"value":{"kind":"literal","value":"mock.controlled:character/b"}}]},"effects":[{"op":"add","target":{"domain":"mock.controlled:exchange","key":"mock.controlled:material"},"amount":{"kind":"literal","value":-1}},{"op":"add","target":{"domain":"mock.controlled:exchange","key":"mock.controlled:reward"},"amount":{"kind":"literal","value":1}}]}],"otherwise":[]}},
+      {"op":"end"},
+      {"op":"decide","plan":{"schemaVersion":1,"cases":[{"when":{"op":"all","conditions":[{"op":"compare","left":{"kind":"read","ref":{"domain":"mock.controlled:exchange","key":"mock.controlled:material"}},"relation":"ge","right":{"kind":"literal","value":1}},{"op":"compare","left":{"kind":"read","ref":{"domain":"mock.controlled:exchange","key":"mock.controlled:reward"}},"relation":"eq","right":{"kind":"literal","value":0}},{"op":"contains","list":{"kind":"read","ref":{"domain":"mock.controlled:party","key":"mock.controlled:members"}},"value":{"kind":"literal","value":"mock.controlled:character/b"}}]},"effects":[{"op":"add","target":{"domain":"mock.controlled:exchange","key":"mock.controlled:material"},"amount":{"kind":"literal","value":-1}},{"op":"add","target":{"domain":"mock.controlled:exchange","key":"mock.controlled:reward"},"amount":{"kind":"literal","value":2}}]}],"otherwise":[]}},
+      {"op":"end"},
+      {"op":"end"}
+    ] },
+    "mock.controlled:event/trial": { "steps": [
     { "op": "say", "dialogueId": "mock.controlled:talk/start" },
     { "op": "invoke", "command": { "kind": "battle", "encounterId": "mock.controlled:battle/trial" }, "outcomes": [
       { "id": "victory", "target": 2, "plan": { "schemaVersion": 1, "cases": [], "otherwise": [
@@ -28,6 +41,7 @@
         { "op": "listAdd", "target": { "domain": "mock.controlled:party", "key": "mock.controlled:members" }, "value": { "kind": "literal", "value": "mock.controlled:character/a" } }
       ] } },
       { "id": "mock.controlled:character/b", "target": 5, "plan": { "schemaVersion": 1, "cases": [], "otherwise": [
+        { "op": "set", "target": { "domain": "mock.controlled:exchange", "key": "mock.controlled:material" }, "value": { "kind": "literal", "value": 1 } },
         { "op": "listAdd", "target": { "domain": "mock.controlled:party", "key": "mock.controlled:members" }, "value": { "kind": "literal", "value": "mock.controlled:character/b" } }
       ] } }
     ] },

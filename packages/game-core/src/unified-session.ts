@@ -58,10 +58,11 @@ export function dispatchUnifiedWorld(content: UnifiedSessionContent, previous: U
   return { state, notifications: result.notifications };
 }
 export function enterUnifiedControlled(content: UnifiedSessionContent, previous: UnifiedSessionState,
-  eventId: string): { state: UnifiedSessionState; notices: ControlledEventNotice[] } {
+  eventId: string, options?: { preserveDecision?: boolean }): { state: UnifiedSessionState; notices: ControlledEventNotice[] } {
   validateUnifiedSession(content, previous);
   if (previous.mode !== 'world' || previous.game.cursor || previous.event.cursor) fail('BUSY');
   const event = createControlledEventState(content.controlled, previous.event.rngState);
+  if (options?.preserveDecision) event.decision = structuredClone(previous.event.decision);
   event.location = location(previous.game);
   const started = dispatchControlledEvent(content.controlled, event, { type: 'START', eventId });
   const state: UnifiedSessionState = { ...withControlled(previous, started.state), mode: 'controlled' };

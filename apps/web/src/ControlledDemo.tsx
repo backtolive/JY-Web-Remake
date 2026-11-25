@@ -85,6 +85,20 @@ export function ControlledDemo({ host, initialGame, previousUnified, onClose, on
   const dialogue = step?.op === 'say' ? demo?.content.data.dialogues[step.dialogueId] : null;
   const won = demo ? readDecisionValue(demo.content.data.decision, demo.state.event.decision, flag) : false;
   const members = demo ? readDecisionValue(demo.content.data.decision, demo.state.event.decision, party) as string[] : [];
+  const exchangeValue = (key: 'material' | 'reward') => demo ? Number(readDecisionValue(
+    demo.content.data.decision, demo.state.event.decision,
+    { domain: 'mock.controlled:exchange', key: `mock.controlled:${key}` })) : 0;
+  const material = exchangeValue('material'), reward = exchangeValue('reward');
+  function startExchange() {
+    if (!demo || cursor) return;
+    const context = { host, controlled: demo.content };
+    const world = demo.state.mode === 'controlled' ? leaveUnifiedControlled(context, demo.state) : demo.state;
+    const state = enterUnifiedControlled(context, world, 'mock.controlled:event/exchange',
+      { preserveDecision: true }).state;
+    applyDemo({ ...demo, state });
+    setMessage('');
+    setError('');
+  }
   const result = (kind: 'battle' | 'transition', outcome: 'victory' | 'defeat' | 'escape' | 'completed') => {
     if (pending) act({ type: 'RESOLVE', result: { schemaVersion: 1, requestId: pending.requestId, kind, outcome } as
       Extract<ControlledEventAction, { type: 'RESOLVE' }>['result'] });
@@ -107,7 +121,10 @@ export function ControlledDemo({ host, initialGame, previousUnified, onClose, on
       <button key={id} onClick={() => act({ type: 'RESOLVE', result: { schemaVersion: 1,
         requestId: pending.requestId, kind: 'selection', selectedId: id } })}>{demo?.content.resources.characters[id]?.name}</button>)}</div>}
     {demo && <p className="controlled-state">地圖：{host.maps[demo.state.game.mapId]?.name} · 勝利旗標：{won ? '是' : '否'} · 同伴：{members.map(id => demo.content.resources.characters[id]?.name ?? id).join('、') || '無'}</p>}
+    {demo && <p>測試背包：材料 ×{material} · 獎勵 ×{reward} · {reward ? '已兌換' :
+      material && members.includes('mock.controlled:character/b') ? '可兌換' : '條件不足'}</p>}
     <div className="controlled-actions"><button disabled={!demo} onClick={save}>儲存此測試</button><button disabled={!demo} onClick={load}>讀取此測試</button>
+      {demo && !cursor && <button onClick={startExchange}>與交換商人交談</button>}
       {demo && <button onClick={migrate}>匯入舊版存檔</button>}
       {demo && !cursor && <button onClick={() => { const world = demo.state.mode === 'controlled' ?
         leaveUnifiedControlled({ host, controlled: demo.content }, demo.state) : demo.state;
