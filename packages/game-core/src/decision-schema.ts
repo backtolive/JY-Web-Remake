@@ -59,3 +59,5 @@ export const decisionPlanSchema = { ...header, $id: 'https://jy-web-remake.local
     otherwise: array(ref('effect'), 10000) }) };
 export const decisionConditionSchema = { ...header, $id: 'https://jy-web-remake.local/schema/decision-condition-v1.json',
   ...ref('condition') };
+export const decisionEffectSchema = { ...header, $id: 'https://jy-web-remake.local/schema/decision-effect-v1.json',
+  ...ref('effect') };

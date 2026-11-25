@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://jy-web-remake.local/schema/controlled-event-content-v2.json",
+  "$id": "https://jy-web-remake.local/schema/controlled-event-content-v3.json",
   "type": "object",
   "properties": {
     "schemaVersion": {
-      "const": 2
+      "const": 3
     },
     "id": {
       "type": "string",
@@ -305,6 +305,87 @@
         "additionalProperties": false
       },
       "maxProperties": 10000
+    },
+    "items": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+        "maxLength": 160
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 512
+          },
+          "imageRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+            "maxLength": 160
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "equipSlot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "stackable": {
+            "type": "boolean"
+          },
+          "maxStack": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "useDialogueRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+            "maxLength": 160
+          },
+          "useConditions": {
+            "type": "array",
+            "items": {
+              "$ref": "https://jy-web-remake.local/schema/decision-condition-v1.json#/definitions/condition"
+            },
+            "maxItems": 32
+          },
+          "useEffects": {
+            "type": "array",
+            "items": {
+              "$ref": "https://jy-web-remake.local/schema/decision-effect-v1.json#/definitions/effect"
+            },
+            "maxItems": 32
+          },
+          "useCommand": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "name",
+          "stackable"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 100000
     }
   },
   "required": [

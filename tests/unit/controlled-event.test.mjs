@@ -14,7 +14,7 @@ const lit = value => ({ kind: 'literal', value });
 const read = ref => ({ kind: 'read', ref });
 const plan = effects => ({ schemaVersion: 1, cases: [], otherwise: effects });
 const contentSource = {
-  schemaVersion: 2, id: 'mock', version: '2.0.0', classification: 'mock',
+  schemaVersion: 3, id: 'mock', version: '2.0.0', classification: 'mock',
   entry: { mapId: 'mock:map/start', x: 1, y: 2 },
   decision: { schemaVersion: 1, domains: {
     'mock:inventory': { kind: 'integer', default: 1, min: 0, max: 9, allowedKeys: [item.key] },

@@ -3,8 +3,9 @@ import { Ajv } from 'ajv';
 import { canonical, contentHash } from './content.ts';
 import { nextRandom } from './runtime.ts';
 import { applyDecisionPlan, createDecisionState, evaluateDecision, validateDecisionState } from './decision.ts';
-import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition } from './decision.ts';
-import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema } from './decision-schema.ts';
+import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition, DecisionEffect } from './decision.ts';
+import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema,
+  decisionEffectSchema } from './decision-schema.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
   controlledEventSaveSchema } from './controlled-event-schema.ts';
 
@@ -21,11 +22,18 @@ type Step = { op: 'say'; dialogueId: string } | { op: 'choice'; options: { id: s
   { op: 'invoke'; command: ControlledCommand;
     outcomes: { id: string; target: number; plan?: DecisionPlan }[] } |
   { op: 'roll'; outcomes: { id: string; target: number; weight: number; plan?: DecisionPlan }[] } | { op: 'end' };
+export interface ItemDefinition {
+  name: string; alias?: string; description?: string; imageRef?: string;
+  category?: string; equipSlot?: string;
+  stackable: boolean; maxStack?: number;
+  useDialogueRef?: string; useConditions?: DecisionCondition[]; useEffects?: DecisionEffect[]; useCommand?: string;
+}
 export interface ControlledEventContent {
-  schemaVersion: 2; id: string; version: string; classification: 'mock' | 'original-derived';
+  schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
   entry: { mapId: string; x: number; y: number }; decision: DecisionSchema;
   dialogues: Record<string, { speaker: string; text: string }>;
   events: Record<string, { steps: Step[] }>;
+  items?: Record<string, ItemDefinition>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
@@ -40,11 +48,14 @@ export type ControlledEventAction = { type: 'START'; eventId: string } | { type:
 export type ControlledEventNotice = { type: 'DIALOGUE' | 'CHOICE' | 'REQUEST' | 'DECISION_APPLIED' | 'EVENT_ENDED';
   id?: string; request?: ControlledRequest; changes?: DecisionChange[] };
 const ajv = new Ajv({ strict: true, allErrors: true });
-for (const schema of [decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema, controlledCommandSchema]) ajv.addSchema(schema);
+for (const schema of [decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema,
+  decisionEffectSchema, controlledCommandSchema]) ajv.addSchema(schema);
 const validContent = ajv.compile(controlledEventContentSchema);
 const validSave = ajv.compile(controlledEventSaveSchema);
 const validResult = ajv.compile(controlledResultSchema);
-function fail(code: string): never { throw new Error(`CONTROLLED_EVENT_${code}`); }
+const validCondition = ajv.compile(decisionConditionSchema);
+const validEffect = ajv.compile(decisionEffectSchema);
+function fail(code: string, detail?: string): never { throw new Error(`CONTROLLED_EVENT_${code}${detail ? `:${detail}` : ''}`); }
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
   return value;
@@ -85,6 +96,16 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     }
   }
   for (const dialogueId of Object.keys(data.dialogues)) if (!dialogueId.startsWith(data.id + ':')) fail('DIALOGUE_NAMESPACE');
+  for (const [itemId, item] of Object.entries(data.items ?? {})) {
+    if (!itemId.startsWith(data.id + ':')) fail('ITEM_NAMESPACE');
+    if (item.useCommand && (item.useConditions?.length || item.useEffects?.length))
+      fail('ITEM_USE_CONFLICT', itemId);
+    if (!item.stackable && item.maxStack !== undefined) fail('ITEM_STACK_CONFLICT', itemId);
+    if (item.useDialogueRef && !Object.hasOwn(data.dialogues, item.useDialogueRef)) fail('ITEM_DIALOGUE_REFERENCE', itemId);
+    if (item.useCommand && !Object.hasOwn(data.events, item.useCommand)) fail('ITEM_EVENT_REFERENCE', itemId);
+    for (const condition of item.useConditions ?? []) if (!validCondition(condition)) fail('ITEM_CONDITION', itemId);
+    for (const effect of item.useEffects ?? []) if (!validEffect(effect)) fail('ITEM_EFFECT', itemId);
+  }
   const identity = { id: data.id, version: data.version, sha256: await contentHash(data) };
   return freeze({ identity, data });
 }

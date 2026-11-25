@@ -1,4 +1,5 @@
-import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema } from './decision-schema.ts';
+import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema,
+  decisionEffectSchema } from './decision-schema.ts';
 import { decisionEventContentSchema } from './decision-event-schema.ts';
 
 const id = { type: 'string', pattern: '^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$', maxLength: 160 };
@@ -26,6 +27,23 @@ export const controlledResultSchema = {
 };
 const outcome = object({ id: { type: 'string', minLength: 1, maxLength: 160 }, target: { type: 'integer', minimum: 0 },
   plan: { $ref: decisionPlanSchema.$id } }, ['id', 'target']);
+/** Static item metadata plus optional declarative use contract. The use layer reuses the
+ * decision condition/effect schemas; `useCommand` (script) and the declarative fields are
+ * mutually exclusive — one source of truth per item. */
+const itemDefinition = object({
+  name: { type: 'string', minLength: 1, maxLength: 64 },
+  alias: { type: 'string', minLength: 1, maxLength: 64 },
+  description: { type: 'string', minLength: 0, maxLength: 512 },
+  imageRef: id,
+  category: { type: 'string', minLength: 1, maxLength: 64 },
+  equipSlot: { type: 'string', minLength: 1, maxLength: 64 },
+  stackable: { type: 'boolean' },
+  maxStack: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+  useDialogueRef: id,
+  useConditions: array({ $ref: `${decisionConditionSchema.$id}#/definitions/condition` }, 32),
+  useEffects: array({ $ref: `${decisionEffectSchema.$id}#/definitions/effect` }, 32),
+  useCommand: id,
+}, ['name', 'stackable']);
 const weightedOutcome = object({ id: id, target: { type: 'integer', minimum: 0 },
   weight: { type: 'integer', minimum: 1, maximum: 1000000 }, plan: { $ref: decisionPlanSchema.$id } },
   ['id', 'target', 'weight']);
@@ -41,9 +59,12 @@ const step = { oneOf: [
   object({ op: { const: 'end' } }),
 ] };
 export const controlledEventContentSchema = {
-  $schema: 'http://json-schema.org/draft-07/schema#', $id: 'https://jy-web-remake.local/schema/controlled-event-content-v2.json',
-  ...object({ ...base, schemaVersion: { const: 2 }, decision: { $ref: decisionDomainsSchema.$id },
-    events: { type: 'object', propertyNames: id, additionalProperties: object({ steps: { ...array(step), minItems: 1 } }), maxProperties: 10000 } }),
+  $schema: 'http://json-schema.org/draft-07/schema#', $id: 'https://jy-web-remake.local/schema/controlled-event-content-v3.json',
+  ...object({ ...base, schemaVersion: { const: 3 }, decision: { $ref: decisionDomainsSchema.$id },
+    events: { type: 'object', propertyNames: id, additionalProperties: object({ steps: { ...array(step), minItems: 1 } }), maxProperties: 10000 },
+    // Optional: content without item definitions remains valid.
+    items: { type: 'object', propertyNames: id, additionalProperties: itemDefinition, maxProperties: 100000 } },
+    ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },
   command: { $ref: controlledCommandSchema.$id } });

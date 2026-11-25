@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "mock.controlled",
   "version": "0.1.0",
   "classification": "mock",

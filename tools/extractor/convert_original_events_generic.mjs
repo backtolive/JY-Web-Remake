@@ -13,11 +13,20 @@ import { resolveControlledEventContent } from '../../packages/game-core/src/cont
 import { canonical } from '../../packages/game-core/src/content.ts';
 
 const PACKAGE_ID = 'original.jy.events';
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const MONEY_ID = 174;
 const ROLE_COUNT = 84;
 const SLOT_FIELDS = 8;
 const CORPUS_DIR = 'assets/generated/event-corpus';
+const RANGER_FILE = 'original/dos/RANGER.GRP';
+// RANGER.GRP item table: 190-byte records x 200 records (source-index byte span 38,000;
+// community Thing_S layout in references/jinyong-legend/script/jyconst.lua).
+const ITEM_TABLE_OFFSET = 59076;
+const ITEM_RECORD_SIZE = 190;
+const ITEM_COUNT = 200;
+// Community-Implementation category mapping from the 8 sampled records (probe_item_records):
+// 0 misc (food/books), 1 weapon (Jinse sword, equipType 0), 2 skill book, 3 consumable (drink).
+const ITEM_CATEGORY = { 0: 'misc', 1: 'weapon', 2: 'skill-book', 3: 'consumable' };
 
 // The 68 evidence-scoped opcodes. `kind` drives step generation; `label` is the rule status.
 const OPCODES = {
@@ -124,6 +133,45 @@ function loadCorpus() {
   const file = readdirSync(CORPUS_DIR).find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
   if (!file) throw new Error('CORPUS_MISSING');
   return JSON.parse(readFileSync(`${CORPUS_DIR}/${file}`, 'utf8'));
+}
+
+/** RANGER item table as static definitions. Use-effects are NOT here: in the original they
+ * live in KDEF scene events that branch on the current item (opcode 4), so the declarative
+ * use fields stay empty in this original-derived package. */
+function loadItemRecords() {
+  const buf = readFileSync(RANGER_FILE);
+  if (buf.length < ITEM_TABLE_OFFSET + ITEM_RECORD_SIZE * ITEM_COUNT) throw new Error('RANGER_ITEM_TABLE_TRUNCATED');
+  const big5 = new TextDecoder('big5');
+  const text = (offset, length) => {
+    const raw = buf.subarray(offset, offset + length);
+    const end = raw.indexOf(0);
+    const bytes = end === -1 ? raw : raw.subarray(0, end);
+    return bytes.length ? big5.decode(bytes) : '';
+  };
+  const i16 = offset => buf.readInt16LE(offset);
+  const records = [];
+  for (let id = 0; id < ITEM_COUNT; id++) {
+    const offset = ITEM_TABLE_OFFSET + id * ITEM_RECORD_SIZE;
+    records.push({ id, name: text(offset + 2, 20), name2: text(offset + 22, 20),
+      description: text(offset + 42, 30), type: i16(offset + 82), equipType: i16(offset + 78) });
+  }
+  return { records, sha256: createHash('sha256').update(buf).digest('hex') };
+}
+
+function buildItemDefinitions(records) {
+  const items = {};
+  const empty = [];
+  for (const record of records) {
+    if (!record.name) { empty.push(record.id); continue; }
+    const definition = { name: record.name,
+      // No per-record stack evidence in the 190-byte layout; uniform Inferred default.
+      stackable: true,
+      category: ITEM_CATEGORY[record.type] ?? `type-${record.type}` };
+    if (record.name2 && record.name2 !== record.name) definition.alias = record.name2;
+    if (record.description) definition.description = record.description;
+    items[`${PACKAGE_ID}:item/${record.id}`] = definition;
+  }
+  return { items, empty };
 }
 
 function talkText(talk) {
@@ -526,6 +574,8 @@ function convertEvent(event, bundle) {
 
 export function buildOriginalEventsContent() {
   const bundle = loadCorpus();
+  const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
+  const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords);
   const convertible = [];
   const blocked = [];
   for (const event of bundle.events) {
@@ -552,17 +602,21 @@ export function buildOriginalEventsContent() {
     }
   }
   const content = {
-    schemaVersion: 2, id: PACKAGE_ID, version: VERSION, classification: 'original-derived',
+    schemaVersion: 3, id: PACKAGE_ID, version: VERSION, classification: 'original-derived',
     entry: { mapId: `${PACKAGE_ID}:map/start`, x: 0, y: 0 },
-    decision: { schemaVersion: 1, domains }, dialogues, events,
+    decision: { schemaVersion: 1, domains }, dialogues, events, items,
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);
   const diagnostics = {
     schemaVersion: 1, converterVersion: VERSION, packageId: PACKAGE_ID,
     contentSha256: null, corpusSha256: bundle.inputs?.find(input => input.sourceFile === 'KDEF.GRP')?.sha256,
+    itemSource: { sourceFile: 'RANGER.GRP', sha256: rangerSha256, tableOffset: ITEM_TABLE_OFFSET,
+      recordSize: ITEM_RECORD_SIZE, recordCount: ITEM_COUNT,
+      layoutSource: 'references/jinyong-legend/script/jyconst.lua (CC.Thing_S, Community Implementation)' },
     summary: { totalEvents: bundle.events.length, converted: convertible.length, blocked: blocked.length,
       dialogues: Object.keys(dialogues).length,
+      itemCount: Object.keys(items).length, emptyItemRecords,
       opcodeLabels: Object.fromEntries(Object.entries(
         eventDiagnostics.reduce((acc, row) => { for (const [label, count] of Object.entries(row.labels)) acc[label] = (acc[label] ?? 0) + count; return acc; }, {}))
         .sort((a, b) => a[0].localeCompare(b[0]))) },

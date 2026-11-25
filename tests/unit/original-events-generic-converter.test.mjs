@@ -213,6 +213,48 @@ test('Generic converter tracks -2 (current scene) writes through a live current-
     assert.ok(keys17.every(key => key.startsWith('original.jy:scene/17/')));
   });
 
+test('Generic converter emits static item definitions from the RANGER item table',
+  { skip }, async () => {
+    const { content, diagnostics } = await convertOriginalEventsGeneric();
+    assert.equal(content.schemaVersion, 3);
+    assert.equal(diagnostics.summary.itemCount, 200);
+    assert.deepEqual(diagnostics.summary.emptyItemRecords, []);
+    assert.equal(diagnostics.itemSource.sourceFile, 'RANGER.GRP');
+    assert.equal(diagnostics.itemSource.tableOffset, 59076);
+    assert.equal(diagnostics.itemSource.recordSize, 190);
+    assert.equal(diagnostics.itemSource.recordCount, 200);
+    assert.ok(/^[a-f0-9]{64}$/.test(diagnostics.itemSource.sha256));
+    // Every item ID uses the package namespace and a DOS item ID in range.
+    for (const [id, definition] of Object.entries(content.items)) {
+      assert.ok(id.startsWith('original.jy.events:item/'));
+      const numeric = Number(id.split('/').at(-1));
+      assert.ok(numeric >= 0 && numeric < 200);
+      assert.equal(definition.stackable, true);
+      assert.ok(definition.name.length > 0);
+      // Original-derived package carries no declarative use layer: use-effects live in
+      // KDEF scene events that branch on the current item (opcode 4).
+      assert.equal(definition.useCommand, undefined);
+      assert.equal(definition.useEffects, undefined);
+      assert.equal(definition.useConditions, undefined);
+      assert.equal(definition.useDialogueRef, undefined);
+    }
+    // Spot checks pinned to the DOS-observation item set (probe_item_records).
+    assert.equal(content.items['original.jy.events:item/160'].name, '唐詩選輯');
+    assert.equal(content.items['original.jy.events:item/160'].description, '普通百姓都懂的唐詩三百首');
+    assert.equal(content.items['original.jy.events:item/174'].name, '銀兩');
+    assert.equal(content.items['original.jy.events:item/110'].name, '金蛇劍');
+    assert.equal(content.items['original.jy.events:item/110'].category, 'weapon');
+    assert.equal(content.items['original.jy.events:item/0'].name, '康倍特');
+    assert.equal(content.items['original.jy.events:item/0'].category, 'consumable');
+    // Every inventory key referenced by event effects has a matching item definition, so
+    // the host can resolve original.jy:item/{id} keys to display metadata.
+    const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;
+    for (const key of inventoryKeys) {
+      const id = Number(key.split('/').at(-1));
+      assert.ok(content.items[`original.jy.events:item/${id}`], key);
+    }
+  });
+
 test('Generic converter maps opcode 50 dynamic variant to an item-presence branch',
   { skip }, async () => {
     const { readFileSync } = await import('node:fs');

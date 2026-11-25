@@ -12,9 +12,11 @@
 - [x] 場景 `-2` 改為追蹤當前場景的動態 key：新建 `original.jy:current-scene` 領域，`-2` 槽位引用改由 `keyFrom` 依目前場景組合成 key，`scene-slots` 的 allowedKeys 覆蓋 `-2` 用到的 slot/field × 84 場景並去重；fresh-state 732/732 終止，專責單元測試驗證寫入落於當前場景。
 - [x] 依證據解鎖全部 14 個阻擋 opcode（4／15／19／24／25／30／44／51／57／58／60／61／62／64）：branch（4 curItem、60 slotPicAny、61 slot4664All）、end（15 死亡、62 結局）、狀態效果（44 slotPicAnimate、57 scene57Anim）、no-op＋診斷（19／24／25／30／51／58／64）；內容包 1,018/1,018 筆轉換、0 阻擋、2,866 對話，fresh-state 全量驅動通過。見 [ADR 0064](decisions/0064-generic-event-conversion-pipeline.md)。
 - [x] 探測 RANGER.GRP 物品表欄位佈局（190B×200，`Thing_S` 社群佈局，8 筆抽樣含全部 DOS 觀察案例物品均吻合）；確認記錄無圖片欄位、使用效果在事件腳本。見 PROGRESS 2026-11-25 物品記錄探測。
-- [ ] 定義通用物品定義合約（engine-owned schema：id／name／description／type／imageRef?）並加入 schema 匯出與引用驗證。
-- [ ] 建立 RANGER 物品表轉接器，產出 git-ignored 物品定義內容包（含來源雜湊／偏移／解析器版本），並把物品定義 ID 接入事件包 `original.jy:item/{id}` 與 `current-item`。
+- [x] 定義通用物品定義合約（engine-owned schema：id／name／alias／description／imageRef?／category／equipSlot?／stackable＋maxStack；use 層 useDialogueRef／useConditions／useEffects／useCommand 可選，腳本與宣告式互斥）並加入 schema 匯出（decision-effect-v1）與引用驗證（ITEM_* 檢查）。見 [ADR 0065](decisions/0065-item-definition-contract.md)。
+- [x] 建立 RANGER 物品表轉接器（190B×200，Thing_S 佈局），產出 git-ignored 物品定義（200/200、0 空記錄，含來源雜湊／偏移／解析器版本）；use 欄位全空（效果在場景事件）；接線約定 inventory key／current-item 值 ↔ `original.jy.events:item/{id}`，測試釘選每個 inventory allowedKey 皆有定義。
 - [ ] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源；確認前不假設圖片欄位。
+- [ ] 「使用物品」宿主命令契約（選單選中→寫 current-item→啟動場景事件），與移動／連戰／商店同列宿主效果缺口。
+- [ ] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 
