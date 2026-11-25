@@ -60,10 +60,30 @@ Web 預覽與 `tools/analyzer/verify_original_events_preview.mjs` 都以全新�
 
 驗證：專責單元測試以 current-scene 預設 32／17 驅動含 `-2` 寫入的事件，全部寫入落於對應場景 key 下；fresh-state 732/732 終止。
 
+## 14 個阻擋 opcode 依證據解鎖（全量 1,018 筆轉換）
+
+在 `-2` 動態追蹤之後，依社群 Pascal 來源與本機 DOS 觀察紀錄把最後 14 個 opcode（4／15／19／24／25／30／44／51／57／58／60／61／62／64）全部映射，內容包改為 **1,018／1,018 筆轉換、0 阻擋、2,866 對話**：
+
+- **opcode 4**（167 事件，`[inum,jump1,jump2]`）：`instruct_4` 比對 `inum = CurItem`（目前使用／選取的物品）。新建 `original.jy:current-item` 領域（key `original.jy:item/current`），映射為該物品 ID 的 branch。事件 16 的 ID 160 有／無對照已有本機 DOS 證據（`docs/validation/opcode-4-dos-observation.md`）；「CurItem＝持有」為推論，標籤 Community Implementation。
+- **opcode 15**（95 事件，恒為 `[83]`）：死亡結局（`instruct_15` 顯示「地球上又多了一失蹤人口」後停止）。109 筆在事件中段出現，故映射為 `end` 步驟（即時停止事件迴圈）；`83` 的具體作用未驗（本機二進位 trace 只確認 handler 讀取該 word）。
+- **opcode 19／25／30**（14／26／7 事件）：玩家移動、鏡頭平移、角色行走——純宿主呈現效果，決策狀態無對應領域，映射為 no-op decide 並記入 `*-unmodeled` 診斷。
+- **opcode 24**（0 事件）：Pascal 空函式（「never be used」），映射為 no-op。
+- **opcode 44**（2 事件，6 參）：兩槽圖號動畫（欄 5 由 beginpic 逐幀至 endpic），最終持久值為 endpic；映射為對當前場景兩槽欄 5 的 set（事件 676 的 7578／7622 已在 DOS AVI 觀察到中間影格 7560／7606）。
+- **opcode 51**（1 事件，無參）：隨機 softstar 對話（`instruct_1(SOFTSTAR_BEGIN_TALK + random(...))`），對話 ID 不在 KDEF bytes，無法確定性重現，映射為 no-op＋診斷。
+- **opcode 57**（1 事件，無參）：固定動畫＝`instruct_27(-1, 7664, 7688)`＋`instruct_44e(2,7690,7746, 3,7748,7804, 4,7806)`；最終值（槽 -1 欄 5-7＝7688、槽 2/3/4 欄 5＝7746/7804/7862）與事件 655 的 DOS 觀察完全吻合。
+- **opcode 58**（1 事件，無參）：15 場隨機對手連戰（敗北→死亡）；連戰鏈與隨機對手未建模，映射為 no-op＋診斷（事件 936 進入可操作戰鬥已有 DOS 觀察）。
+- **opcode 60**（3 事件，`[snum,enum,pic,jump1,jump2]`）：槽位圖號任一欄（5/6/7）等於 pic 的 branch，`snum=-2` 走當前場景 keyFrom；事件 990 的 6068/6066 對照已有 DOS 證據。
+- **opcode 61**（14 事件，`[jump1,jump2]`）：當前場景槽 11..24 欄 5 全為 4664 的 branch（14 項 `all` 條件）；事件 1001 的 0/4664 對照已有 DOS 證據。
+- **opcode 62**（1 事件）：結局動畫＋結束事件迴圈；映射為 `end` 步驟（動畫狀態未建模，記入診斷）。
+- **opcode 64**（1 事件，無參）：隨機商店購買（Pascal：選單＋物品+1＋銀兩-價格）；隨機商店與 DOS 觀察的未扣款異常使確定性映射不成立，映射為 no-op＋診斷。
+
+驗證：全量 1,018 筆事件皆可由 fresh-state 驅動至終止狀態；事件 676 解鎖後，opcode 50 的物品持有分支首次出現在內容包輸出中，由單元測試驗證。
+
 ## 限制
 
 - 場景 `-2` 已改由 `current-scene` 領域動態解析，惟正式遊戲的場景切換寫入尚未接入（預覽／驗證由外部預設）；`-2` 的欄位規則未逐欄隔離。
 - opcode 3／26／27 的槽位欄位寫入是 Inferred，不是 Verified Original。
 - 銀兩與物品「持有」以數量 ≥1 近似成員判斷；技能（33／35）、隨身物品（41）已建狀態領域，opcode 50 動態變體已映射為分支，惟 50e 參數解算器（`list[0] <= 128`）仍為 no-op。
-- 社群 Pascal 語意等同原版 DOS 的假設未逐事件重播自然可達性；286 筆阻擋事件不轉換。
+- opcode 4 的「目前使用物品」以 `current-item` 領域近似「持有」；19／25／30（移動／鏡頭／行走）、51（隨機對話）、58（連戰鏈）、64（隨機商店）的宿主效果未建模為決策狀態，僅 no-op＋診斷；62 的結局動畫狀態未建模；15 的 `83` 作用未驗。
+- 社群 Pascal 語意等同原版 DOS 的假設未逐事件重播自然可達性；1,018 筆全量轉換不等於原版規則驗收。
 - Web 宿主已提供本機唯讀預覽（`apps/web/src/original-events-preview.tsx`）：玩家手動選檔載入內容包，逐事件操作對話／選項／分支／決策效果，戰鬥為模擬結果；這是內容預覽，非完整原版遊玩，不影響預設 Mock。

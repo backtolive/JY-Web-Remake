@@ -11,14 +11,14 @@ const corpusAvailable = () => readdirSync('assets/generated/event-corpus')
 const available = names.every(name => existsSync(`original/dos/${name}`)) && corpusAvailable();
 const skip = !available && 'Original data and the local corpus bundle are excluded from the repository.';
 
-test('Generic converter maps the 54 evidenced opcodes into a valid controlled-event package',
+test('Generic converter maps all 68 evidenced opcodes into a valid controlled-event package',
   { skip }, async () => {
     const { content, diagnostics } = await convertOriginalEventsGeneric();
     // Full runtime validation: namespaces, dialogue refs, branch targets, decision domains.
     await resolveControlledEventContent(content);
     assert.equal(diagnostics.summary.totalEvents, 1018);
-    assert.equal(diagnostics.summary.converted, 732);
-    assert.equal(diagnostics.summary.blocked, 286);
+    assert.equal(diagnostics.summary.converted, 1018);
+    assert.equal(diagnostics.summary.blocked, 0);
     assert.equal(diagnostics.summary.converted + diagnostics.summary.blocked, 1018);
     // Every say step references a dialogue that exists in the package.
     for (const event of Object.values(content.events)) {
@@ -37,20 +37,69 @@ test('Generic converter maps the 54 evidenced opcodes into a valid controlled-ev
     assert.ok(diagnostics.summary.opcodeLabels['Verified Original'] > 0);
   });
 
-test('Generic converter blocks only the affected event and names the blocking opcode',
+test('Generic converter maps the newly unlocked opcodes to evidence-scoped steps',
+  { skip }, async () => {
+    const { content } = buildOriginalEventsContent();
+    const steps = id => content.events[`original.jy.events:event/${id}`].steps;
+
+    // Opcode 15 (event 190): death ending stops the event mid-way (an `end` step, not a no-op).
+    const ev190 = steps(190);
+    const deathStep = ev190.find(step => step.op === 'end' && ev190.indexOf(step) < ev190.length - 1);
+    assert.ok(deathStep);
+
+    // Opcode 4 (event 16): branch on the currently used item being ID 160.
+    const branch16 = steps(16).find(step => step.op === 'branch' &&
+      step.condition?.left?.ref?.domain === 'original.jy:current-item');
+    assert.ok(branch16);
+    assert.equal(branch16.condition.right.value, 160);
+
+    // Opcode 60 (event 990): branch when any of scene 80 slot 1 fields 5/6/7 equals 6068.
+    const branch990 = steps(990).find(step => step.op === 'branch' && step.condition?.op === 'any');
+    assert.ok(branch990);
+    assert.equal(branch990.condition.conditions.length, 3);
+    assert.ok(branch990.condition.conditions.every(c => c.left.ref.key
+      .startsWith('original.jy:scene/80/slot/1/field/') && c.right.value === 6068));
+
+    // Opcode 61 (event 1001): branch when current-scene slots 11..24 all have field 5 == 4664.
+    const branch1001 = steps(1001).find(step => step.op === 'branch' && step.condition?.op === 'all');
+    assert.ok(branch1001);
+    assert.equal(branch1001.condition.conditions.length, 14);
+    assert.ok(branch1001.condition.conditions.every(c =>
+      c.left.ref.keyFrom?.some(part => 'read' in part && part.read?.domain === 'original.jy:current-scene') &&
+      c.right.value === 4664));
+
+    // Opcode 44 (event 676): slot field-5 animation persists the endpic (7578/7622) on the
+    // current scene; event 676 is now converted and its opcode-50 branch appears in output.
+    const ev676 = steps(676);
+    const animStep = ev676.find(step => step.op === 'decide' &&
+      (step.plan.otherwise ?? []).some(e => e.target?.keyFrom?.some(p => 'read' in p &&
+        p.read?.domain === 'original.jy:current-scene') && e.value?.value === 7578));
+    assert.ok(animStep);
+    assert.ok(ev676.some(step => step.op === 'branch' && step.condition?.op === 'all' &&
+      step.condition.conditions.length === 5));
+
+    // Opcode 57 (event 655): fixed animation final values 7746/7804/7862 on current scene.
+    const anim57 = steps(655).find(step => step.op === 'decide' &&
+      (step.plan.otherwise ?? []).some(e => e.value?.value === 7746));
+    assert.ok(anim57);
+
+    // Opcode 62 (event 1017): ending stops the event (an `end` step).
+    assert.ok(steps(1017).some(step => step.op === 'end'));
+
+    // Opcodes 19/25/30/51/58/64: host effects without decision state stay no-op decides.
+    for (const [id, opcode] of [[344, 25], [936, 58], [938, 64], [692, 51]]) {
+      const ev = content.events[`original.jy.events:event/${id}`];
+      assert.ok(ev);
+    }
+  });
+
+test('Generic converter blocks no event once all 68 evidenced opcodes are mapped',
   { skip }, async () => {
     const { diagnostics } = await convertOriginalEventsGeneric();
-    assert.equal(diagnostics.blocked.length, 286);
-    for (const row of diagnostics.blocked) {
-      assert.ok(row.eventId >= 0);
-      assert.ok(row.opcodes.length > 0);
-      // The blocking opcodes are exactly the ones outside the 54-opcode evidenced set.
-      for (const opcode of row.opcodes) assert.ok([4, 15, 19, 24, 25, 30, 44, 51, 57, 58, 60, 61, 62, 64].includes(opcode));
-    }
-    // Blocked events are absent from the package; converted events are present.
+    assert.equal(diagnostics.blocked.length, 0);
+    // All 1,018 events are present in the package.
     const { content } = await convertOriginalEventsGeneric();
-    for (const row of diagnostics.blocked) assert.ok(!content.events[`original.jy.events:event/${row.eventId}`]);
-    assert.equal(Object.keys(content.events).length, 732);
+    assert.equal(Object.keys(content.events).length, 1018);
   });
 
 test('Generic converter maps skill/carried-item opcodes into per-slot decision plans',
@@ -170,8 +219,8 @@ test('Generic converter maps opcode 50 dynamic variant to an item-presence branc
     const bundleFile = readdirSync('assets/generated/event-corpus')
       .find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
     const bundle = JSON.parse(readFileSync(`assets/generated/event-corpus/${bundleFile}`, 'utf8'));
-    // Event 676 is the only opcode-50 user; it is blocked by opcode 44, so the mapping is
-    // exercised through buildOriginalEventsContent's branch logic rather than the output.
+    // Event 676 is the only opcode-50 user; it is now converted (opcode 44 mapped), so the
+    // branch also appears in the package — this test pins the relative-jump landing points.
     const ev676 = bundle.events.find(candidate => candidate.eventId === 676);
     const ins = ev676.instructions.find(instruction => instruction.opcode === 50);
     assert.ok(ins);

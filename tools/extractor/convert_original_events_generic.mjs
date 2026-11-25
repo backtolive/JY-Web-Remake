@@ -19,12 +19,13 @@ const ROLE_COUNT = 84;
 const SLOT_FIELDS = 8;
 const CORPUS_DIR = 'assets/generated/event-corpus';
 
-// The 54 evidence-scoped opcodes. `kind` drives step generation; `label` is the rule status.
+// The 68 evidence-scoped opcodes. `kind` drives step generation; `label` is the rule status.
 const OPCODES = {
   0: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   1: { kind: 'say', label: 'Community Implementation', note: 'dialogue' },
   2: { kind: 'effect', effect: 'inventoryAdd', label: 'Community Implementation' },
   3: { kind: 'effect', effect: 'slotWrite', label: 'Inferred' },
+  4: { kind: 'branch', condition: 'curItem', label: 'Community Implementation' },
   5: { kind: 'choice', options: [{ id: 'opt:cancel', text: '取消', arm: 'no' }, { id: 'opt:fight', text: '戰鬥', arm: 'yes' }], label: 'Community Implementation' },
   6: { kind: 'battle', label: 'Community Implementation' },
   7: { kind: 'end', label: 'Community Implementation', note: 'break' },
@@ -35,17 +36,22 @@ const OPCODES = {
   12: { kind: 'noop', label: 'Community Implementation', note: 'inn-heal-uninterpreted' },
   13: { kind: 'noop', label: 'Community Implementation', note: 'screen-flash' },
   14: { kind: 'noop', label: 'Community Implementation', note: 'black-screen' },
+  15: { kind: 'end', label: 'Community Implementation', note: 'death-ending', diagnostic: true },
   16: { kind: 'branch', condition: 'roleInParty', label: 'Community Implementation' },
   17: { kind: 'noop', label: 'Community Implementation', note: 'scene-tile-uninterpreted' },
   18: { kind: 'branch', condition: 'itemPresent', label: 'Inferred' },
+  19: { kind: 'noop', label: 'Community Implementation', note: 'player-move-unmodeled' },
   20: { kind: 'branch', condition: 'partyFull', label: 'Community Implementation' },
   21: { kind: 'effect', effect: 'partyRemove', label: 'Community Implementation' },
   22: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   23: { kind: 'effect', effect: 'roleSet', field: 'poison', label: 'Community Implementation' },
+  24: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
+  25: { kind: 'noop', label: 'Community Implementation', note: 'camera-pan-unmodeled' },
   26: { kind: 'effect', effect: 'slotAdd', label: 'Inferred' },
   27: { kind: 'effect', effect: 'slotSet567', label: 'Inferred' },
   28: { kind: 'branch', condition: 'ethicsRange', label: 'Community Implementation' },
   29: { kind: 'branch', condition: 'attackRange', label: 'Community Implementation' },
+  30: { kind: 'noop', label: 'Community Implementation', note: 'walk-unmodeled' },
   31: { kind: 'branch', condition: 'money', label: 'Community Implementation' },
   32: { kind: 'effect', effect: 'inventoryAdd', label: 'Community Implementation' },
   33: { kind: 'effect', effect: 'skillLearn', label: 'Community Implementation' },
@@ -59,19 +65,27 @@ const OPCODES = {
   41: { kind: 'effect', effect: 'carriedItem', label: 'Community Implementation' },
   42: { kind: 'branch', condition: 'hasMale', label: 'Unknown' },
   43: { kind: 'branch', condition: 'itemPresent', label: 'Inferred' },
+  44: { kind: 'effect', effect: 'slotPicAnimate', label: 'Community Implementation' },
   45: { kind: 'effect', effect: 'roleAdd', field: 'speed', label: 'Community Implementation' },
   46: { kind: 'effect', effect: 'roleAdd', field: 'max-mp', label: 'Community Implementation' },
   47: { kind: 'effect', effect: 'roleAdd', field: 'attack', label: 'Community Implementation' },
   48: { kind: 'effect', effect: 'roleAdd', field: 'max-hp', label: 'Community Implementation' },
   49: { kind: 'effect', effect: 'roleSet', field: 'mp-type', label: 'Community Implementation' },
   50: { kind: 'branch', condition: 'allItemsPresent', label: 'Community Implementation' },
+  51: { kind: 'noop', label: 'Community Implementation', note: 'random-talk-unmodeled' },
   52: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   53: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   54: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   55: { kind: 'branch', condition: 'slotField2', label: 'Verified Original' },
   56: { kind: 'effect', effect: 'roleAdd0', field: 'repute', label: 'Community Implementation' },
+  57: { kind: 'effect', effect: 'scene57Anim', label: 'Community Implementation' },
+  58: { kind: 'noop', label: 'Community Implementation', note: 'battle-chain-unmodeled' },
   59: { kind: 'effect', effect: 'partyClear', label: 'Community Implementation' },
+  60: { kind: 'branch', condition: 'slotPicAny', label: 'Community Implementation' },
+  61: { kind: 'branch', condition: 'slot4664All', label: 'Community Implementation' },
+  62: { kind: 'end', label: 'Community Implementation', note: 'ending-animation', diagnostic: true },
   63: { kind: 'effect', effect: 'roleSet', field: 'sexual', label: 'Community Implementation' },
+  64: { kind: 'noop', label: 'Community Implementation', note: 'shop-purchase-unmodeled' },
   65: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   66: { kind: 'noop', label: 'Community Implementation', note: 'music' },
   67: { kind: 'noop', label: 'Community Implementation', note: 'sound' },
@@ -159,6 +173,25 @@ function collectKeys(events) {
         case 'slotField2':
           if (typeof a0 === 'number') minus2Combos.add(`slot/${a0}/field/2`);
           break;
+        case 'slotPicAny':
+          if (typeof a0 === 'number' && typeof a1 === 'number') {
+            if (a0 === -2) for (const field of [5, 6, 7]) minus2Combos.add(`slot/${a1}/field/${field}`);
+            else for (const field of [5, 6, 7]) sceneSlots.add(slotKey(a0, a1, field));
+          }
+          break;
+        case 'slot4664All':
+          for (let slot = 11; slot <= 24; slot++) minus2Combos.add(`slot/${slot}/field/5`);
+          break;
+        case 'slotPicAnimate':
+          if (typeof a0 === 'number' && typeof a2 === 'number') {
+            minus2Combos.add(`slot/${a0}/field/5`);
+            minus2Combos.add(`slot/${a2}/field/5`);
+          }
+          break;
+        case 'scene57Anim':
+          for (const field of [5, 6, 7]) minus2Combos.add(`slot/-1/field/${field}`);
+          for (const slot of [2, 3, 4]) minus2Combos.add(`slot/${slot}/field/5`);
+          break;
         case 'sceneReset': if (typeof a0 === 'number') sceneRecords.add(sceneRecordKey(a0)); break;
         case 'partyAdd': case 'partyRemove': if (typeof a0 === 'number') roles.add(a0); break;
         case 'roleSet': case 'roleAdd': if (typeof a0 === 'number') roles.add(a0); break;
@@ -194,6 +227,8 @@ function buildDomains(keys) {
           (_, scene) => `original.jy:scene/${scene}/${combo}`))])] },
     'original.jy:current-scene': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
       allowedKeys: ['original.jy:scene/current'] },
+    'original.jy:current-item': { kind: 'integer', default: 0, min: -1, max: 1_000_000,
+      allowedKeys: ['original.jy:item/current'] },
     'original.jy:scene-records': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
       allowedKeys: keys.sceneRecords },
   };
@@ -221,7 +256,7 @@ function buildDomains(keys) {
 }
 
 function buildEffect(op, args, instruction) {
-  const [a0, a1, a2, a3, a4] = args;
+  const [a0, a1, a2, a3, a4, a5] = args;
   const plan = { schemaVersion: 1, cases: [], otherwise: [] };
   const put = effect => plan.otherwise.push(effect);
   switch (op.effect) {
@@ -269,6 +304,21 @@ function buildEffect(op, args, instruction) {
     case 'slotSet567':
       for (const field of [5, 6, 7])
         put({ op: 'set', target: sceneSlotKeyFrom(a0, field), value: literal(a2) });
+      break;
+    case 'slotPicAnimate': {
+      // Opcode 44 [enum1, beginpic1, endpic1, enum2, beginpic2, endpic2]: animate scene slot
+      // field 5 from beginpic to endpic; the final persisted value is the endpic.
+      put({ op: 'set', target: sceneSlotKeyFrom(a0, 5), value: literal(a2) });
+      put({ op: 'set', target: sceneSlotKeyFrom(a2, 5), value: literal(a5) });
+      break;
+    }
+    case 'scene57Anim':
+      // Opcode 57 = instruct_27(-1, 7664, 7688) + instruct_44e(2, 7690, 7746, 3, 7748, 7804, 4, 7806).
+      // Final slot field-5 values match the DOS observation for event 655 (7746/7804/7862).
+      for (const field of [5, 6, 7]) put({ op: 'set', target: sceneSlotKeyFrom(-1, field), value: literal(7688) });
+      put({ op: 'set', target: sceneSlotKeyFrom(2, 5), value: literal(7746) });
+      put({ op: 'set', target: sceneSlotKeyFrom(3, 5), value: literal(7804) });
+      put({ op: 'set', target: sceneSlotKeyFrom(4, 5), value: literal(7862) });
       break;
     case 'skillLearn':
       buildSkillLearn(plan, a0, a1);
@@ -351,7 +401,7 @@ function buildCarriedItem(plan, role, inum, amount) {
 }
 
 function buildCondition(op, args) {
-  const [a0, a1, a2] = args;
+  const [a0, a1, a2, a3, a4] = args;
   switch (op.condition) {
     case 'roleInParty':
       return { op: 'contains', list: read('original.jy:party', partyKey), value: literal(String(a0)) };
@@ -375,6 +425,22 @@ function buildCondition(op, args) {
       return { op: 'compare', left: literal(0), relation: 'eq', right: literal(1) };
     case 'slotField2':
       return { op: 'compare', left: readRef(sceneSlotKeyFrom(a0, 2)), relation: 'eq', right: literal(a1) };
+    case 'curItem':
+      // Opcode 4 [inum, jump1, jump2]: branch when the currently used/selected item is inum.
+      return { op: 'compare', left: read('original.jy:current-item', 'original.jy:item/current'),
+        relation: 'eq', right: literal(a0) };
+    case 'slotPicAny': {
+      // Opcode 60 [snum, enum, pic, jump1, jump2]: branch when any of scene slot fields 5/6/7
+      // equals pic; snum -2 resolves to the current scene.
+      const slotRead = field => a0 === -2 ? readRef(sceneSlotKeyFrom(a1, field))
+        : read('original.jy:scene-slots', slotKey(a0, a1, field));
+      return { op: 'any', conditions: [5, 6, 7].map(field =>
+        ({ op: 'compare', left: slotRead(field), relation: 'eq', right: literal(a2) })) };
+    }
+    case 'slot4664All':
+      // Opcode 61 [jump1, jump2]: branch when current-scene slots 11..24 all have field 5 == 4664.
+      return { op: 'all', conditions: Array.from({ length: 14 }, (_, i) =>
+        ({ op: 'compare', left: readRef(sceneSlotKeyFrom(11 + i, 5)), relation: 'eq', right: literal(4664) })) };
     case 'allItemsPresent':
       // Opcode 50 dynamic variant: branch when all five items (args 0..4) are in inventory.
       return { op: 'all', conditions: [a0, a1, a2, a3, a4].filter(item => typeof item === 'number')
@@ -442,6 +508,8 @@ function convertEvent(event, bundle) {
         break;
       }
       case 'end':
+        if (op.diagnostic)
+          diagnostics.uninterpreted.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, note: op.note });
         steps.push({ op: 'end' });
         break;
       case 'noop':
