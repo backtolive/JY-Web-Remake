@@ -172,7 +172,7 @@ export default function App(){
     try{
       if(file.size>16_000_000)throw new Error('預覽包超過 16 MB，請選擇轉換工具產生的 original.jy.events 內容包。');
       const parsed=JSON.parse(await file.text());
-      if(parsed?.schemaVersion!==2||parsed?.id!=='original.jy.events'||parsed?.classification!=='original-derived')throw new Error('請選擇有效的 original.jy.events 受控事件包（由 convert_original_events_generic 產生）。');
+      if(parsed?.schemaVersion!==3||parsed?.id!=='original.jy.events'||parsed?.classification!=='original-derived')throw new Error('請選擇有效的 original.jy.events 受控事件包（由 convert_original_events_generic 產生）。');
       const content=await resolveControlledEventContent(parsed);
       setOriginalEvents(content);setShowOriginalEvents(true);
       announce(`已載入原版事件包：${Object.keys(content.data.events).length} 筆事件、${Object.keys(content.data.dialogues).length} 段對話。`);

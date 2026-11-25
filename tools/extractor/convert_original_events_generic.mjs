@@ -11,6 +11,7 @@ import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'nod
 import { createHash } from 'node:crypto';
 import { resolveControlledEventContent } from '../../packages/game-core/src/controlled-event.ts';
 import { canonical } from '../../packages/game-core/src/content.ts';
+import { encodeRgbaPng } from './png-encode.mjs';
 
 const PACKAGE_ID = 'original.jy.events';
 const VERSION = '0.2.0';
@@ -28,6 +29,23 @@ const ITEM_COUNT = 200;
 // references/kys-jedisdl/kys_main.pas (0 story item, 1 equipment, 2 secret manual,
 // 3 medicine, 4 hidden weapon), cross-checked against the 8 sampled records.
 const ITEM_CATEGORY = { 0: 'story', 1: 'equipment', 2: 'secret-manual', 3: 'medicine', 4: 'hidden-weapon' };
+
+// Item icons live in the split map-pic atlases, NOT ALLDEF.GRP. The scene atlas
+// (SDX000/SMP000) is the authoritative source: item UI runs in scenes and it is complete,
+// carrying 199 uniform 1728B icons at logical index 3501+id (items 0..198). The world atlas
+// (WDX000/WMP000) carries only 198 (items 0..197); item 199's slot (3700) is empty in both.
+// Palette is MMAP.COL (256x3 RGB). Evidence: references/kys-jedisdl/kys_type.pas
+// (ITEM_BEGIN_PIC=3501) and kys_main.pas (DrawMPic); references/jinyong-legend/src/piccache.c
+// (IDX cumulative-end offsets, picid/2) and script/jyconst.lua (LoadThingPic mode 0).
+const ICON_SCENE_IDX = 'original/dos/SDX000';
+const ICON_SCENE_GRP = 'original/dos/SMP000';
+const ICON_WORLD_IDX = 'original/dos/WDX000';
+const ICON_WORLD_GRP = 'original/dos/WMP000';
+const ICON_PALETTE = 'original/dos/MMAP.COL';
+const ICON_BASE = 3501;
+const ICON_SIZE = 1728;
+const ICON_CELL = 40;
+const ICON_COLS = 20; // atlas grid: 20 columns of 40px cells; rows = ceil(200/20) = 10
 
 // The 68 evidence-scoped opcodes. `kind` drives step generation; `label` is the rule status.
 const OPCODES = {
@@ -159,7 +177,101 @@ function loadItemRecords() {
   return { records, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
-function buildItemDefinitions(records) {
+const sha256Of = buf => createHash('sha256').update(buf).digest('hex');
+
+/** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
+ * only when its IDX range is exactly ICON_SIZE bytes and the header is 40x40; otherwise
+ * null (empty slot). RLE per piccache.c: [w][h][xoff][yoff] then per row a length byte, and
+ * alternating transparent-run / (solid-run, palette-index x solid-run) runs. */
+function decodeIcon(idx, grp, palette, id) {
+  const lo = ICON_BASE + id;
+  const entries = idx.length / 4;
+  const start = lo < entries ? idx.readInt32LE(lo * 4) : null;
+  const end = lo + 1 < entries ? idx.readInt32LE((lo + 1) * 4) : null;
+  if (start === null || end === null || end - start !== ICON_SIZE) return null;
+  const data = grp.subarray(start, end);
+  const w = data.readInt16LE(0), h = data.readInt16LE(2);
+  if (w !== ICON_CELL || h !== ICON_CELL) return null;
+  const rgba = new Uint8Array(w * h * 4);
+  const rgb = i => [palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]];
+  let p = 8;
+  for (let y = 0; y < h && p < data.length; y++) {
+    const row = data[p++];
+    if (row === 0) continue;
+    let x = 0;
+    while (x < w && p < data.length) {
+      x += data[p++]; // transparent run
+      if (x >= w) break;
+      const solid = data[p++];
+      for (let j = 0; j < solid && x < w; j++, p++, x++) {
+        const [r, g, b] = rgb(data[p]);
+        const o = (y * w + x) * 4;
+        rgba[o] = r; rgba[o + 1] = g; rgba[o + 2] = b; rgba[o + 3] = 255;
+      }
+    }
+  }
+  return rgba;
+}
+
+/** Load every present item icon from the scene atlas (authoritative) and record atlas
+ * provenance. Also reports which items the world atlas lacks, for the diagnostics note. */
+function loadItemIconAtlas() {
+  const sceneIdx = readFileSync(ICON_SCENE_IDX);
+  const sceneGrp = readFileSync(ICON_SCENE_GRP);
+  const worldIdx = readFileSync(ICON_WORLD_IDX);
+  const worldGrp = readFileSync(ICON_WORLD_GRP);
+  const palette = readFileSync(ICON_PALETTE);
+  if (palette.length !== 256 * 3) throw new Error('ICON_PALETTE_SIZE');
+  const icons = new Map();
+  const present = [];
+  const missing = [];
+  const worldMissing = [];
+  for (let id = 0; id < ITEM_COUNT; id++) {
+    const px = decodeIcon(sceneIdx, sceneGrp, palette, id);
+    if (px) { icons.set(id, px); present.push(id); }
+    else missing.push(id);
+    if (!decodeIcon(worldIdx, worldGrp, palette, id)) worldMissing.push(id);
+  }
+  const rows = Math.ceil(ITEM_COUNT / ICON_COLS);
+  const provenance = {
+    sourceFiles: {
+      sceneIndex: { file: 'SDX000', sha256: sha256Of(sceneIdx) },
+      sceneGroup: { file: 'SMP000', sha256: sha256Of(sceneGrp) },
+      worldIndex: { file: 'WDX000', sha256: sha256Of(worldIdx) },
+      worldGroup: { file: 'WMP000', sha256: sha256Of(worldGrp) },
+      palette: { file: 'MMAP.COL', sha256: sha256Of(palette), bytes: palette.length },
+    },
+    logicalBase: ICON_BASE, iconSize: ICON_SIZE,
+    grid: { cols: ICON_COLS, rows, cell: ICON_CELL, atlasWidth: ICON_COLS * ICON_CELL, atlasHeight: rows * ICON_CELL },
+    presentCount: present.length, missingItems: missing, worldMissingItems: worldMissing,
+    layoutSource: 'references/kys-jedisdl/kys_type.pas (ITEM_BEGIN_PIC=3501), kys_main.pas (DrawMPic); references/jinyong-legend/src/piccache.c (IDX cumulative-end offsets), script/jyconst.lua (LoadThingPic mode 0)',
+    note: 'Scene atlas is authoritative (item UI runs in scenes; it is complete). World atlas lacks '
+      + `items ${worldMissing.join(', ') || 'none'}; item 199 slot empty in both. Icons 0..197 are pixel-identical across world and scene atlases.`,
+  };
+  return { icons, present, missing, worldMissing, provenance };
+}
+
+/** Pack the per-item RGBA icons into a single fixed-grid atlas (20 columns of 40px cells)
+ * and encode it as PNG. Empty slots (e.g. item 199) stay fully transparent. */
+function composeIconAtlas(icons) {
+  const rows = Math.ceil(ITEM_COUNT / ICON_COLS);
+  const width = ICON_COLS * ICON_CELL, height = rows * ICON_CELL;
+  const rgba = Buffer.alloc(width * height * 4);
+  for (const [id, px] of icons) {
+    const cellX = (id % ICON_COLS) * ICON_CELL;
+    const cellY = Math.floor(id / ICON_COLS) * ICON_CELL;
+    for (let y = 0; y < ICON_CELL; y++) {
+      for (let x = 0; x < ICON_CELL; x++) {
+        const s = (y * ICON_CELL + x) * 4;
+        const d = ((cellY + y) * width + (cellX + x)) * 4;
+        rgba[d] = px[s]; rgba[d + 1] = px[s + 1]; rgba[d + 2] = px[s + 2]; rgba[d + 3] = px[s + 3];
+      }
+    }
+  }
+  return encodeRgbaPng(width, height, rgba);
+}
+
+function buildItemDefinitions(records, iconPresent) {
   const items = {};
   const empty = [];
   for (const record of records) {
@@ -170,6 +282,9 @@ function buildItemDefinitions(records) {
       category: ITEM_CATEGORY[record.type] ?? `type-${record.type}` };
     if (record.name2 && record.name2 !== record.name) definition.alias = record.name2;
     if (record.description) definition.description = record.description;
+    // Icon reference (generic namepaced id; the engine never reads image bytes). Present
+    // only when the item's atlas slot decoded; item 199 has an empty slot so gets none.
+    if (iconPresent.has(record.id)) definition.imageRef = `${PACKAGE_ID}:pic/item/${record.id}`;
     // Equipment slot from the RANGER EquipType field (offset 78); kys_main.pas clamps
     // out-of-range values to slot 0 before writing Rrole[r].Equip[p].
     if (record.type === 1)
@@ -591,7 +706,9 @@ function convertEvent(event, bundle) {
 export function buildOriginalEventsContent() {
   const bundle = loadCorpus();
   const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
-  const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords);
+  const iconAtlas = loadItemIconAtlas();
+  const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
+  const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
   const convertible = [];
   const blocked = [];
   for (const event of bundle.events) {
@@ -640,44 +757,50 @@ export function buildOriginalEventsContent() {
     itemSource: { sourceFile: 'RANGER.GRP', sha256: rangerSha256, tableOffset: ITEM_TABLE_OFFSET,
       recordSize: ITEM_RECORD_SIZE, recordCount: ITEM_COUNT,
       layoutSource: 'references/jinyong-legend/script/jyconst.lua (CC.Thing_S, Community Implementation)' },
+    itemIcons: iconAtlas.provenance,
     summary: { totalEvents: bundle.events.length, converted: convertible.length, blocked: blocked.length,
       dialogues: Object.keys(dialogues).length,
       itemCount: Object.keys(items).length, emptyItemRecords,
+      iconCount: iconAtlas.present.length, iconMissing: iconAtlas.missing,
       opcodeLabels: Object.fromEntries(Object.entries(
         eventDiagnostics.reduce((acc, row) => { for (const [label, count] of Object.entries(row.labels)) acc[label] = (acc[label] ?? 0) + count; return acc; }, {}))
         .sort((a, b) => a[0].localeCompare(b[0]))) },
     blocked, eventDiagnostics,
   };
-  return { content, diagnostics, digest };
+  return { content, diagnostics, digest, iconAtlasPng };
 }
 
 export async function convertOriginalEventsGeneric() {
-  const { content, diagnostics, digest } = buildOriginalEventsContent();
+  const { content, diagnostics, digest, iconAtlasPng } = buildOriginalEventsContent();
   const resolved = await resolveControlledEventContent(content);
   diagnostics.contentSha256 = resolved.identity.sha256;
-  return { content, diagnostics, digest };
+  return { content, diagnostics, digest, iconAtlasPng };
 }
 
-export function writeOriginalEventsLocal(projectRoot, { content, diagnostics, digest }) {
+export function writeOriginalEventsLocal(projectRoot, { content, diagnostics, digest, iconAtlasPng }) {
   const output = new URL(`file://${projectRoot}/assets/generated/original-events/`.replace(/\\/g, '/'));
   const dir = output.pathname.replace(/^\/([A-Za-z]:)/, '$1');
   mkdirSync(dir, { recursive: true });
-  // Single current package: readers assume one content file, so drop older generations.
+  // Single current package: readers assume one content file + one atlas, so drop older generations.
   for (const name of readdirSync(dir)) {
     if (/^original-events-[a-f0-9]{16}(\.diagnostics)?\.local\.json$/.test(name) && !name.includes(digest))
+      rmSync(`${dir}/${name}`);
+    if (/^original-events-[a-f0-9]{16}\.item-icons\.png$/.test(name) && !name.includes(digest))
       rmSync(`${dir}/${name}`);
   }
   const contentPath = `${dir}/original-events-${digest}.local.json`;
   const diagnosticsPath = `${dir}/original-events-${digest}.diagnostics.local.json`;
+  const iconAtlasPath = `${dir}/original-events-${digest}.item-icons.png`;
   writeFileSync(contentPath, JSON.stringify(content, null, 2) + '\n', 'utf8');
   writeFileSync(diagnosticsPath, JSON.stringify(diagnostics, null, 2) + '\n', 'utf8');
-  return { contentPath, diagnosticsPath };
+  writeFileSync(iconAtlasPath, iconAtlasPng);
+  return { contentPath, diagnosticsPath, iconAtlasPath };
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('\\').pop())) {
   convertOriginalEventsGeneric()
-    .then(({ content, diagnostics, digest }) => {
-      const paths = writeOriginalEventsLocal(process.cwd(), { content, diagnostics, digest });
+    .then(({ content, diagnostics, digest, iconAtlasPng }) => {
+      const paths = writeOriginalEventsLocal(process.cwd(), { content, diagnostics, digest, iconAtlasPng });
       console.log(JSON.stringify({ digest, ...paths, summary: diagnostics.summary }, null, 1));
     })
     .catch(error => { console.error(error.message); process.exit(1); });

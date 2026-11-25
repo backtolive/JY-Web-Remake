@@ -1,6 +1,18 @@
 # 進度 — 2026-11-26
 
-## 2026-11-26：ALLDEF.GRP 物品圖片來源追查（最新）
+## 2026-11-26：物品圖示提取接入轉接器＋Web 預覽（最新）
+
+Phase: Phase 3 資料讀取／轉換＋Phase 5 Web 預覽；圖示來源 Community Implementation（社群 Pascal/Lua/C），本地 bytes 全量解碼視覺驗證。Status: **imageRef＋圖集提取完成，199 張圖示（物品 0..198）入內容包＋800×400 圖集 PNG；Web 預覽渲染實測通過；順手修 `App.tsx` v3 檢查**
+- Completed Tasks: 實測兩圖集 item 圖示塊（`verify_item_icon_block.mjs`：world 198／scene 199，共有 198 張像素相同，item 199 皆空）→ 定 scene 圖集為權威；`convert_original_events_generic.mjs` 新增 `loadItemIconAtlas`／`decodeIcon`／`composeIconAtlas`＋`png-encode.mjs`，對物品 0..198 寫入 `imageRef`、item 199 無，產出 800×400 圖集 PNG＋`diagnostics.itemIcons` provenance；`original-events-preview.tsx` 新增圖集載入＋圖示網格＋選取縮圖；`App.tsx` 修 `schemaVersion!==2`→`!==3`（v3 內容包原本無法載入）。
+- Files Changed: `tools/extractor/png-encode.mjs`（新）、`tools/extractor/convert_original_events_generic.mjs`、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`apps/web/src/App.tsx`、`tests/unit/png-encode.test.mjs`（新）、`tests/unit/original-events-generic-converter.test.mjs`、`tools/analyzer/verify_item_icon_block.mjs`（新）、`tools/analyzer/make_trimmed_events_package.mjs`（新，Web 預覽 UI 測試用）、`docs/decisions/0068-item-icon-extraction.md`（新）、docs。
+- Tests Executed: 單元 147/147；root＋web typecheck；schema:check；web build；全量 fresh-state 驅動；Web 預覽瀏覽器實測。
+- Test Results: 全通過；內容包 digest `662ce189fa32e198`（199 imageRef／item 199 無）；圖集 PNG 800×400 RGBA；1,018/1,018 事件達終態。
+- Research Findings: 物品圖示在分割 map-pic 圖集（非 ALLDEF）；logical `3501+id`；world 198／scene 199 張，共有 198 張像素相同；item 199 兩圖集皆空；1728B／40×40；`MMAP.COL` 256×3 palette。
+- Known Limitations: 僅 scene-0／world-0 圖集全量解碼（110 個圖集檔未逐一）；`stackable: true` 仍為 uniform Inferred；裝備/修煉互斥與 `CanEquip` 未建模。
+- Unverified Assumptions: 社群 C/Pascal/Lua 圖示格式與 DOS 本地 bytes 一致；`MMAP.COL` 為 scene/world 共用 palette。
+- Next Recommended Tasks: current-scene 寫入正式 Runtime（場景切換）；裝備/修煉內容效果層（互斥解綁＋CanEquip）；Web 預覽完整資源儀表板。詳 [ADR 0068](decisions/0068-item-icon-extraction.md)
+
+## 2026-11-26：ALLDEF.GRP 物品圖片來源追查
 
 Phase: Phase 3 資料讀取（研究探測）；結論 Community Implementation（社群 Pascal/Lua/C）＋本地 bytes 視覺驗證。Status: **確認 ALLDEF.GRP 不是物品圖片來源（是場景事件槽表）；物品圖在分割地圖圖集 WMP/SMP（+WDX/SDX）logical index 3501+，199 個 40×40 icon（物品 0..198），已解碼三筆視覺驗證吻合**。Completed Tasks: 新增 `tools/analyzer/probe_alldef_item_images.mjs`（ALLDEF 結構統計：100×200 slot×11 int16，f2/f3/f4 事件引用 max 1017、f9/f10 座標 0..57/0..56，稀疏結構化表非圖片流；雜湊釘選）；`probe_pic_atlas_items.mjs`（IDX 累計 end-offset 格式、WDX000 3701 entries／SDX000 3983 entries，3501..3699 為均勻 1728B）；`decode_item_icons.mjs`＋`ppm-to-png.mjs`（icon 解碼：8B header＋逐列 RLE transparent/solid run＋palette index，palette＝MMAP.COL 256×3 RGB；解碼物品 0/110/160 → 藥丸／劍／書，與物品語意吻合）。Files Changed: 四個 analyzer 腳本（新）、docs；本機產物在 ignored `assets/generated/pic-atlas-probe/`。Tests Executed: 探測腳本對釘選 ALLDEF/WMP/SDX/MMAP.COL 唯讀。Test Results: 全通過；ALLDEF 雜湊 `3633122f…` 吻合。Research Findings: ① ALLDEF＝場景事件槽表（非圖片）；② 物品圖來源＝分割地圖圖集：world WMP000-025/WDX000-025、scene SMP000-083/SDX000-083，logical index `3501+itemNumber`（Pascal `ITEM_BEGIN_PIC=3501`，kys_type.pas:302、kys_main.pas:479 INI 可覆寫；Lua `LoadThingPic` mode 0 同址，jyconst.lua:601-602；mode 1 的獨立 thing.idx/thing.grp 本機 DOS 目錄不存在）；③ IDX＝累計 end-offsets（piccache.c:132-135），API picid÷2（piccache.c:188）↔ Lua ×2；④ 199 個 icon（3501..3699＝物品 0..198）每個 1728B＝40×40（Lua ThingPicWidth/Height=40）；物品 199「最後」的 slot 3700 為空；⑤ icon 格式＝[w/h/xoff/yoff:2×4]＋逐列 RLE。Known Limitations: 僅抽樣 3 筆 icon 視覺驗證；WMP/SMP 共 110 個圖集檔未逐一解碼；8bpp 假設（palette index 1 byte）依社群 C 來源，未對全部 icon 驗證 datalong 一致性。Unverified Assumptions: 社群 C/Pascal/Lua 的圖集格式與 DOS 原版一致；MMAP.COL 為 scene/world 圖示共用 palette。Next Recommended Tasks: 把物品 icon 提取接入轉接器（imageRef → 圖集來源引用）與 Web 預覽顯示；current-scene 寫入接入正式 Runtime；裝備/修煉內容效果層。見 PROGRESS 本節。
 

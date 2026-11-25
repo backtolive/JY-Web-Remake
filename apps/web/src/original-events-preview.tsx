@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createControlledEventState, dispatchControlledEvent,
   restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
 import type { ControlledEventAction, ControlledEventState, ControlledResult, DecisionChange,
@@ -21,6 +21,8 @@ export function OriginalEventsPreview({ content, onClose }:
   const [changes, setChanges] = useState<DecisionChange[]>([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [iconUrls, setIconUrls] = useState<Map<string, string> | null>(null);
+  const iconAtlasInput = useRef<HTMLInputElement>(null);
   const itemOptions = useMemo(() => Object.keys(content.data.items ?? {}).sort((a, b) =>
     (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
   const itemName = (id: string) => content.data.items?.[`${content.identity.id}:item/${id}`]?.name ?? '';
@@ -89,6 +91,39 @@ export function OriginalEventsPreview({ content, onClose }:
       setMessage('已讀回進度。'); setError(''); }
     catch (cause) { setError(cause instanceof Error ? cause.message : '讀取失敗。'); }
   }
+  // Load the converter-generated item-icon atlas (800x400, 20 columns of 40px cells) and
+  // slice each item's cell into a data URL. The engine content only carries an imageRef id;
+  // decoding/positioning is a preview concern, so the grid layout lives here, not in content.
+  const ICON_COLS = 20, ICON_CELL = 40;
+  async function loadIconAtlas(file?: File) {
+    if (!file) return;
+    try {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve(); img.onerror = () => reject(new Error('ATLAS_LOAD')); img.src = url;
+      });
+      if (img.naturalWidth !== ICON_COLS * ICON_CELL || img.naturalHeight !== 10 * ICON_CELL)
+        throw new Error('ATLAS_SIZE');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('ATLAS_CTX');
+      const map = new Map<string, string>();
+      for (const id of itemOptions) {
+        const itemId = Number(id.split('/').pop());
+        canvas.width = ICON_CELL; canvas.height = ICON_CELL;
+        ctx.clearRect(0, 0, ICON_CELL, ICON_CELL);
+        ctx.drawImage(img, (itemId % ICON_COLS) * ICON_CELL, Math.floor(itemId / ICON_COLS) * ICON_CELL,
+          ICON_CELL, ICON_CELL, 0, 0, ICON_CELL, ICON_CELL);
+        map.set(id, canvas.toDataURL('image/png'));
+      }
+      URL.revokeObjectURL(url);
+      setIconUrls(map); setError('');
+      setMessage(`已載入物品圖集：${map.size} 張圖示。`);
+    } catch (cause) {
+      setError(cause instanceof Error ? '物品圖集無法載入（請選擇轉換工具產生的 item-icons PNG）。' : '物品圖集無法載入。');
+    }
+  }
   const pending = state?.pending;
   return <section className="oe-preview" aria-label="原版事件本機唯讀預覽">
     <header><strong>原版事件 · 本機唯讀預覽</strong><button onClick={onClose}>關閉</button></header>
@@ -110,13 +145,34 @@ export function OriginalEventsPreview({ content, onClose }:
         <label>目標角色／槽（裝備／修煉用；角色編號 0 起，槽 0–1）
           <input type="number" min={0} value={hostRole} onChange={e => setHostRole(e.target.value)} />
           <input type="number" min={0} max={1} value={hostSlot} onChange={e => setHostSlot(e.target.value)} /></label>
+        {useItemId && iconUrls?.get(`${content.identity.id}:item/${useItemId}`) &&
+          <span className="oe-item-icon-wrap">
+            <img className="oe-item-icon" src={iconUrls.get(`${content.identity.id}:item/${useItemId}`)}
+              alt={`${useItemId} ${itemName(useItemId)}`} />
+            <span className="oe-item-icon-label">{useItemId} {itemName(useItemId)}</span>
+          </span>}
       </>}
       <button className="primary" disabled={!eventId} onClick={() => start(eventId)}>開始事件</button>
       <button disabled={!useItemId} onClick={useItem}>使用物品</button>
       <button disabled={!useItemId} onClick={() => equipPractice('EQUIP')}>裝備</button>
       <button disabled={!useItemId} onClick={() => equipPractice('PRACTICE')}>修煉</button>
+      <button onClick={() => iconAtlasInput.current?.click()}>載入物品圖集（PNG）</button>
       <button onClick={load}>讀取進度</button>
+      <input ref={iconAtlasInput} type="file" accept="image/png" hidden aria-label="選擇物品圖集 PNG"
+        onChange={event => void loadIconAtlas(event.target.files?.[0])}/>
       <p className="oe-note">全量 {events.length} 筆事件（68 個已證 opcode）；對話、選項、分支與決策效果可操作，戰鬥為模擬結果。此為內容預覽，非完整原版遊玩。</p>
+      {iconUrls && <div className="oe-icon-gallery">
+        <p className="oe-note">物品圖示（{iconUrls.size} 張；點擊選取為使用物品）</p>
+        <div className="oe-icon-grid">
+          {itemOptions.map(id => {
+            const itemId = id.split('/').pop() ?? '';
+            const name = itemName(itemId);
+            return <button key={id} className="oe-icon-cell" onClick={() => setUseItemId(itemId)} title={`${itemId} ${name}`}>
+              <img src={iconUrls.get(id)} alt={name || `item ${itemId}`} />
+            </button>;
+          })}
+        </div>
+      </div>}
     </div>}
     {state && <>
       <p className="oe-event">目前事件 <strong>{cursor ? cursor.eventId.split('/').pop() : '已結束'}</strong> · 步驟 {cursor ? cursor.pc : '—'}</p>

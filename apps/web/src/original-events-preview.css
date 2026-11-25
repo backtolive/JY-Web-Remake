@@ -16,4 +16,15 @@
 .oe-preview .oe-actions{margin-top:12px;padding-top:9px;border-top:1px solid #d7dccd}
 .oe-preview .oe-error{color:#a42f2f;font-weight:600}
 .oe-preview .oe-status{font-size:12px;color:#59695d}
-@media(max-width:720px){.oe-preview{left:2%;right:2%;bottom:2%;padding:12px;max-height:82%}}
+.oe-preview .oe-item-icon-wrap{display:inline-flex;align-items:center;gap:8px;margin:2px 0 8px}
+.oe-preview .oe-item-icon{width:40px;height:40px;image-rendering:pixelated;border:1px solid #c9d0bd;background:
+ conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0) 0 0/8px 8px}
+.oe-preview .oe-item-icon-label{font-size:12px;color:#59695d}
+.oe-preview .oe-icon-gallery{margin-top:12px;padding-top:9px;border-top:1px solid #d7dccd}
+.oe-preview .oe-icon-grid{display:grid;grid-template-columns:repeat(20,40px);gap:3px;max-height:220px;overflow:auto;padding:4px}
+.oe-preview .oe-icon-cell{width:40px;height:40px;padding:0;border:1px solid #c9d0bd;border-radius:3px;cursor:pointer;background:
+ conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0) 0 0/8px 8px}
+.oe-preview .oe-icon-cell img{width:40px;height:40px;image-rendering:pixelated;display:block}
+.oe-preview .oe-icon-cell:hover{border-color:#b8954a}
+@media(max-width:720px){.oe-preview{left:2%;right:2%;bottom:2%;padding:12px;max-height:82%}
+.oe-preview .oe-icon-grid{grid-template-columns:repeat(10,40px)}}

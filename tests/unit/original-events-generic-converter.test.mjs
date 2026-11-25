@@ -303,3 +303,40 @@ test('Generic converter maps opcode 50 dynamic variant to an item-presence branc
     // The dynamic variant (list[0] > 128) is the branch arm, not the 50e parameter arm.
     assert.ok(ins.args[0] > 128);
   });
+
+test('Generic converter emits item imageRefs and an icon atlas from the scene atlas',
+  { skip }, async () => {
+    const { content, diagnostics, iconAtlasPng } = buildOriginalEventsContent();
+    // 199 items carry an imageRef; item 199's empty atlas slot gets none.
+    assert.equal(diagnostics.summary.iconCount, 199);
+    assert.deepEqual(diagnostics.summary.iconMissing, [199]);
+    const withRef = Object.entries(content.items).filter(([, definition]) => definition.imageRef);
+    assert.equal(withRef.length, 199);
+    // imageRef is a generic namespaced id (schema id pattern); no atlas bytes in content.
+    for (const [id, definition] of withRef) {
+      assert.equal(definition.imageRef, `original.jy.events:pic/item/${id.split('/').at(-1)}`);
+      assert.match(definition.imageRef, /^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$/);
+    }
+    // Pinned items present; item 199 absent.
+    for (const id of [0, 110, 160, 198])
+      assert.equal(content.items[`original.jy.events:item/${id}`].imageRef, `original.jy.events:pic/item/${id}`);
+    assert.equal(content.items['original.jy.events:item/199'].imageRef, undefined);
+    // Provenance records the scene/world atlas files, palette, logical base and grid layout.
+    const icons = diagnostics.itemIcons;
+    assert.equal(icons.logicalBase, 3501);
+    assert.equal(icons.iconSize, 1728);
+    assert.deepEqual(icons.grid, { cols: 20, rows: 10, cell: 40, atlasWidth: 800, atlasHeight: 400 });
+    assert.equal(icons.presentCount, 199);
+    assert.deepEqual(icons.missingItems, [199]);
+    assert.ok(icons.worldMissingItems.includes(198)); // world atlas lacks item 198
+    for (const info of Object.values(icons.sourceFiles)) {
+      assert.ok(info.file);
+      assert.match(info.sha256, /^[a-f0-9]{64}$/);
+    }
+    assert.equal(icons.sourceFiles.palette.file, 'MMAP.COL');
+    // The atlas PNG is a valid 800x400 RGBA image (engine content carries only the id).
+    assert.equal(iconAtlasPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(iconAtlasPng.readUInt32BE(16), 800);
+    assert.equal(iconAtlasPng.readUInt32BE(20), 400);
+    assert.equal(iconAtlasPng[25], 6); // color type: RGBA
+  });
