@@ -11,6 +11,10 @@
 - [x] 逐功能補技能（33／35）、隨身物品（41）與 opcode 50 動態變體的狀態領域：新建 `original.jy:skill`／`skill-level`（10 槽）與 `carried-item`／`carried-item-amount`（4 格）領域，opcode 33／35／41 建成 per-slot 決策 plan，opcode 50 動態變體映射為物品持有分支；50e 參數解算器仍為 no-op。見 [ADR 0064](decisions/0064-generic-event-conversion-pipeline.md)。
 - [x] 場景 `-2` 改為追蹤當前場景的動態 key：新建 `original.jy:current-scene` 領域，`-2` 槽位引用改由 `keyFrom` 依目前場景組合成 key，`scene-slots` 的 allowedKeys 覆蓋 `-2` 用到的 slot/field × 84 場景並去重；fresh-state 732/732 終止，專責單元測試驗證寫入落於當前場景。
 - [x] 依證據解鎖全部 14 個阻擋 opcode（4／15／19／24／25／30／44／51／57／58／60／61／62／64）：branch（4 curItem、60 slotPicAny、61 slot4664All）、end（15 死亡、62 結局）、狀態效果（44 slotPicAnimate、57 scene57Anim）、no-op＋診斷（19／24／25／30／51／58／64）；內容包 1,018/1,018 筆轉換、0 阻擋、2,866 對話，fresh-state 全量驅動通過。見 [ADR 0064](decisions/0064-generic-event-conversion-pipeline.md)。
+- [x] 探測 RANGER.GRP 物品表欄位佈局（190B×200，`Thing_S` 社群佈局，8 筆抽樣含全部 DOS 觀察案例物品均吻合）；確認記錄無圖片欄位、使用效果在事件腳本。見 PROGRESS 2026-11-25 物品記錄探測。
+- [ ] 定義通用物品定義合約（engine-owned schema：id／name／description／type／imageRef?）並加入 schema 匯出與引用驗證。
+- [ ] 建立 RANGER 物品表轉接器，產出 git-ignored 物品定義內容包（含來源雜湊／偏移／解析器版本），並把物品定義 ID 接入事件包 `original.jy:item/{id}` 與 `current-item`。
+- [ ] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源；確認前不假設圖片欄位。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 
