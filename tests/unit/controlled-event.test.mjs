@@ -156,3 +156,33 @@ test('Seeded weighted branch replays identically and invalid seed or target is r
   const bad = structuredClone(source); bad.events['mock:event/quest'].steps[0].outcomes[0].target = 99;
   await assert.rejects(resolveControlledEventContent(bad), /JUMP_TARGET/);
 });
+
+test('Branch step jumps on the decision condition and rejects out-of-range targets', async () => {
+  const source = structuredClone(contentSource);
+  source.events['mock:event/quest'].steps = [
+    { op: 'branch', condition: { op: 'compare', left: read(item), relation: 'ge', right: lit(1) }, yes: 1, no: 2 },
+    { op: 'say', dialogueId: 'mock:dialogue/start' },
+    { op: 'end' },
+  ];
+  const content = await resolveControlledEventContent(source);
+  // Item defaults to 1, so the "yes" arm (say) is taken, pausing for dialogue.
+  const taken = dispatchControlledEvent(content, createControlledEventState(content),
+    { type: 'START', eventId: 'mock:event/quest' });
+  assert.equal(taken.notices[0].type, 'DIALOGUE');
+  assert.deepEqual(taken.state.cursor, { eventId: 'mock:event/quest', pc: 1, waiting: 'dialogue' });
+  const finished = dispatchControlledEvent(content, taken.state, { type: 'CONTINUE' });
+  assert.equal(finished.state.cursor, null);
+  assert.equal(finished.notices.at(-1).type, 'EVENT_ENDED');
+  // Lower the item so the "no" arm (end) is taken directly.
+  const sourceNo = structuredClone(contentSource);
+  sourceNo.decision.domains['mock:inventory'].default = 0;
+  sourceNo.events['mock:event/quest'].steps = source.events['mock:event/quest'].steps;
+  const contentNo = await resolveControlledEventContent(sourceNo);
+  const skipped = dispatchControlledEvent(contentNo, createControlledEventState(contentNo),
+    { type: 'START', eventId: 'mock:event/quest' });
+  assert.equal(skipped.notices.length, 1);
+  assert.equal(skipped.notices[0].type, 'EVENT_ENDED');
+  const bad = structuredClone(source);
+  bad.events['mock:event/quest'].steps[0].yes = 99;
+  await assert.rejects(resolveControlledEventContent(bad), /JUMP_TARGET/);
+});

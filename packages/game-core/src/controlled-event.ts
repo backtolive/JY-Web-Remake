@@ -2,9 +2,9 @@
 import { Ajv } from 'ajv';
 import { canonical, contentHash } from './content.ts';
 import { nextRandom } from './runtime.ts';
-import { applyDecisionPlan, createDecisionState, validateDecisionState } from './decision.ts';
-import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange } from './decision.ts';
-import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema } from './decision-schema.ts';
+import { applyDecisionPlan, createDecisionState, evaluateDecision, validateDecisionState } from './decision.ts';
+import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition } from './decision.ts';
+import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema } from './decision-schema.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
   controlledEventSaveSchema } from './controlled-event-schema.ts';
 
@@ -17,7 +17,8 @@ export type ControlledResult = { schemaVersion: 1; requestId: string; kind: 'bat
   { schemaVersion: 1; requestId: string; kind: 'selection'; selectedId: string };
 export interface ControlledRequest { schemaVersion: 1; requestId: string; command: ControlledCommand }
 type Step = { op: 'say'; dialogueId: string } | { op: 'choice'; options: { id: string; text: string; target: number }[] } |
-  { op: 'decide'; plan: DecisionPlan } | { op: 'invoke'; command: ControlledCommand;
+  { op: 'decide'; plan: DecisionPlan } | { op: 'branch'; condition: DecisionCondition; yes: number; no: number } |
+  { op: 'invoke'; command: ControlledCommand;
     outcomes: { id: string; target: number; plan?: DecisionPlan }[] } |
   { op: 'roll'; outcomes: { id: string; target: number; weight: number; plan?: DecisionPlan }[] } | { op: 'end' };
 export interface ControlledEventContent {
@@ -39,7 +40,7 @@ export type ControlledEventAction = { type: 'START'; eventId: string } | { type:
 export type ControlledEventNotice = { type: 'DIALOGUE' | 'CHOICE' | 'REQUEST' | 'DECISION_APPLIED' | 'EVENT_ENDED';
   id?: string; request?: ControlledRequest; changes?: DecisionChange[] };
 const ajv = new Ajv({ strict: true, allErrors: true });
-for (const schema of [decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, controlledCommandSchema]) ajv.addSchema(schema);
+for (const schema of [decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema, controlledCommandSchema]) ajv.addSchema(schema);
 const validContent = ajv.compile(controlledEventContentSchema);
 const validSave = ajv.compile(controlledEventSaveSchema);
 const validResult = ajv.compile(controlledResultSchema);
@@ -67,6 +68,9 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
       if (step.op === 'choice') {
         if (new Set(step.options.map(option => option.id)).size !== step.options.length) fail('OPTION_DUPLICATE');
         if (step.options.some(option => option.target >= event.steps.length)) fail('JUMP_TARGET');
+      }
+      if (step.op === 'branch') {
+        if (step.yes >= event.steps.length || step.no >= event.steps.length) fail('JUMP_TARGET');
       }
       if (step.op === 'invoke') {
         const permitted = outcomeIds(step.command), actual = step.outcomes.map(outcome => outcome.id);
@@ -162,6 +166,9 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
       state.decision = applied.state;
       if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
       cursor.pc++;
+    } else if (step.op === 'branch') {
+      const target = evaluateDecision(content.data.decision, state.decision, step.condition, budget - count) ? step.yes : step.no;
+      cursor.pc = target;
     } else if (step.op === 'roll') {
       const result = nextRandom(state.rngState);
       const total = step.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);

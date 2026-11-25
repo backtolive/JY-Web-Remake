@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { contentSchema, saveSchema } from '../../packages/game-core/src/schema.ts';
 import { decisionDomainsSchema, decisionStateSchema, decisionTransactionSchema,
-  decisionPlanSchema } from '../../packages/game-core/src/decision-schema.ts';
+  decisionPlanSchema, decisionConditionSchema } from '../../packages/game-core/src/decision-schema.ts';
 import { decisionEventContentSchema, decisionEventSaveSchema } from '../../packages/game-core/src/decision-event-schema.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
   controlledEventSaveSchema } from '../../packages/game-core/src/controlled-event-schema.ts';
@@ -13,6 +13,7 @@ if(!check)await mkdir('schemas',{recursive:true});
 for(const [file,schema] of [['game-content.schema.json',contentSchema],['save.schema.json',saveSchema],
   ['decision-domains.schema.json',decisionDomainsSchema],['decision-state.schema.json',decisionStateSchema],
   ['decision-transaction.schema.json',decisionTransactionSchema],['decision-plan.schema.json',decisionPlanSchema],
+  ['decision-condition.schema.json',decisionConditionSchema],
   ['decision-event-content.schema.json',decisionEventContentSchema],['decision-event-save.schema.json',decisionEventSaveSchema],
   ['controlled-command.schema.json',controlledCommandSchema],['controlled-result.schema.json',controlledResultSchema],
   ['controlled-event-content.schema.json',controlledEventContentSchema],['controlled-event-save.schema.json',controlledEventSaveSchema],

@@ -37,11 +37,44 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
           "maxLength": 160
+        },
+        "keyFrom": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "literal": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "literal"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "read": {
+                    "$ref": "#/definitions/reference"
+                  }
+                },
+                "required": [
+                  "read"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "maxItems": 8
         }
       },
       "required": [
-        "domain",
-        "key"
+        "domain"
       ],
       "additionalProperties": false
     },
@@ -130,6 +163,37 @@
           "required": [
             "op",
             "list",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "listSize"
+            },
+            "list": {
+              "$ref": "#/definitions/operand"
+            },
+            "relation": {
+              "enum": [
+                "eq",
+                "ne",
+                "lt",
+                "le",
+                "gt",
+                "ge"
+              ]
+            },
+            "value": {
+              "$ref": "#/definitions/operand"
+            }
+          },
+          "required": [
+            "op",
+            "list",
+            "relation",
             "value"
           ],
           "additionalProperties": false
@@ -273,6 +337,46 @@
             "op",
             "target",
             "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "const": "patchList"
+            },
+            "target": {
+              "$ref": "#/definitions/reference"
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10000
+                  },
+                  "value": {
+                    "$ref": "#/definitions/operand"
+                  }
+                },
+                "required": [
+                  "index",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "maxItems": 64,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "op",
+            "target",
+            "entries"
           ],
           "additionalProperties": false
         },

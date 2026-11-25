@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createDecisionState, applyDecisionTransaction, evaluateDecision,
   applyDecisionPlan, readDecisionValue } from '../../packages/game-core/src/decision.ts';
 import { decisionDomainsSchema, decisionStateSchema, decisionTransactionSchema,
-  decisionPlanSchema } from '../../packages/game-core/src/decision-schema.ts';
+  decisionPlanSchema, decisionConditionSchema } from '../../packages/game-core/src/decision-schema.ts';
 
 const schema = { schemaVersion: 1, domains: {
   'mock:inventory': { kind: 'integer', default: 0, min: 0, max: 99, allowedKeys: ['mock:item/medicine'] },
@@ -117,6 +117,7 @@ test('Shared decision schemas reject undeclared JSON fields and restrict declare
     ['decision-state.schema.json', decisionStateSchema],
     ['decision-transaction.schema.json', decisionTransactionSchema],
     ['decision-plan.schema.json', decisionPlanSchema],
+    ['decision-condition.schema.json', decisionConditionSchema],
   ]) assert.deepEqual(JSON.parse(await readFile(`schemas/${name}`, 'utf8')), value);
   const initial = createDecisionState(schema);
   assert.throws(() => applyDecisionTransaction(schema, initial,
@@ -144,4 +145,74 @@ test('Mock cross-domain invariant rejects HP above maximum without committing ea
   ] }), /DECISION_INVARIANT/);
   assert.equal(readDecisionValue(constrained, initial, flag), false);
   assert.equal(readDecisionValue(constrained, initial, attack), 0);
+});
+
+test('keyFrom composes dynamic keys from literal and read parts joined with a slash', () => {
+  const dynamic = { schemaVersion: 1, domains: {
+    'mock:slots': { kind: 'list', default: [], maxItems: 8, allowedKeys: [
+      'mock:scene/1/slot/1', 'mock:scene/1/slot/2', 'mock:scene/2/slot/1', 'mock:scene/2/slot/2'] },
+    'mock:cursor': { kind: 'integer', default: 1, min: 1, max: 3, allowedKeys: ['mock:cursor/scene', 'mock:cursor/slot'] },
+  } };
+  const scene = { domain: 'mock:cursor', key: 'mock:cursor/scene' };
+  const slot = { domain: 'mock:cursor', key: 'mock:cursor/slot' };
+  const dynamicRef = { domain: 'mock:slots', keyFrom: [
+    { literal: 'mock:scene' }, { read: scene }, { literal: 'slot' }, { read: slot } ] };
+  const initial = createDecisionState(dynamic);
+  // Reads the key resolved from the cursor scene/slot (both default to 1).
+  assert.deepEqual(readDecisionValue(dynamic, initial, dynamicRef), []);
+  // patchList writes through the dynamic key.
+  const applied = applyDecisionTransaction(dynamic, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'patchList', target: dynamicRef, entries: [{ index: 0, value: literal('mock:thing/one') }] },
+  ] });
+  assert.equal(applied.state.values['mock:slots']['mock:scene/1/slot/1'][0], 'mock:thing/one');
+  // A different cursor resolves to a different, still-allowed key.
+  const moved = applyDecisionTransaction(dynamic, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'set', target: scene, value: literal(2) },
+  ] });
+  assert.equal(moved.state.values['mock:slots']?.['mock:scene/2/slot/1'], undefined);
+  // A composed key outside the allowed set is rejected.
+  const off = applyDecisionTransaction(dynamic, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'set', target: slot, value: literal(2) },
+    { op: 'set', target: scene, value: literal(2) },
+  ] });
+  const cornerRef = { domain: 'mock:slots', keyFrom: [
+    { literal: 'mock:scene' }, { read: scene }, { literal: 'slot' }, { read: slot } ] };
+  assert.equal(readDecisionValue(dynamic, off.state, cornerRef).length, 0);
+  // A composed key outside the allowed set is rejected on read.
+  const outside = applyDecisionTransaction(dynamic, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'set', target: scene, value: literal(3) },
+  ] });
+  assert.throws(() => readDecisionValue(dynamic, outside.state, cornerRef), /DECISION_KEY/);
+});
+
+test('patchList writes per-index entries into a list and pads sparse slots within the cap', () => {
+  const sparse = { schemaVersion: 1, domains: {
+    'mock:slots': { kind: 'list', default: [], maxItems: 4, allowedKeys: ['mock:slot/1'] },
+  } };
+  const slot = ref('slots', 'slot/1');
+  const initial = createDecisionState(sparse);
+  const applied = applyDecisionTransaction(sparse, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'patchList', target: slot, entries: [
+      { index: 0, value: literal('a') }, { index: 3, value: literal('d') },
+    ] },
+  ] });
+  assert.deepEqual(applied.state.values['mock:slots']['mock:slot/1'], ['a', '0', '0', 'd']);
+  assert.throws(() => applyDecisionTransaction(sparse, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'patchList', target: slot, entries: [{ index: 5, value: literal('x') }] },
+  ] }), /DECISION_PATCH_INDEX/);
+});
+
+test('listSize compares a list operand against a numeric threshold', () => {
+  const sized = { schemaVersion: 1, domains: {
+    'mock:party': { kind: 'list', default: [], maxItems: 6, allowedKeys: ['mock:members'] },
+  } };
+  const members = ref('party', 'members');
+  const initial = createDecisionState(sized);
+  const full = applyDecisionTransaction(sized, initial, { schemaVersion: 1, guards: [], effects: [
+    { op: 'listAdd', target: members, value: literal('mock:member/a') },
+  ] });
+  assert.equal(evaluateDecision(sized, full.state, { op: 'listSize', list: read(members), relation: 'eq', value: literal(1) }, 1), true);
+  assert.equal(evaluateDecision(sized, full.state, { op: 'listSize', list: read(members), relation: 'ge', value: literal(6) }, 1), false);
+  assert.throws(() => evaluateDecision(sized, full.state,
+    { op: 'listSize', list: read(members), relation: 'eq', value: literal('six') }, 1), /DECISION_LISTSIZE_TYPE/);
 });

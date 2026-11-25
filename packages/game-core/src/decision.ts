@@ -22,17 +22,20 @@ export interface DecisionDomain {
 }
 export interface DecisionSchema { schemaVersion: 1; domains: Record<string, DecisionDomain>; invariants?: DecisionCondition[] }
 export interface DecisionState { schemaVersion: 1; revision: number; values: Record<string, Record<string, DecisionValue>> }
-export interface DecisionRef { domain: string; key: string }
+export type DecisionKeyPart = { literal: string } | { read: DecisionRef };
+export interface DecisionRef { domain: string; key?: string; keyFrom?: DecisionKeyPart[] }
 export type DecisionOperand = { kind: 'literal'; value: DecisionValue } | { kind: 'read'; ref: DecisionRef };
 export type DecisionCondition =
   | { op: 'compare'; left: DecisionOperand; relation: 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge'; right: DecisionOperand }
   | { op: 'contains'; list: DecisionOperand; value: DecisionOperand }
+  | { op: 'listSize'; list: DecisionOperand; relation: 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge'; value: DecisionOperand }
   | { op: 'all' | 'any'; conditions: DecisionCondition[] }
   | { op: 'not'; condition: DecisionCondition };
 export type DecisionEffect =
   | { op: 'set'; target: DecisionRef; value: DecisionOperand }
   | { op: 'add'; target: DecisionRef; amount: DecisionOperand }
   | { op: 'listAdd' | 'listRemove'; target: DecisionRef; value: DecisionOperand }
+  | { op: 'patchList'; target: DecisionRef; entries: { index: number; value: DecisionOperand }[] }
   | { op: 'require'; condition: DecisionCondition };
 export interface DecisionTransaction { schemaVersion: 1; guards: DecisionCondition[]; effects: DecisionEffect[] }
 export interface DecisionChange { target: DecisionRef; before: DecisionValue; after: DecisionValue }
@@ -59,12 +62,36 @@ function validValue(domain: DecisionDomain, value: unknown): value is DecisionVa
     default: return false;
   }
 }
-function domainFor(schema: DecisionSchema, ref: DecisionRef): DecisionDomain {
-  if (!ref || !idPattern.test(ref.domain) || !idPattern.test(ref.key)) fail('REFERENCE');
+function domainFor(schema: DecisionSchema, state: DecisionState, ref: DecisionRef): DecisionDomain {
+  if (!ref || !idPattern.test(ref.domain) || typeof ref.key !== 'string' && !Array.isArray(ref.keyFrom)) fail('REFERENCE');
   const domain = schema.domains[ref.domain];
   if (!domain) fail('DOMAIN');
-  if (!domain.allowedKeys.includes(ref.key)) fail('KEY');
+  const key = resolveKey(schema, state, ref);
+  if (!domain.allowedKeys.includes(key)) fail('KEY');
   return domain;
+}
+/** A key may be static, or composed from literal/read parts joined with '/'. Read parts must be static refs. */
+function resolveKey(schema: DecisionSchema, state: DecisionState, ref: DecisionRef): string {
+  if (!ref.keyFrom) {
+    if (typeof ref.key !== 'string' || !idPattern.test(ref.key)) fail('REFERENCE');
+    return ref.key;
+  }
+  if (!ref.keyFrom.length || ref.keyFrom.length > 8) fail('KEY_PARTS');
+  const parts = ref.keyFrom.map(part => {
+    if (part && typeof part === 'object' && 'literal' in part) {
+      if (typeof part.literal !== 'string' || part.literal.length < 1 || part.literal.length > 64) fail('KEY_PART');
+      return part.literal;
+    }
+    if (part && typeof part === 'object' && 'read' in part) {
+      const staticRef = part.read;
+      if (!staticRef || staticRef.keyFrom || typeof staticRef.key !== 'string') fail('KEY_PART');
+      return String(state.values[staticRef.domain]?.[staticRef.key] ?? schema.domains[staticRef.domain]?.default);
+    }
+    return fail('KEY_PART');
+  });
+  const key = parts.join('/');
+  if (!idPattern.test(key)) fail('KEY_FORMAT');
+  return key;
 }
 export function validateDecisionSchema(schema: DecisionSchema): void {
   if (!validDomains(schema) || !schema || schema.schemaVersion !== 1 || !schema.domains || typeof schema.domains !== 'object' ||
@@ -108,8 +135,8 @@ export function validateDecisionState(schema: DecisionSchema, state: DecisionSta
   if (schema.invariants?.some(invariant => !evaluateCondition(schema, state, invariant, 0))) fail('INVARIANT');
 }
 function readValue(schema: DecisionSchema, state: DecisionState, ref: DecisionRef): DecisionValue {
-  const domain = domainFor(schema, ref);
-  return cloneValue(state.values[ref.domain]?.[ref.key] ?? domain.default);
+  const domain = domainFor(schema, state, ref);
+  return cloneValue(state.values[ref.domain]?.[resolveKey(schema, state, ref)] ?? domain.default);
 }
 export function readDecisionValue(schema: DecisionSchema, state: DecisionState, ref: DecisionRef): DecisionValue {
   validateDecisionState(schema, state);
@@ -146,6 +173,17 @@ function evaluateCondition(schema: DecisionSchema, state: DecisionState,
       const list = operand(schema, state, condition.list), value = operand(schema, state, condition.value);
       if (!Array.isArray(list) || typeof value !== 'string') fail('CONTAINS_TYPE');
       return list.includes(value);
+    }
+    case 'listSize': {
+      const list = operand(schema, state, condition.list), value = operand(schema, state, condition.value);
+      if (!Array.isArray(list) || typeof value !== 'number') fail('LISTSIZE_TYPE');
+      const size = list.length;
+      switch (condition.relation) {
+        case 'eq': return size === value; case 'ne': return size !== value;
+        case 'lt': return size < value; case 'le': return size <= value;
+        case 'gt': return size > value; case 'ge': return size >= value;
+        default: return fail('LISTSIZE');
+      }
     }
     case 'all': case 'any':
       if (!Array.isArray(condition.conditions) || !condition.conditions.length || condition.conditions.length > 32) fail('CONDITION');
@@ -194,7 +232,8 @@ export function applyDecisionTransaction(schema: DecisionSchema, previous: Decis
       if (!evaluateCondition(schema, state, effect.condition, 0)) fail('REQUIRE');
       continue;
     }
-    const domain = domainFor(schema, effect.target);
+    const domain = domainFor(schema, state, effect.target);
+    const targetKey = resolveKey(schema, state, effect.target);
     const before = readValue(schema, state, effect.target);
     let after: DecisionValue;
     if (effect.op === 'set') after = operand(schema, state, effect.value);
@@ -212,9 +251,22 @@ export function applyDecisionTransaction(schema: DecisionSchema, previous: Decis
         if (!before.includes(value)) fail('LIST_MISSING');
         after = before.filter(item => item !== value);
       }
+    } else if (effect.op === 'patchList') {
+      if (!Array.isArray(before)) fail('PATCH_TYPE');
+      if (!Array.isArray(effect.entries) || !effect.entries.length) fail('PATCH_ENTRIES');
+      const maxLength = Math.max(before.length, ...effect.entries.map(entry => entry.index + 1));
+      if (domain.maxItems !== undefined && maxLength > domain.maxItems) fail('PATCH_INDEX');
+      after = [...before];
+      while (after.length < maxLength) after.push('0');
+      for (const entry of effect.entries) {
+        if (!Number.isInteger(entry.index) || entry.index < 0 || entry.index > maxLength - 1) fail('PATCH_INDEX');
+        const item = operand(schema, state, entry.value);
+        if (typeof item !== 'string') fail('PATCH_ITEM_TYPE');
+        after[entry.index] = item;
+      }
     } else return fail('EFFECT');
     if (!validValue(domain, after)) fail('VALUE_RANGE');
-    (state.values[effect.target.domain] ??= {})[effect.target.key] = cloneValue(after);
+    (state.values[effect.target.domain] ??= {})[targetKey] = cloneValue(after);
     changes.push({ target: { ...effect.target }, before, after: cloneValue(after) });
   }
   if (!Number.isSafeInteger(state.revision + 1)) fail('REVISION');
