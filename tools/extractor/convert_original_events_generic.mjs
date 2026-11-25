@@ -48,15 +48,15 @@ const OPCODES = {
   29: { kind: 'branch', condition: 'attackRange', label: 'Community Implementation' },
   31: { kind: 'branch', condition: 'money', label: 'Community Implementation' },
   32: { kind: 'effect', effect: 'inventoryAdd', label: 'Community Implementation' },
-  33: { kind: 'noop', label: 'Community Implementation', note: 'skill-learn-uninterpreted' },
+  33: { kind: 'effect', effect: 'skillLearn', label: 'Community Implementation' },
   34: { kind: 'effect', effect: 'roleAdd', field: 'aptitude', label: 'Community Implementation' },
-  35: { kind: 'noop', label: 'Community Implementation', note: 'skill-slot-uninterpreted' },
+  35: { kind: 'effect', effect: 'skillSlotSet', label: 'Community Implementation' },
   36: { kind: 'branch', condition: 'sexCheck', label: 'Community Implementation' },
   37: { kind: 'effect', effect: 'roleAdd0', field: 'ethics', label: 'Community Implementation' },
   38: { kind: 'noop', label: 'Community Implementation', note: 'scene-layer-uninterpreted' },
   39: { kind: 'effect', effect: 'sceneReset', label: 'Community Implementation' },
   40: { kind: 'noop', label: 'Community Implementation', note: 'facing' },
-  41: { kind: 'noop', label: 'Community Implementation', note: 'carried-item-uninterpreted' },
+  41: { kind: 'effect', effect: 'carriedItem', label: 'Community Implementation' },
   42: { kind: 'branch', condition: 'hasMale', label: 'Unknown' },
   43: { kind: 'branch', condition: 'itemPresent', label: 'Inferred' },
   45: { kind: 'effect', effect: 'roleAdd', field: 'speed', label: 'Community Implementation' },
@@ -64,7 +64,7 @@ const OPCODES = {
   47: { kind: 'effect', effect: 'roleAdd', field: 'attack', label: 'Community Implementation' },
   48: { kind: 'effect', effect: 'roleAdd', field: 'max-hp', label: 'Community Implementation' },
   49: { kind: 'effect', effect: 'roleSet', field: 'mp-type', label: 'Community Implementation' },
-  50: { kind: 'noop', label: 'Community Implementation', note: 'dynamic-variant-uninterpreted' },
+  50: { kind: 'branch', condition: 'allItemsPresent', label: 'Community Implementation' },
   52: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   53: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
   54: { kind: 'noop', label: 'Community Implementation', note: 'no-op' },
@@ -86,6 +86,10 @@ const slotKey = (scene, slot, field) => `original.jy:scene/${scene}/slot/${slot}
 const sceneRecordKey = scene => `original.jy:scene/${scene}/condition`;
 const roleKey = (field, role) => `original.jy:role/${role}`;
 const partyKey = 'original.jy:party/members';
+const skillKey = (role, slot) => `original.jy:skill/${role}/${slot}`;
+const carriedKey = (role, slot) => `original.jy:carried/${role}/${slot}`;
+const SKILL_SLOTS = 10;
+const CARRIED_SLOTS = 4;
 const sceneName = value => (value === -2 ? 'current' : String(value));
 
 function loadCorpus() {
@@ -109,6 +113,8 @@ function collectKeys(events) {
   const sceneSlots = new Set();
   const sceneRecords = new Set();
   const roles = new Set();
+  const skillRoles = new Set();
+  const carriedRoles = new Set();
   for (const event of events) {
     for (const instruction of event.instructions) {
       const op = OPCODES[instruction.opcode];
@@ -135,12 +141,18 @@ function collectKeys(events) {
         case 'partyAdd': case 'partyRemove': if (typeof a0 === 'number') roles.add(a0); break;
         case 'roleSet': case 'roleAdd': if (typeof a0 === 'number') roles.add(a0); break;
         case 'roleAdd0': roles.add(0); break;
+        case 'skillLearn': case 'skillSlotSet': if (typeof a0 === 'number') skillRoles.add(a0); break;
+        case 'carriedItem': if (typeof a0 === 'number') carriedRoles.add(a0); break;
+        case 'allItemsPresent':
+          for (const item of [a0, a1, a2, a3, a4]) if (typeof item === 'number') inventory.add(item);
+          break;
         default: break;
       }
     }
   }
   return { inventory: [...inventory].sort((a, b) => a - b), sceneSlots: [...sceneSlots],
-    sceneRecords: [...sceneRecords], roles: [...roles].sort((a, b) => a - b) };
+    sceneRecords: [...sceneRecords], roles: [...roles].sort((a, b) => a - b),
+    skillRoles: [...skillRoles].sort((a, b) => a - b), carriedRoles: [...carriedRoles].sort((a, b) => a - b) };
 }
 
 function buildDomains(keys) {
@@ -161,46 +173,150 @@ function buildDomains(keys) {
       allowedKeys: keys.roles.length ? keys.roles.map(role => roleKey(field, role))
         : Array.from({ length: ROLE_COUNT }, (_, role) => roleKey(field, role)) };
   }
+  if (keys.skillRoles.length) {
+    const skillKeys = keys.skillRoles.flatMap(role =>
+      Array.from({ length: SKILL_SLOTS }, (_, slot) => skillKey(role, slot)));
+    // Skill IDs are positive; 0 marks an empty slot. Levels are set by opcode 35 to
+    // arbitrary values (e.g. 900) and only capped at 10 on opcode 33 re-learn, so the
+    // level domain is wide; the cap is enforced by the plan, not the range.
+    domains['original.jy:skill'] = { kind: 'integer', default: 0, min: 0, max: 1_000_000, allowedKeys: skillKeys };
+    domains['original.jy:skill-level'] = { kind: 'integer', default: 0, min: 0, max: 1_000_000, allowedKeys: skillKeys };
+  }
+  if (keys.carriedRoles.length) {
+    const carriedKeys = keys.carriedRoles.flatMap(role =>
+      Array.from({ length: CARRIED_SLOTS }, (_, slot) => carriedKey(role, slot)));
+    domains['original.jy:carried-item'] = { kind: 'integer', default: -1, min: -1, max: 1_000_000, allowedKeys: carriedKeys };
+    domains['original.jy:carried-item-amount'] = { kind: 'integer', default: 0, min: -1_000_000, max: 1_000_000, allowedKeys: carriedKeys };
+  }
   return domains;
 }
 
 function buildEffect(op, args, instruction) {
   const [a0, a1, a2, a3, a4] = args;
+  const plan = { schemaVersion: 1, cases: [], otherwise: [] };
+  const put = effect => plan.otherwise.push(effect);
   switch (op.effect) {
     case 'inventoryAdd':
-      return [{ op: 'add', target: { domain: 'original.jy:inventory', key: invKey(a0) }, amount: literal(a1) }];
+      put({ op: 'add', target: { domain: 'original.jy:inventory', key: invKey(a0) }, amount: literal(a1) });
+      break;
     case 'partyAdd':
-      return [{ op: 'listAdd', target: { domain: 'original.jy:party', key: partyKey }, value: literal(String(a0)) }];
+      put({ op: 'listAdd', target: { domain: 'original.jy:party', key: partyKey }, value: literal(String(a0)) });
+      break;
     case 'partyRemove':
-      return [{ op: 'listRemove', target: { domain: 'original.jy:party', key: partyKey }, value: literal(String(a0)) }];
+      // Guarded by contains: removing a member who is not in the party is a no-op, so
+      // events can run from a fresh preview state without LIST_MISSING.
+      plan.cases.push({ when: { op: 'contains', list: read('original.jy:party', partyKey),
+        value: literal(String(a0)) },
+        effects: [{ op: 'listRemove', target: { domain: 'original.jy:party', key: partyKey }, value: literal(String(a0)) }] });
+      break;
     case 'partyClear':
-      return [{ op: 'set', target: { domain: 'original.jy:party', key: partyKey }, value: literal([]) }];
+      put({ op: 'set', target: { domain: 'original.jy:party', key: partyKey }, value: literal([]) });
+      break;
     case 'roleSet':
-      return [{ op: 'set', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, a0) }, value: literal(a1) }];
+      put({ op: 'set', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, a0) }, value: literal(a1) });
+      break;
     case 'roleAdd':
-      return [{ op: 'add', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, a0) }, amount: literal(a1) }];
+      put({ op: 'add', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, a0) }, amount: literal(a1) });
+      break;
     case 'roleAdd0':
-      return [{ op: 'add', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, 0) }, amount: literal(a0) }];
+      put({ op: 'add', target: { domain: `original.jy:role/${op.field}`, key: roleKey(op.field, 0) }, amount: literal(a0) });
+      break;
     case 'sceneReset':
-      return [{ op: 'set', target: { domain: 'original.jy:scene-records', key: sceneRecordKey(a0) }, value: literal(0) }];
-    case 'slotWrite': {
-      const effects = [];
+      put({ op: 'set', target: { domain: 'original.jy:scene-records', key: sceneRecordKey(a0) }, value: literal(0) });
+      break;
+    case 'slotWrite':
       for (let field = 0; field < SLOT_FIELDS; field++) {
         const value = args[2 + field];
         if (typeof value === 'number' && value !== -2)
-          effects.push({ op: 'set', target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, value: literal(value) });
+          put({ op: 'set', target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, value: literal(value) });
       }
-      return effects;
-    }
+      break;
     case 'slotAdd':
-      return [2, 3, 4].map(field => ({ op: 'add',
-        target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, amount: literal(args[2 + field - 2]) }));
+      for (const field of [2, 3, 4])
+        put({ op: 'add', target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, amount: literal(args[2 + field - 2]) });
+      break;
     case 'slotSet567':
-      return [5, 6, 7].map(field => ({ op: 'set',
-        target: { domain: 'original.jy:scene-slots', key: slotKey('current', a0, field) }, value: literal(a2) }));
+      for (const field of [5, 6, 7])
+        put({ op: 'set', target: { domain: 'original.jy:scene-slots', key: slotKey('current', a0, field) }, value: literal(a2) });
+      break;
+    case 'skillLearn':
+      buildSkillLearn(plan, a0, a1);
+      break;
+    case 'skillSlotSet':
+      buildSkillSlotSet(plan, a0, a1, a2, a3);
+      break;
+    case 'carriedItem':
+      buildCarriedItem(plan, a0, a1, a2);
+      break;
     default:
-      return [];
+      break;
   }
+  return plan;
+}
+
+/** Opcode 33 [rnum, magicnum]: learn a skill. Pascal scans slots 0..9 in order; the first
+ * slot that is empty (<=0) or already holds this skill is used. Re-learn sets
+ * level = min(level+1, 10); a fresh slot gets level 1. Cases are interleaved per slot to
+ * match the single-loop scan order. */
+function buildSkillLearn(plan, role, magic) {
+  for (let slot = 0; slot < SKILL_SLOTS; slot++) {
+    const key = skillKey(role, slot);
+    const hasSkill = { op: 'compare', left: read('original.jy:skill', key), relation: 'eq', right: literal(magic) };
+    plan.cases.push({ when: { op: 'all', conditions: [hasSkill,
+      { op: 'compare', left: read('original.jy:skill-level', key), relation: 'lt', right: literal(10) }] },
+      effects: [{ op: 'add', target: { domain: 'original.jy:skill-level', key }, amount: literal(1) }] });
+    plan.cases.push({ when: { op: 'all', conditions: [hasSkill,
+      { op: 'compare', left: read('original.jy:skill-level', key), relation: 'ge', right: literal(10) }] },
+      effects: [{ op: 'set', target: { domain: 'original.jy:skill-level', key }, value: literal(10) }] });
+    plan.cases.push({ when: { op: 'compare', left: read('original.jy:skill', key), relation: 'le', right: literal(0) },
+      effects: [
+        { op: 'set', target: { domain: 'original.jy:skill', key }, value: literal(magic) },
+        { op: 'set', target: { domain: 'original.jy:skill-level', key }, value: literal(1) }] });
+  }
+  // All slots full and the skill absent: Pascal leaves the table unchanged.
+}
+
+/** Opcode 35 [rnum, magiclistnum, magicnum, exp]: write a skill slot. In-range listnum
+ * writes that slot directly; out-of-range finds the first empty slot, else falls back to
+ * slot 0 (Pascal bug writes MagLevel[10], here approximated as slot 0 level). */
+function buildSkillSlotSet(plan, role, listnum, magic, exp) {
+  if (Number.isInteger(listnum) && listnum >= 0 && listnum < SKILL_SLOTS) {
+    const key = skillKey(role, listnum);
+    plan.otherwise.push(
+      { op: 'set', target: { domain: 'original.jy:skill', key }, value: literal(magic) },
+      { op: 'set', target: { domain: 'original.jy:skill-level', key }, value: literal(exp) });
+    return;
+  }
+  for (let slot = 0; slot < SKILL_SLOTS; slot++) {
+    const key = skillKey(role, slot);
+    plan.cases.push({ when: { op: 'compare', left: read('original.jy:skill', key), relation: 'le', right: literal(0) },
+      effects: [
+        { op: 'set', target: { domain: 'original.jy:skill', key }, value: literal(magic) },
+        { op: 'set', target: { domain: 'original.jy:skill-level', key }, value: literal(exp) }] });
+  }
+  const fallback = skillKey(role, 0);
+  plan.otherwise.push(
+    { op: 'set', target: { domain: 'original.jy:skill', key: fallback }, value: literal(magic) },
+    { op: 'set', target: { domain: 'original.jy:skill-level', key: fallback }, value: literal(exp) });
+}
+
+/** Opcode 41 [rnum, inum, amount]: carry an item. Pascal first scans all four slots for an
+ * existing copy (then increments its amount); only if none is found does it take the first
+ * empty slot. The two groups preserve that scan order. */
+function buildCarriedItem(plan, role, inum, amount) {
+  for (let slot = 0; slot < CARRIED_SLOTS; slot++) {
+    const key = carriedKey(role, slot);
+    plan.cases.push({ when: { op: 'compare', left: read('original.jy:carried-item', key), relation: 'eq', right: literal(inum) },
+      effects: [{ op: 'add', target: { domain: 'original.jy:carried-item-amount', key }, amount: literal(amount) }] });
+  }
+  for (let slot = 0; slot < CARRIED_SLOTS; slot++) {
+    const key = carriedKey(role, slot);
+    plan.cases.push({ when: { op: 'compare', left: read('original.jy:carried-item', key), relation: 'eq', right: literal(-1) },
+      effects: [
+        { op: 'set', target: { domain: 'original.jy:carried-item', key }, value: literal(inum) },
+        { op: 'set', target: { domain: 'original.jy:carried-item-amount', key }, value: literal(amount) }] });
+  }
+  // All four slots full and the item absent: Pascal leaves the slots unchanged.
 }
 
 function buildCondition(op, args) {
@@ -228,6 +344,10 @@ function buildCondition(op, args) {
       return { op: 'compare', left: literal(0), relation: 'eq', right: literal(1) };
     case 'slotField2':
       return { op: 'compare', left: read('original.jy:scene-slots', slotKey('current', a0, 2)), relation: 'eq', right: literal(a1) };
+    case 'allItemsPresent':
+      // Opcode 50 dynamic variant: branch when all five items (args 0..4) are in inventory.
+      return { op: 'all', conditions: [a0, a1, a2, a3, a4].filter(item => typeof item === 'number')
+        .map(item => ({ op: 'compare', left: read('original.jy:inventory', invKey(item)), relation: 'ge', right: literal(1) })) };
     default:
       return null;
   }
@@ -260,8 +380,22 @@ function convertEvent(event, bundle) {
         diagnostics.branches.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, yes: yesTarget, no: noTarget });
         break;
       case 'branch': {
-        steps.push({ op: 'branch', condition: buildCondition(op, instruction.args), yes: yesTarget, no: noTarget });
-        diagnostics.branches.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, yes: yesTarget, no: noTarget });
+        let yes = yesTarget, no = noTarget;
+        if (instruction.opcode === 50) {
+          // Dynamic variant (list[0] > 128): relative jump via list[5] (yes) and list[6] (no),
+          // added to the current position plus the 8-word instruction width.
+          const width = 8;
+          yes = wordOffsetToIndex.get(instruction.wordOffset + width + instruction.args[5]);
+          no = wordOffsetToIndex.get(instruction.wordOffset + width + instruction.args[6]);
+          if (instruction.args[0] <= 128 || yes === undefined || no === undefined) {
+            diagnostics.uninterpreted.push({ opcode: 50, wordOffset: instruction.wordOffset,
+              note: instruction.args[0] <= 128 ? 'opcode-50e-variant' : 'opcode-50-target-out-of-range' });
+            steps.push({ op: 'decide', plan: { schemaVersion: 1, cases: [], otherwise: [] } });
+            break;
+          }
+        }
+        steps.push({ op: 'branch', condition: buildCondition(op, instruction.args), yes, no });
+        diagnostics.branches.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, yes, no });
         break;
       }
       case 'battle':
@@ -270,16 +404,9 @@ function convertEvent(event, bundle) {
         diagnostics.branches.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, yes: yesTarget, no: noTarget });
         break;
       case 'effect': {
-        const effects = buildEffect(op, instruction.args, instruction);
-        if (!effects.length) diagnostics.uninterpreted.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, note: 'effect-empty' });
-        // partyRemove is guarded by contains: removing a member who is not in the party is a
-        // no-op, so events can run from a fresh preview state without LIST_MISSING.
-        const plan = op.effect === 'partyRemove'
-          ? { schemaVersion: 1,
-              cases: [{ when: { op: 'contains', list: read('original.jy:party', partyKey),
-                value: literal(String(instruction.args[0])) }, effects }],
-              otherwise: [] }
-          : { schemaVersion: 1, cases: [], otherwise: effects };
+        const plan = buildEffect(op, instruction.args, instruction);
+        if (!plan.cases.length && !plan.otherwise.length)
+          diagnostics.uninterpreted.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, note: 'effect-empty' });
         steps.push({ op: 'decide', plan });
         break;
       }

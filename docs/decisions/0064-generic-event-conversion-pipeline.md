@@ -38,10 +38,20 @@ Web 預覽與 `tools/analyzer/verify_original_events_preview.mjs` 都以全新�
 
 驗證結果：732 筆轉換事件全部可由 fresh-state 驅動至終止狀態（對話續行、選單取第一項、戰鬥模擬勝利、選擇取第一候選），`verify_original_events_preview.mjs` 通過。
 
+## 技能、隨身物品與 opcode 50 狀態領域
+
+在 fresh-state 預覽之後，依社群 Pascal 來源（`references/kys-jedisdl/kys_event.pas`）把三個原本 no-op 的 opcode 建成真實狀態效果，標籤 Community Implementation：
+
+- **技能**（opcode 33 學會、35 寫槽）：角色有 10 個技能槽（`Magic[0..9]`／`MagLevel[0..9]`）。新建 `original.jy:skill`（技能 ID，0＝空槽）與 `original.jy:skill-level`（層級）兩個領域，key 為 `original.jy:skill/{role}/{slot}`。opcode 33 以每槽交錯的 plan case 重現 Pascal 單迴圈掃描：已持有該技能時 `層級 = min(層級+1, 10)`，空槽時寫入技能與層級 1；opcode 35 在 `magiclistnum` 0..9 時直接寫該槽，超出範圍時找第一空槽、否則回退槽 0（Pascal 的 `MagLevel[10]` 越界 bug 以槽 0 層級近似）。層級領域範圍寬（max 1,000,000），因為 opcode 35 會把層級寫成任意值（語料中 900／100），上限 10 只由 opcode 33 的 plan 強制。
+- **隨身物品**（opcode 41）：角色有 4 個隨身格（`TakingItem[0..3]`／`TakingItemAmount[0..3]`，-1＝空）。新建 `original.jy:carried-item`（物品 ID，-1＝空）與 `original.jy:carried-item-amount`（數量）兩領域，key 為 `original.jy:carried/{role}/{slot}`。plan 分兩組重現 Pascal 雙迴圈：先掃四格找既有同物（增加數量），再找第一空格（寫入物品與數量）。
+- **opcode 50 動態變體**：`list[0] > 128` 時是「五件物品（args 0..4）全在背包」的條件分支，yes／no 目標由相對跳轉 `wordOffset + 8 + list[5]`／`list[6]` 計算並映射到 step index；`list[0] <= 128` 的 50e 參數解算器仍標 no-op 並記入診斷。唯一使用者事件 676 因 opcode 44 被阻擋，故此映射目前未在輸出中出現，由單元測試以事件 676 的相對跳轉落點（ opcode 32 獎勵／opcode 1 對話）驗證。
+
+驗證結果：全 Node 134/134、fresh-state 732/732 終止；技能／隨身／opcode 50 的 plan 結構與目標落點各有專責單元測試。
+
 ## 限制
 
 - 場景 `-2` 以固定 `current` key 近似，場景切換不追蹤；`-2` 的欄位規則未逐欄隔離。
 - opcode 3／26／27 的槽位欄位寫入是 Inferred，不是 Verified Original。
-- 銀兩與物品「持有」以數量 ≥1 近似成員判斷；技能（33／35）、隨身物品（41）、opcode 50 動態變體未建狀態領域，映射為 no-op。
+- 銀兩與物品「持有」以數量 ≥1 近似成員判斷；技能（33／35）、隨身物品（41）已建狀態領域，opcode 50 動態變體已映射為分支，惟 50e 參數解算器（`list[0] <= 128`）仍為 no-op。
 - 社群 Pascal 語意等同原版 DOS 的假設未逐事件重播自然可達性；286 筆阻擋事件不轉換。
 - Web 宿主已提供本機唯讀預覽（`apps/web/src/original-events-preview.tsx`）：玩家手動選檔載入內容包，逐事件操作對話／選項／分支／決策效果，戰鬥為模擬結果；這是內容預覽，非完整原版遊玩，不影響預設 Mock。

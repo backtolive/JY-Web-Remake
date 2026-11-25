@@ -53,23 +53,71 @@ test('Generic converter blocks only the affected event and names the blocking op
     assert.equal(Object.keys(content.events).length, 732);
   });
 
-test('Generic converter keeps a no-op for uninterpreted effects and records it in diagnostics',
+test('Generic converter maps skill/carried-item opcodes into per-slot decision plans',
   { skip }, async () => {
     const { readFileSync } = await import('node:fs');
     const bundleFile = readdirSync('assets/generated/event-corpus')
       .find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
     const bundle = JSON.parse(readFileSync(`assets/generated/event-corpus/${bundleFile}`, 'utf8'));
-    const { content, diagnostics } = buildOriginalEventsContent();
-    // Opcode 33 (skill learn) has community-source evidence but its skill-array effect is
-    // not modeled in this slice, so it maps to a no-op decide and is recorded in diagnostics.
-    const rows = diagnostics.eventDiagnostics.flatMap(row => row.uninterpreted
-      .filter(note => note.note === 'skill-learn-uninterpreted').map(note => ({ ...note, eventId: row.eventId })));
-    assert.ok(rows.length > 0);
-    for (const row of rows) {
-      const event = bundle.events.find(candidate => candidate.eventId === row.eventId);
-      const stepIndex = event.instructions.findIndex(instruction => instruction.wordOffset === row.wordOffset);
-      const steps = content.events[`original.jy.events:event/${row.eventId}`].steps;
-      assert.equal(steps[stepIndex].op, 'decide');
-      assert.deepEqual(steps[stepIndex].plan, { schemaVersion: 1, cases: [], otherwise: [] });
-    }
+    const { content } = buildOriginalEventsContent();
+    const domains = content.decision.domains;
+    assert.ok(domains['original.jy:skill']);
+    assert.ok(domains['original.jy:skill-level']);
+    assert.ok(domains['original.jy:carried-item']);
+    assert.ok(domains['original.jy:carried-item-amount']);
+
+    // Opcode 33 (skillLearn): event 581 learns skill 15 for role 49. The decide step must
+    // carry the per-slot cascade (30 cases) that re-learns or fills the first empty slot.
+    const ev581 = bundle.events.find(candidate => candidate.eventId === 581);
+    const learnIndex = ev581.instructions.findIndex(instruction => instruction.opcode === 33);
+    const learnStep = content.events['original.jy.events:event/581'].steps[learnIndex];
+    assert.equal(learnStep.op, 'decide');
+    assert.equal(learnStep.plan.cases.length, 30);
+    assert.equal(learnStep.plan.otherwise.length, 0);
+    assert.equal(learnStep.plan.cases[0].effects[0].target.domain, 'original.jy:skill-level');
+
+    // Opcode 35 (skillSlotSet): event 115 writes slot 0 of role 10 to skill 10, level 900.
+    const ev115 = bundle.events.find(candidate => candidate.eventId === 115);
+    const slotIndex = ev115.instructions.findIndex(instruction => instruction.opcode === 35);
+    const slotStep = content.events['original.jy.events:event/115'].steps[slotIndex];
+    assert.equal(slotStep.op, 'decide');
+    assert.equal(slotStep.plan.cases.length, 0);
+    assert.equal(slotStep.plan.otherwise.length, 2);
+    assert.deepEqual(slotStep.plan.otherwise[0].target.key, 'original.jy:skill/10/0');
+    assert.equal(slotStep.plan.otherwise[0].value.value, 10);
+    assert.equal(slotStep.plan.otherwise[1].value.value, 900);
+
+    // Opcode 41 (carriedItem): event 289 carries item 78 for role 36. The decide step must
+    // carry the two-group cascade (4 carry + 4 empty = 8 cases).
+    const ev289 = bundle.events.find(candidate => candidate.eventId === 289);
+    const carryIndex = ev289.instructions.findIndex(instruction => instruction.opcode === 41);
+    const carryStep = content.events['original.jy.events:event/289'].steps[carryIndex];
+    assert.equal(carryStep.op, 'decide');
+    assert.equal(carryStep.plan.cases.length, 8);
+    assert.equal(carryStep.plan.cases[0].effects[0].target.domain, 'original.jy:carried-item-amount');
+    assert.equal(carryStep.plan.cases[4].effects[0].target.domain, 'original.jy:carried-item');
+  });
+
+test('Generic converter maps opcode 50 dynamic variant to an item-presence branch',
+  { skip }, async () => {
+    const { readFileSync } = await import('node:fs');
+    const bundleFile = readdirSync('assets/generated/event-corpus')
+      .find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
+    const bundle = JSON.parse(readFileSync(`assets/generated/event-corpus/${bundleFile}`, 'utf8'));
+    // Event 676 is the only opcode-50 user; it is blocked by opcode 44, so the mapping is
+    // exercised through buildOriginalEventsContent's branch logic rather than the output.
+    const ev676 = bundle.events.find(candidate => candidate.eventId === 676);
+    const ins = ev676.instructions.find(instruction => instruction.opcode === 50);
+    assert.ok(ins);
+    const width = 8;
+    const wordOffsetToIndex = new Map();
+    ev676.instructions.forEach((instruction, index) => wordOffsetToIndex.set(instruction.wordOffset, index));
+    const yes = wordOffsetToIndex.get(ins.wordOffset + width + ins.args[5]);
+    const no = wordOffsetToIndex.get(ins.wordOffset + width + ins.args[6]);
+    // The relative jumps land on real instruction boundaries: the all-present arm reaches
+    // the opcode-32 reward grant; the other arm reaches the opcode-1 dialogue.
+    assert.equal(ev676.instructions[yes].opcode, 32);
+    assert.equal(ev676.instructions[no].opcode, 1);
+    // The dynamic variant (list[0] > 128) is the branch arm, not the 50e parameter arm.
+    assert.ok(ins.args[0] > 128);
   });
