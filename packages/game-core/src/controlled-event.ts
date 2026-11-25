@@ -29,6 +29,20 @@ export interface ItemDefinition {
   stackable: boolean; maxStack?: number;
   useDialogueRef?: string; useConditions?: DecisionCondition[]; useEffects?: DecisionEffect[]; useCommand?: string;
 }
+/** One declared equipment state binding: a domain plus a key template whose {role}/{slot}/{item}
+ * placeholders are substituted at dispatch. Substituted keys must land in the domain's allowedKeys. */
+export interface EquipmentBinding { domain: string; key: string }
+/** Equipment/practice state for the EQUIP/PRACTICE host commands. The original (community Pascal
+ * UseItem) writes the per-role slot and the per-item "user" binding; the content declares where
+ * each lives, the engine keeps zero naming conventions. */
+export interface EquipmentDeclaration {
+  /** Per-role equipment slot (Pascal Rrole[r].Equip[p]); template uses {role} and {slot}. */
+  slots: EquipmentBinding;
+  /** Per-role practiced manual (Pascal Rrole[r].PracticeMagic); template uses {role}. */
+  practice: EquipmentBinding;
+  /** Per-item "currently used by role" (Pascal Ritem[i].User); template uses {item}. */
+  itemUser: EquipmentBinding;
+}
 export interface ControlledEventContent {
   schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
   entry: { mapId: string; x: number; y: number }; decision: DecisionSchema;
@@ -36,6 +50,7 @@ export interface ControlledEventContent {
   events: Record<string, { steps: Step[] }>;
   items?: Record<string, ItemDefinition>;
   currentItem?: DecisionRef;
+  equipment?: EquipmentDeclaration;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
@@ -49,7 +64,13 @@ export type ControlledEventAction = { type: 'START'; eventId: string } | { type:
   { type: 'CHOOSE'; optionId: string } | { type: 'RESOLVE'; result: ControlledResult } |
   /** Host item-menu selection: writes the declared current-item ref. Original flow: the menu
    * sets CurItem before a scene event runs; the event script (opcode 4) branches on it. */
-  { type: 'USE_ITEM'; itemId: number };
+  { type: 'USE_ITEM'; itemId: number } |
+  /** Host equipment selection (Pascal UseItem type 1): writes the per-role slot and the
+   * per-item user binding. Slot comes from the host (item EquipType, clamped 0..1). */
+  { type: 'EQUIP'; itemId: number; role: number; slot: number } |
+  /** Host practice selection (Pascal UseItem type 2): writes the per-role practice slot and
+   * the per-item user binding. */
+  { type: 'PRACTICE'; itemId: number; role: number };
 export type ControlledEventNotice = { type: 'DIALOGUE' | 'CHOICE' | 'REQUEST' | 'DECISION_APPLIED' | 'EVENT_ENDED';
   id?: string; request?: ControlledRequest; changes?: DecisionChange[] };
 const ajv = new Ajv({ strict: true, allErrors: true });
@@ -61,6 +82,18 @@ const validResult = ajv.compile(controlledResultSchema);
 const validCondition = ajv.compile(decisionConditionSchema);
 const validEffect = ajv.compile(decisionEffectSchema);
 function fail(code: string, detail?: string): never { throw new Error(`CONTROLLED_EVENT_${code}${detail ? `:${detail}` : ''}`); }
+/** Substitute {role}/{slot}/{item} placeholders in a declared key template and verify the
+ * concrete key is permitted by the target domain. */
+function substituteKey(template: string, values: Record<string, number>, binding: string,
+  domains: Record<string, { allowedKeys: string[] }>, domain: string): string {
+  const key = template.replace(/\{([a-z]+)\}/g, (match, name) => {
+    const value = values[name] ?? -1;
+    if (!Number.isInteger(value) || value < 0) fail('EQUIPMENT_TEMPLATE', binding);
+    return String(value);
+  });
+  if (!domains[domain]?.allowedKeys.includes(key)) fail('EQUIPMENT_KEY', binding);
+  return key;
+}
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
   return value;
@@ -116,6 +149,13 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     if (!domain) fail('CURRENT_ITEM_DOMAIN');
     if (data.currentItem.keyFrom?.length || data.currentItem.key === undefined) fail('CURRENT_ITEM_REF');
     if (!domain.allowedKeys.includes(data.currentItem.key)) fail('CURRENT_ITEM_REF');
+  }
+  if (data.equipment) {
+    for (const [binding, row] of Object.entries(data.equipment)) {
+      if (!data.decision.domains[row.domain]) fail('EQUIPMENT_DOMAIN', binding);
+      for (const match of row.key.matchAll(/\{([a-z]+)\}/g))
+        if (!['role', 'slot', 'item'].includes(match[1])) fail('EQUIPMENT_TEMPLATE', binding);
+    }
   }
   const identity = { id: data.id, version: data.version, sha256: await contentHash(data) };
   return freeze({ identity, data });
@@ -177,17 +217,39 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
     if (step.command.kind === 'transition') state.location = structuredClone(step.command.destination);
     state.pending = null;
     state.cursor.pc = outcome.target;
-  } else if (action.type === 'USE_ITEM') {
-    // Host item-menu selection between events: writes the declared current-item ref. The
-    // original does not consume the item here; consumption is an effect of the event script.
+  } else if (action.type === 'USE_ITEM' || action.type === 'EQUIP' || action.type === 'PRACTICE') {
+    // Host item/equipment/practice menu selection between events: the menu is closed while an
+    // event runs. The original does not consume the item here; consumption is an effect of the
+    // event script (Pascal UseItem writes CurItem, then the per-role slot + per-item user).
     if (state.cursor) fail('USE_ITEM_BUSY');
-    const target = content.data.currentItem;
-    if (!target) fail('NO_CURRENT_ITEM');
-    if (!Number.isInteger(action.itemId)) fail('USE_ITEM_VALUE');
-    const applied = applyDecisionTransaction(content.data.decision, state.decision,
-      { schemaVersion: 1, guards: [], effects: [{ op: 'set', target, value: { kind: 'literal', value: action.itemId } }] }, budget);
-    state.decision = applied.state;
-    if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
+    if (action.type === 'USE_ITEM') {
+      const target = content.data.currentItem;
+      if (!target) fail('NO_CURRENT_ITEM');
+      if (!Number.isInteger(action.itemId)) fail('USE_ITEM_VALUE');
+      const applied = applyDecisionTransaction(content.data.decision, state.decision,
+        { schemaVersion: 1, guards: [], effects: [{ op: 'set', target, value: { kind: 'literal', value: action.itemId } }] }, budget);
+      state.decision = applied.state;
+      if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
+    } else {
+      const declaration = content.data.equipment;
+      if (!declaration) fail('NO_EQUIPMENT');
+      if (!Number.isInteger(action.itemId) || !Number.isInteger(action.role) ||
+        (action.type === 'EQUIP' && !Number.isInteger(action.slot))) fail('EQUIPMENT_VALUE');
+      const slot = action.type === 'EQUIP' ? action.slot : 0;
+      const binding = action.type === 'EQUIP' ? declaration.slots : declaration.practice;
+      const slotKey = substituteKey(binding.key, { role: action.role, slot, item: action.itemId },
+        action.type, content.data.decision.domains, binding.domain);
+      const userKey = substituteKey(declaration.itemUser.key, { role: action.role, item: action.itemId },
+        'itemUser', content.data.decision.domains, declaration.itemUser.domain);
+      const applied = applyDecisionTransaction(content.data.decision, state.decision, {
+        schemaVersion: 1, guards: [], effects: [
+          { op: 'set', target: { domain: binding.domain, key: slotKey }, value: { kind: 'literal', value: action.itemId } },
+          { op: 'set', target: { domain: declaration.itemUser.domain, key: userKey }, value: { kind: 'literal', value: action.role } },
+        ],
+      }, budget);
+      state.decision = applied.state;
+      if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
+    }
   } else fail('ACTION');
   for (let count = 0; state.cursor; count++) {
     if (count >= budget) fail('BUDGET');

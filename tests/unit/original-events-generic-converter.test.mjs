@@ -251,6 +251,26 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/160'].category, 'story');
     // USE_ITEM target is declared: the current-item domain ref from the opcode-4 pipeline.
     assert.deepEqual(content.currentItem, { domain: 'original.jy:current-item', key: 'original.jy:item/current' });
+    // EQUIP/PRACTICE targets are declared (ADR 0067): per-role slot + per-item user bindings.
+    assert.deepEqual(content.equipment, {
+      slots: { domain: 'original.jy:equip', key: 'original.jy:equip/{role}/{slot}' },
+      practice: { domain: 'original.jy:practice', key: 'original.jy:practice/{role}' },
+      itemUser: { domain: 'original.jy:item-user', key: 'original.jy:item-user/{item}' },
+    });
+    // Equipment domains cover exactly the party role set: 2 slots per role
+    // (kys_type.pas Equip array[0..1]), one practice slot per role, one user binding
+    // per item (full 200-item table).
+    const partyRoles = content.decision.domains['original.jy:party'].allowedValues.length;
+    assert.ok(partyRoles > 0);
+    assert.equal(content.decision.domains['original.jy:equip'].allowedKeys.length, partyRoles * 2);
+    assert.ok(content.decision.domains['original.jy:equip'].allowedKeys
+      .includes(`original.jy:equip/${content.decision.domains['original.jy:party'].allowedValues[0]}/1`));
+    assert.equal(content.decision.domains['original.jy:practice'].allowedKeys.length, partyRoles);
+    assert.equal(content.decision.domains['original.jy:item-user'].allowedKeys.length, 200);
+    // Equipment items carry the clamped EquipType slot (kys_main.pas clamps to 0..1);
+    // non-equipment items have no slot.
+    assert.equal(content.items['original.jy.events:item/110'].equipSlot, '0');
+    assert.equal(content.items['original.jy.events:item/160'].equipSlot, undefined);
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

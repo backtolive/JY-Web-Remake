@@ -15,6 +15,8 @@ export function OriginalEventsPreview({ content, onClose }:
   const [filter, setFilter] = useState('');
   const [eventId, setEventId] = useState('');
   const [useItemId, setUseItemId] = useState('');
+  const [hostRole, setHostRole] = useState('0');
+  const [hostSlot, setHostSlot] = useState('0');
   const [state, setState] = useState<ControlledEventState | null>(null);
   const [changes, setChanges] = useState<DecisionChange[]>([]);
   const [error, setError] = useState('');
@@ -46,6 +48,21 @@ export function OriginalEventsPreview({ content, onClose }:
       setError('');
       setMessage(`已使用物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''}；現在可啟動會檢查目前物品的場景事件（例如事件 16）。`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : '使用物品失敗。'); }
+  }
+  function equipPractice(kind: 'EQUIP' | 'PRACTICE') {
+    if (!useItemId) return;
+    try {
+      const role = Number(hostRole), slot = Number(hostSlot);
+      const action: ControlledEventAction = kind === 'EQUIP'
+        ? { type: 'EQUIP', itemId: Number(useItemId), role, slot }
+        : { type: 'PRACTICE', itemId: Number(useItemId), role };
+      const result = dispatchControlledEvent(content, createControlledEventState(content), action);
+      setState(result.state); setChanges(result.notices.flatMap(n => n.changes ?? []));
+      setError('');
+      setMessage(kind === 'EQUIP'
+        ? `已將物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''} 裝備給角色 ${role} 槽 ${slot}。`
+        : `角色 ${role} 已修煉物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''}。`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : (kind === 'EQUIP' ? '裝備失敗。' : '修煉失敗。')); }
   }
   function act(action: Exclude<ControlledEventAction, { type: 'START' }>) {
     if (!state) return;
@@ -83,14 +100,21 @@ export function OriginalEventsPreview({ content, onClose }:
         <option value="">選取事件（{filtered.length}）</option>
         {filtered.map(id => <option key={id} value={id}>事件 {id.split('/').pop()}</option>)}
       </select>
-      {itemOptions.length > 0 && <label>使用物品（選填；啟動前寫入「目前物品」，供檢查該欄的事件分支）
-        <select value={useItemId} onChange={e => setUseItemId(e.target.value)}>
-          <option value="">不選擇</option>
-          {itemOptions.map(id => <option key={id} value={id.split('/').pop()}>
-            {id.split('/').pop()}{content.data.items?.[id]?.name ? ` ${content.data.items[id].name}` : ''}</option>)}
-        </select></label>}
+      {itemOptions.length > 0 && <>
+        <label>使用物品（選填；啟動前寫入「目前物品」，供檢查該欄的事件分支）
+          <select value={useItemId} onChange={e => setUseItemId(e.target.value)}>
+            <option value="">不選擇</option>
+            {itemOptions.map(id => <option key={id} value={id.split('/').pop()}>
+              {id.split('/').pop()}{content.data.items?.[id]?.name ? ` ${content.data.items[id].name}` : ''}</option>)}
+          </select></label>
+        <label>目標角色／槽（裝備／修煉用；角色編號 0 起，槽 0–1）
+          <input type="number" min={0} value={hostRole} onChange={e => setHostRole(e.target.value)} />
+          <input type="number" min={0} max={1} value={hostSlot} onChange={e => setHostSlot(e.target.value)} /></label>
+      </>}
       <button className="primary" disabled={!eventId} onClick={() => start(eventId)}>開始事件</button>
       <button disabled={!useItemId} onClick={useItem}>使用物品</button>
+      <button disabled={!useItemId} onClick={() => equipPractice('EQUIP')}>裝備</button>
+      <button disabled={!useItemId} onClick={() => equipPractice('PRACTICE')}>修煉</button>
       <button onClick={load}>讀取進度</button>
       <p className="oe-note">全量 {events.length} 筆事件（68 個已證 opcode）；對話、選項、分支與決策效果可操作，戰鬥為模擬結果。此為內容預覽，非完整原版遊玩。</p>
     </div>}

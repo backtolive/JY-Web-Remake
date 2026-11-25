@@ -170,6 +170,10 @@ function buildItemDefinitions(records) {
       category: ITEM_CATEGORY[record.type] ?? `type-${record.type}` };
     if (record.name2 && record.name2 !== record.name) definition.alias = record.name2;
     if (record.description) definition.description = record.description;
+    // Equipment slot from the RANGER EquipType field (offset 78); kys_main.pas clamps
+    // out-of-range values to slot 0 before writing Rrole[r].Equip[p].
+    if (record.type === 1)
+      definition.equipSlot = String(record.equipType < 0 || record.equipType > 1 ? 0 : record.equipType);
     items[`${PACKAGE_ID}:item/${record.id}`] = definition;
   }
   return { items, empty };
@@ -278,6 +282,17 @@ function buildDomains(keys) {
       allowedKeys: ['original.jy:scene/current'] },
     'original.jy:current-item': { kind: 'integer', default: 0, min: -1, max: 1_000_000,
       allowedKeys: ['original.jy:item/current'] },
+    // EQUIP/PRACTICE host command targets (ADR 0067): community Pascal UseItem writes
+    // Rrole[r].Equip[0..1] / Rrole[r].PracticeMagic and Ritem[i].User. kys_type.pas has
+    // Equip array[0..1] and PracticeMagic smallint; kys_main.pas clamps EquipType to 0..1.
+    'original.jy:equip': { kind: 'integer', default: -1, min: -1, max: 1_000_000,
+      allowedKeys: (keys.roles.length ? keys.roles : Array.from({ length: ROLE_COUNT }, (_, role) => role))
+        .flatMap(role => [0, 1].map(slot => `original.jy:equip/${role}/${slot}`)) },
+    'original.jy:practice': { kind: 'integer', default: -1, min: -1, max: 1_000_000,
+      allowedKeys: (keys.roles.length ? keys.roles : Array.from({ length: ROLE_COUNT }, (_, role) => role))
+        .map(role => `original.jy:practice/${role}`) },
+    'original.jy:item-user': { kind: 'integer', default: -1, min: -1, max: 1_000_000,
+      allowedKeys: Array.from({ length: ITEM_COUNT }, (_, id) => `original.jy:item-user/${id}`) },
     'original.jy:scene-records': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
       allowedKeys: keys.sceneRecords },
   };
@@ -609,6 +624,13 @@ export function buildOriginalEventsContent() {
     // USE_ITEM host command target: the menu selection writes this ref before a scene
     // event runs; opcode-4 events branch on it (CurItem in the community Pascal).
     currentItem: { domain: 'original.jy:current-item', key: 'original.jy:item/current' },
+    // EQUIP/PRACTICE host command targets: per-role slot + per-item user bindings
+    // (Rrole.Equip / Rrole.PracticeMagic / Ritem.User in the community Pascal).
+    equipment: {
+      slots: { domain: 'original.jy:equip', key: 'original.jy:equip/{role}/{slot}' },
+      practice: { domain: 'original.jy:practice', key: 'original.jy:practice/{role}' },
+      itemUser: { domain: 'original.jy:item-user', key: 'original.jy:item-user/{item}' },
+    },
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);
