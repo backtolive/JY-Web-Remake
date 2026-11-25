@@ -98,6 +98,72 @@ test('Generic converter maps skill/carried-item opcodes into per-slot decision p
     assert.equal(carryStep.plan.cases[4].effects[0].target.domain, 'original.jy:carried-item');
   });
 
+test('Generic converter tracks -2 (current scene) writes through a live current-scene key',
+  { skip }, async () => {
+    const { content } = buildOriginalEventsContent();
+    const resolved = await resolveControlledEventContent(content);
+    const domains = content.decision.domains;
+    // A dedicated current-scene domain holds the live scene id.
+    assert.ok(domains['original.jy:current-scene']);
+    assert.deepEqual(domains['original.jy:current-scene'].allowedKeys, ['original.jy:scene/current']);
+    // The fixed 'current' placeholder is gone; the -2 slots are allowed for every real scene.
+    const sceneKeys = domains['original.jy:scene-slots'].allowedKeys;
+    assert.ok(!sceneKeys.some(key => key.includes('/scene/current/')));
+    assert.ok(sceneKeys.includes('original.jy:scene/32/slot/0/field/0'));
+    assert.ok(new Set(sceneKeys).size === sceneKeys.length);
+
+    // Find a converted event whose opcode 3 writes a -2 slot, and confirm its effect target
+    // is composed from the current-scene value via keyFrom.
+    const bundleFile = readdirSync('assets/generated/event-corpus')
+      .find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
+    const { readFileSync } = await import('node:fs');
+    const bundle = JSON.parse(readFileSync(`assets/generated/event-corpus/${bundleFile}`, 'utf8'));
+    const sourceEvent = bundle.events.find(candidate =>
+      candidate.instructions.some(instruction => instruction.opcode === 3 && instruction.args[0] === -2));
+    assert.ok(sourceEvent);
+    const eventId = `original.jy.events:event/${sourceEvent.eventId}`;
+    const event = content.events[eventId];
+    assert.ok(event);
+    const dynamicEffect = event.steps.flatMap(step =>
+      step.op === 'decide' ? [...step.plan.cases.map(c => c.effects), step.plan.otherwise].flat() : [])
+      .find(effect => effect.target?.keyFrom?.some(part => 'read' in part &&
+        part.read?.domain === 'original.jy:current-scene'));
+    assert.ok(dynamicEffect);
+    assert.equal(dynamicEffect.target.domain, 'original.jy:scene-slots');
+
+    // Driving the event with a seeded current scene lands every -2 write on that scene.
+    const drive = async scene => {
+      const { createControlledEventState, dispatchControlledEvent } =
+        await import('../../packages/game-core/src/controlled-event.ts');
+      let state = createControlledEventState(resolved);
+      state.decision.values['original.jy:current-scene'] = { 'original.jy:scene/current': scene };
+      ({ state } = dispatchControlledEvent(resolved, state, { type: 'START', eventId }));
+      let guard = 0;
+      while (state.cursor && guard++ < 5000) {
+        const step = resolved.data.events[state.cursor.eventId].steps[state.cursor.pc];
+        if (step.op === 'say') ({ state } = dispatchControlledEvent(resolved, state, { type: 'CONTINUE' }));
+        else if (step.op === 'choice')
+          ({ state } = dispatchControlledEvent(resolved, state, { type: 'CHOOSE', optionId: step.options[0].id }));
+        else if (step.op === 'invoke') {
+          const result = step.command.kind === 'battle'
+            ? { schemaVersion: 1, requestId: state.pending.requestId, kind: 'battle', outcome: 'victory' }
+            : step.command.kind === 'selection'
+              ? { schemaVersion: 1, requestId: state.pending.requestId, kind: 'selection', selectedId: step.command.candidates[0] }
+              : { schemaVersion: 1, requestId: state.pending.requestId, kind: step.command.kind, outcome: 'completed' };
+          ({ state } = dispatchControlledEvent(resolved, state, { type: 'RESOLVE', result }));
+        } else ({ state } = dispatchControlledEvent(resolved, state, { type: 'CONTINUE' }));
+      }
+      return state;
+    };
+    const state32 = await drive(32);
+    const state17 = await drive(17);
+    const keys32 = Object.keys(state32.decision.values['original.jy:scene-slots'] ?? {});
+    const keys17 = Object.keys(state17.decision.values['original.jy:scene-slots'] ?? {});
+    assert.ok(keys32.length > 0);
+    assert.ok(keys32.every(key => key.startsWith('original.jy:scene/32/')));
+    assert.ok(keys17.every(key => key.startsWith('original.jy:scene/17/')));
+  });
+
 test('Generic converter maps opcode 50 dynamic variant to an item-presence branch',
   { skip }, async () => {
     const { readFileSync } = await import('node:fs');

@@ -90,7 +90,21 @@ const skillKey = (role, slot) => `original.jy:skill/${role}/${slot}`;
 const carriedKey = (role, slot) => `original.jy:carried/${role}/${slot}`;
 const SKILL_SLOTS = 10;
 const CARRIED_SLOTS = 4;
-const sceneName = value => (value === -2 ? 'current' : String(value));
+// RANGER carries 84 scene records, numbered 0-83. A -2 (current scene) write resolves to
+// whichever scene the game is in, so the allowed keys must cover every scene for the slots
+// that -2 writes touch.
+const SCENE_COUNT = 84;
+const currentSceneRef = { domain: 'original.jy:current-scene', key: 'original.jy:scene/current' };
+/** A -2 (current scene) slot ref composed live from the current-scene value via keyFrom. */
+const sceneSlotKeyFrom = (slot, field) => ({ domain: 'original.jy:scene-slots', keyFrom: [
+  { literal: 'original.jy:scene' },
+  { read: currentSceneRef },
+  { literal: 'slot' },
+  { literal: String(slot) },
+  { literal: 'field' },
+  { literal: String(field) },
+] });
+const readRef = ref => ({ kind: 'read', ref });
 
 function loadCorpus() {
   const file = readdirSync(CORPUS_DIR).find(name => name.startsWith('all-events-') && name.endsWith('.local.json'));
@@ -111,6 +125,7 @@ function talkText(talk) {
 function collectKeys(events) {
   const inventory = new Set([MONEY_ID]);
   const sceneSlots = new Set();
+  const minus2Combos = new Set();
   const sceneRecords = new Set();
   const roles = new Set();
   const skillRoles = new Set();
@@ -124,18 +139,25 @@ function collectKeys(events) {
         case 'inventoryAdd': inventory.add(a0); break;
         case 'itemPresent': inventory.add(a0); break;
         case 'slotWrite':
-          if (typeof a0 === 'number' && typeof a1 === 'number')
-            for (let field = 0; field < SLOT_FIELDS; field++) sceneSlots.add(slotKey(sceneName(a0), a1, field));
+          if (typeof a0 === 'number' && typeof a1 === 'number') {
+            if (a0 === -2) {
+              for (let field = 0; field < SLOT_FIELDS; field++)
+                if (typeof instruction.args[2 + field] === 'number' && instruction.args[2 + field] !== -2)
+                  minus2Combos.add(`slot/${a1}/field/${field}`);
+            } else for (let field = 0; field < SLOT_FIELDS; field++) sceneSlots.add(slotKey(a0, a1, field));
+          }
           break;
         case 'slotAdd':
-          if (typeof a0 === 'number' && typeof a1 === 'number')
-            for (const field of [2, 3, 4]) sceneSlots.add(slotKey(sceneName(a0), a1, field));
+          if (typeof a0 === 'number' && typeof a1 === 'number') {
+            if (a0 === -2) for (const field of [2, 3, 4]) minus2Combos.add(`slot/${a1}/field/${field}`);
+            else for (const field of [2, 3, 4]) sceneSlots.add(slotKey(a0, a1, field));
+          }
           break;
         case 'slotSet567':
-          if (typeof a0 === 'number') for (const field of [5, 6, 7]) sceneSlots.add(slotKey('current', a0, field));
+          if (typeof a0 === 'number') for (const field of [5, 6, 7]) minus2Combos.add(`slot/${a0}/field/${field}`);
           break;
         case 'slotField2':
-          if (typeof a0 === 'number') sceneSlots.add(slotKey('current', a0, 2));
+          if (typeof a0 === 'number') minus2Combos.add(`slot/${a0}/field/2`);
           break;
         case 'sceneReset': if (typeof a0 === 'number') sceneRecords.add(sceneRecordKey(a0)); break;
         case 'partyAdd': case 'partyRemove': if (typeof a0 === 'number') roles.add(a0); break;
@@ -151,6 +173,7 @@ function collectKeys(events) {
     }
   }
   return { inventory: [...inventory].sort((a, b) => a - b), sceneSlots: [...sceneSlots],
+    minus2Combos: [...minus2Combos],
     sceneRecords: [...sceneRecords], roles: [...roles].sort((a, b) => a - b),
     skillRoles: [...skillRoles].sort((a, b) => a - b), carriedRoles: [...carriedRoles].sort((a, b) => a - b) };
 }
@@ -164,7 +187,13 @@ function buildDomains(keys) {
     'original.jy:inventory': { kind: 'integer', default: 0, min: -1_000_000, max: 1_000_000,
       allowedKeys: keys.inventory.map(id => invKey(id)) },
     'original.jy:scene-slots': { kind: 'integer', default: 0, min: -1_000_000, max: 1_000_000,
-      allowedKeys: keys.sceneSlots },
+      // -2 (current scene) writes resolve to the live scene, so allow every scene for the
+      // slots those writes touch; explicit scene keys may overlap, dedupe.
+      allowedKeys: [...new Set([...keys.sceneSlots,
+        ...keys.minus2Combos.flatMap(combo => Array.from({ length: SCENE_COUNT },
+          (_, scene) => `original.jy:scene/${scene}/${combo}`))])] },
+    'original.jy:current-scene': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
+      allowedKeys: ['original.jy:scene/current'] },
     'original.jy:scene-records': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
       allowedKeys: keys.sceneRecords },
   };
@@ -228,16 +257,18 @@ function buildEffect(op, args, instruction) {
       for (let field = 0; field < SLOT_FIELDS; field++) {
         const value = args[2 + field];
         if (typeof value === 'number' && value !== -2)
-          put({ op: 'set', target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, value: literal(value) });
+          put({ op: 'set', target: a0 === -2 ? sceneSlotKeyFrom(a1, field)
+            : { domain: 'original.jy:scene-slots', key: slotKey(a0, a1, field) }, value: literal(value) });
       }
       break;
     case 'slotAdd':
       for (const field of [2, 3, 4])
-        put({ op: 'add', target: { domain: 'original.jy:scene-slots', key: slotKey(sceneName(a0), a1, field) }, amount: literal(args[2 + field - 2]) });
+        put({ op: 'add', target: a0 === -2 ? sceneSlotKeyFrom(a1, field)
+          : { domain: 'original.jy:scene-slots', key: slotKey(a0, a1, field) }, amount: literal(args[2 + field - 2]) });
       break;
     case 'slotSet567':
       for (const field of [5, 6, 7])
-        put({ op: 'set', target: { domain: 'original.jy:scene-slots', key: slotKey('current', a0, field) }, value: literal(a2) });
+        put({ op: 'set', target: sceneSlotKeyFrom(a0, field), value: literal(a2) });
       break;
     case 'skillLearn':
       buildSkillLearn(plan, a0, a1);
@@ -343,7 +374,7 @@ function buildCondition(op, args) {
     case 'hasMale':
       return { op: 'compare', left: literal(0), relation: 'eq', right: literal(1) };
     case 'slotField2':
-      return { op: 'compare', left: read('original.jy:scene-slots', slotKey('current', a0, 2)), relation: 'eq', right: literal(a1) };
+      return { op: 'compare', left: readRef(sceneSlotKeyFrom(a0, 2)), relation: 'eq', right: literal(a1) };
     case 'allItemsPresent':
       // Opcode 50 dynamic variant: branch when all five items (args 0..4) are in inventory.
       return { op: 'all', conditions: [a0, a1, a2, a3, a4].filter(item => typeof item === 'number')

@@ -48,9 +48,21 @@ Web 預覽與 `tools/analyzer/verify_original_events_preview.mjs` 都以全新�
 
 驗證結果：全 Node 134/134、fresh-state 732/732 終止；技能／隨身／opcode 50 的 plan 結構與目標落點各有專責單元測試。
 
+## 場景 `-2`（當前場景）動態 key 追蹤
+
+之前場景 `-2`（當前場景）以固定 `current` key 近似，場景切換不追蹤。本輪改為動態解析：
+
+- 新建 `original.jy:current-scene` 領域（整數，唯一 key `original.jy:scene/current`），由遊戲狀態在場景切換時寫入目前場景編號。
+- `-2` 的槽位引用改用 `keyFrom` 組合 key：`literal 'original.jy:scene'`＋`read current-scene`＋`literal slot/{n}/field/{m}`，執行時解析到實際場景（例如 `original.jy:scene/32/slot/0/field/0`）。
+- `original.jy:scene-slots` 的 `allowedKeys` 不再包含 `current` 佔位 key，改為「明確場景 key」加「`-2` 用到的 slot/field 組合 × 全部 84 個場景」（RANGER 場景記錄數），並去重（runtime 要求 allowedKeys 無重複）。
+- 影響 opcode 3（slotWrite 全欄位）、26（slotAdd 欄位 2-4）、27（slotSet567 欄位 5-7）、55（slotField2 條件）；語料中 `-2` 寫入共 2,167 條、660 筆事件。
+- 標籤 Inferred：場景編號範圍與「`-2` 解析為當前場景」依社群 Pascal 來源（`scene := -2` 分支）與 RANGER 84 場景記錄，未逐事件 DOS 重播。
+
+驗證：專責單元測試以 current-scene 預設 32／17 驅動含 `-2` 寫入的事件，全部寫入落於對應場景 key 下；fresh-state 732/732 終止。
+
 ## 限制
 
-- 場景 `-2` 以固定 `current` key 近似，場景切換不追蹤；`-2` 的欄位規則未逐欄隔離。
+- 場景 `-2` 已改由 `current-scene` 領域動態解析，惟正式遊戲的場景切換寫入尚未接入（預覽／驗證由外部預設）；`-2` 的欄位規則未逐欄隔離。
 - opcode 3／26／27 的槽位欄位寫入是 Inferred，不是 Verified Original。
 - 銀兩與物品「持有」以數量 ≥1 近似成員判斷；技能（33／35）、隨身物品（41）已建狀態領域，opcode 50 動態變體已映射為分支，惟 50e 參數解算器（`list[0] <= 128`）仍為 no-op。
 - 社群 Pascal 語意等同原版 DOS 的假設未逐事件重播自然可達性；286 筆阻擋事件不轉換。
