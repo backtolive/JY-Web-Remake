@@ -15,7 +15,8 @@
 - [x] 定義通用物品定義合約（engine-owned schema：id／name／alias／description／imageRef?／category／equipSlot?／stackable＋maxStack；use 層 useDialogueRef／useConditions／useEffects／useCommand 可選，腳本與宣告式互斥）並加入 schema 匯出（decision-effect-v1）與引用驗證（ITEM_* 檢查）。見 [ADR 0065](decisions/0065-item-definition-contract.md)。
 - [x] 建立 RANGER 物品表轉接器（190B×200，Thing_S 佈局），產出 git-ignored 物品定義（200/200、0 空記錄，含來源雜湊／偏移／解析器版本）；use 欄位全空（效果在場景事件）；接線約定 inventory key／current-item 值 ↔ `original.jy.events:item/{id}`，測試釘選每個 inventory allowedKey 皆有定義。
 - [x] 「使用物品」宿主命令契約（USE_ITEM）：內容宣告 `currentItem` 引用、runtime 動作（無游標時寫入、不消耗）、Web 預覽物品選單；E2E 與 opcode-4 DOS 觀察一致。見 [ADR 0066](decisions/0066-use-item-host-command.md)。
-- [ ] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源；確認前不假設圖片欄位。
+- [x] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源：確認**不是**（是場景事件槽表 100×200 slot×11 int16）；物品圖在分割地圖圖集 WMP000-025/SMP000-083（+WDX/SDX），logical index 3501+itemNumber（Pascal `ITEM_BEGIN_PIC=3501`），199 個 40×40 icon（物品 0..198，每個 1728B；物品 199 空），icon 格式＝8B header＋逐列 RLE＋MMAP.COL 256×3 palette；解碼物品 0/110/160 視覺驗證（藥丸／劍／書）吻合。見 PROGRESS 2026-11-26 ALLDEF 追查。
+- [ ] 把物品 icon 提取接入轉接器（`imageRef` → 圖集來源引用：檔＋logical index）與 Web 預覽顯示；需處理 scene/world 雙圖集與物品 199 空缺。
 - [x] 裝備／修煉宿主命令（EQUIP／PRACTICE）：內容宣告 `equipment`（slots/practice/itemUser 三個「域＋key 模板」綁定）、runtime 動作（無游標時雙寫入、key 代入驗證）、轉換器三域＋`equipSlot` 欄（EquipType clamp 0..1）、Web 預覽裝備／修煉控制；E2E 與 Pascal 寫入一致。見 [ADR 0067](decisions/0067-equip-practice-host-commands.md)。
 - [ ] 裝備／修煉的互斥解綁與 `CanEquip` 屬性門檻（內容效果層：事件腳本 plan 或 useConditions）。
 - [ ] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）——物品選單已顯示名稱，完整資訊面板待補。
