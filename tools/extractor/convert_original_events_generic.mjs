@@ -147,7 +147,9 @@ function buildDomains(keys) {
   const domains = {
     'original.jy:party': { kind: 'list', default: [], maxItems: 6, unique: true,
       allowedKeys: [partyKey], allowedValues: keys.roles.map(role => String(role)) },
-    'original.jy:inventory': { kind: 'integer', default: 0, min: 0, max: 1_000_000,
+    // min is symmetric with the other integer domains so consumption effects (negative add)
+    // from a fresh zero state do not fail validation; a real game seeds proper starting values.
+    'original.jy:inventory': { kind: 'integer', default: 0, min: -1_000_000, max: 1_000_000,
       allowedKeys: keys.inventory.map(id => invKey(id)) },
     'original.jy:scene-slots': { kind: 'integer', default: 0, min: -1_000_000, max: 1_000_000,
       allowedKeys: keys.sceneSlots },
@@ -270,7 +272,15 @@ function convertEvent(event, bundle) {
       case 'effect': {
         const effects = buildEffect(op, instruction.args, instruction);
         if (!effects.length) diagnostics.uninterpreted.push({ opcode: instruction.opcode, wordOffset: instruction.wordOffset, note: 'effect-empty' });
-        steps.push({ op: 'decide', plan: { schemaVersion: 1, cases: [], otherwise: effects } });
+        // partyRemove is guarded by contains: removing a member who is not in the party is a
+        // no-op, so events can run from a fresh preview state without LIST_MISSING.
+        const plan = op.effect === 'partyRemove'
+          ? { schemaVersion: 1,
+              cases: [{ when: { op: 'contains', list: read('original.jy:party', partyKey),
+                value: literal(String(instruction.args[0])) }, effects }],
+              otherwise: [] }
+          : { schemaVersion: 1, cases: [], otherwise: effects };
+        steps.push({ op: 'decide', plan });
         break;
       }
       case 'end':

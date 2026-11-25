@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createGame, dispatch, dispatchUnifiedWorld, migrateLegacySave, resolveContent, restoreSave,
-  restoreUnifiedSession, serializeSave, serializeUnifiedSession, validatePackageSchema } from '@jy/game-core';
-import type { Command, ContentPackage, GameState, ResolvedContent, UnifiedSessionContent,
-  UnifiedSessionState } from '@jy/game-core';
+import { createGame, dispatch, dispatchUnifiedWorld, migrateLegacySave, resolveContent,
+  resolveControlledEventContent, restoreSave, restoreUnifiedSession, serializeSave,
+  serializeUnifiedSession, validatePackageSchema } from '@jy/game-core';
+import type { Command, ContentPackage, GameState, ResolvedContent, ResolvedControlledEventContent,
+  UnifiedSessionContent, UnifiedSessionState } from '@jy/game-core';
 import mock from '../../../tests/fixtures/mock-wuxia-package.json';
 import greetingMod from '../../../tests/fixtures/mock-greeting-mod.json';
 import { MiniMap, SceneView } from './SceneView';
@@ -16,6 +17,7 @@ import { replaceModelInstances } from '../../../packages/game-data/src/model-rep
 import {decodeProjectedMap} from '../../../packages/game-data/src/projected-map';
 import type {ProjectedMap} from '../../../packages/game-data/src/projected-map';
 import { ControlledDemo } from './ControlledDemo';
+import { OriginalEventsPreview } from './original-events-preview';
 import { resolveMockControlledForHost } from './mock-controlled';
 import { bindObserved673, dispatchObserved673, observed673Aptitude, observed673SaveKey,
   observed673Slot, restoreObserved673, serializeObserved673 } from './original-673-web';
@@ -46,10 +48,12 @@ export default function App(){
   const controlledDemoRef=useRef(false);
   const [controlledLocation,setControlledLocation]=useState<{mapId:string;x:number;y:number}|null>(null);
   useEffect(()=>{controlledDemoRef.current=controlledDemo;},[controlledDemo]);
+  const [originalEvents,setOriginalEvents]=useState<ResolvedControlledEventContent|null>(null);
+  const [showOriginalEvents,setShowOriginalEvents]=useState(false);
   const [selectedItem,setSelectedItem]=useState('');
   const [log,setLog]=useState<string[]>([]);
   const originalInput=useRef<HTMLInputElement>(null),regionInput=useRef<HTMLInputElement>(null),saveInput=useRef<HTMLInputElement>(null);
-  const modelInput=useRef<HTMLInputElement>(null);
+  const modelInput=useRef<HTMLInputElement>(null),originalEventsInput=useRef<HTMLInputElement>(null);
   function clearModelReplacement(){setRegionBaseline([]);setModelId('');setReplacementInfo('');}
   function apply(next:Session){sessionRef.current=next;setSession(next);}
   function applyUnified(next:UnifiedRuntime|null){unifiedRef.current=next;setUnified(next);}
@@ -64,7 +68,7 @@ export default function App(){
     const raw=cause instanceof Error?cause.message:'操作失敗，現有進度已保留。';setError(code&&friendly[code]?friendly[code]:raw);
   }
   async function start(pkg:unknown,withMod:boolean,original:boolean){
-    const ticket=++generation.current;loading(true);setError('');applyUnified(null);applyObserved673(null);observed673BundleRef.current=null;availableUnifiedRef.current=null;controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);setRegionCells([]);setProjectedMap(undefined);setRegionNotes([]);setCutaway(false);clearModelReplacement();
+    const ticket=++generation.current;loading(true);setError('');applyUnified(null);applyObserved673(null);observed673BundleRef.current=null;availableUnifiedRef.current=null;controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);setOriginalEvents(null);setShowOriginalEvents(false);setRegionCells([]);setProjectedMap(undefined);setRegionNotes([]);setCutaway(false);clearModelReplacement();
     try{
       if(!globalThis.crypto?.subtle)throw new Error('請使用 HTTPS 或 localhost 開啟網站，才能驗證內容包與存檔。');
       const content=await resolveContent(withMod?[pkg,greetingMod]:[pkg]);
@@ -162,6 +166,17 @@ export default function App(){
       setRegionCells([]);setProjectedMap(undefined);setRegionNotes([]);setCutaway(false);clearModelReplacement();setOriginalPackage(pkg);setModEnabled(false);apply({content,state:observed?.state.game??createGame(content,42),original:true});
       announce(observed?'已載入事件 673 本機採樣切片。前置資質採 DOS 觀察值 72。':'原版預覽包已在本機載入。此切片僅含部分對話與占位場景。');
     }catch(cause){problem(cause);}finally{loading(false);if(originalInput.current)originalInput.current.value='';}
+  }
+  async function importOriginalEvents(file?:File){
+    if(!file)return;loading(true);setError('');
+    try{
+      if(file.size>16_000_000)throw new Error('預覽包超過 16 MB，請選擇轉換工具產生的 original.jy.events 內容包。');
+      const parsed=JSON.parse(await file.text());
+      if(parsed?.schemaVersion!==2||parsed?.id!=='original.jy.events'||parsed?.classification!=='original-derived')throw new Error('請選擇有效的 original.jy.events 受控事件包（由 convert_original_events_generic 產生）。');
+      const content=await resolveControlledEventContent(parsed);
+      setOriginalEvents(content);setShowOriginalEvents(true);
+      announce(`已載入原版事件包：${Object.keys(content.data.events).length} 筆事件、${Object.keys(content.data.dialogues).length} 段對話。`);
+    }catch(cause){problem(cause);}finally{loading(false);if(originalEventsInput.current)originalEventsInput.current.value='';}
   }
   async function importRegionPreview(file?:File){
     if(!file)return;loading(true);setError('');
@@ -294,6 +309,7 @@ export default function App(){
               onClose={(next,bound)=>{const current=sessionRef.current;if(current){const pair={host:current.content,controlled:bound};availableUnifiedRef.current=pair;applyUnified({content:pair,state:next});apply({...current,state:next.game});}
                 controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);}}
               onLocation={setControlledLocation}/>}
+            {showOriginalEvents&&originalEvents&&<OriginalEventsPreview content={originalEvents} onClose={()=>setShowOriginalEvents(false)}/>}
             <div className="game-hud"><button aria-pressed={gamePanel==='map'} onClick={()=>setGamePanel(gamePanel==='map'?null:'map')}>地圖</button><button aria-pressed={gamePanel==='inventory'} disabled={controlledDemo} onClick={()=>setGamePanel(gamePanel==='inventory'?null:'inventory')}>行囊 {carriedItems?.length?`· ${carriedItems.length}`:''}</button><button aria-pressed={gamePanel==='save'} onClick={()=>setGamePanel(gamePanel==='save'?null:'save')}>存檔</button></div>
             {gamePanel==='map'&&map&&displayState&&<section className="game-overlay map-overlay" aria-label="行跡地圖"><h3>行跡</h3><MiniMap map={map} state={displayState} view={cameraView}/><p>X {displayState.x} · Y {displayState.y}</p></section>}
             {gamePanel==='inventory'&&<section className="game-overlay inventory-overlay" aria-label="行囊"><h3>行囊</h3>{carriedItems?.length?<><ul className="game-inventory-list">{carriedItems.map(([id,count])=><li key={id}><button aria-pressed={activeItemId===id} onClick={()=>setSelectedItem(id)}>{content?.items[id]?.name.replace(/^Mock /,'')}<b>× {count}</b></button></li>)}</ul><article className="item-description"><h4>{content?.items[activeItemId]?.name.replace(/^Mock /,'')??'選擇一件道具'}</h4><p>{content?.items[activeItemId]?.description??'此道具尚無說明。'}</p></article></>:<p className="muted">行囊目前是空的。</p>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
@@ -308,6 +324,7 @@ export default function App(){
         <aside className="sidebar">
           <section className="side-card"><div className="card-title"><h3>留存江湖</h3><span>SAVE</span></div><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session||controlledDemo}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session||controlledDemo}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session||controlledDemo}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session||controlledDemo}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session||controlledDemo}>上一份備份</button></div><p className="fine-print">{controlledDemo?'受控事件的獨立存讀請使用遊戲畫面中的按鈕。':'存檔留在此瀏覽器。換裝置前可先匯出備份。'}</p></section>
           <details className="side-card content-settings"><summary>內容與測試設定</summary><label className="mod-toggle"><input type="checkbox" checked={modEnabled} disabled={busy||session?.original} onChange={e=>void start(mock,e.target.checked,false)}/><span>啟用原創問候 MOD<small>切換後從入口重新開始。</small></span></label><button className="wide" disabled={busy||!!session?.original||!!session?.state.cursor||!session?.content.maps['mock.wuxia:map/room']||controlledDemo} onClick={()=>{controlledDemoRef.current=true;setGamePanel(null);setControlledLocation(session!.state);setControlledDemo(true);}}>試玩受控事件 · Mock</button><button className="wide" disabled={busy} onClick={()=>originalInput.current?.click()}>匯入本機原版預覽包</button>
+<button className="wide" disabled={busy} onClick={()=>originalEventsInput.current?.click()}>載入原版事件包（local）</button>
 <button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入本機地圖區域預覽</button><button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入完整世界地圖</button><p className="fine-print">選取準備工具產生的 JSON。檔案只在裝置內讀取。</p>
 {modelOptions.length>0&&<section aria-label="本機模型替換"><label className="fine-print">替換的視覺資產<select aria-label="替換的視覺資產" value={selectedModel} disabled={busy} onChange={e=>setModelId(e.target.value)}>{modelOptions.map(id=><option key={id} value={id}>{id}</option>)}</select></label><button className="wide" disabled={busy} onClick={()=>modelInput.current?.click()}>匯入替換 GLB</button><button className="wide" disabled={busy||!replacementInfo} onClick={()=>{setRegionCells(regionBaseline);setReplacementInfo('');announce('已還原匯入時的模型，遊戲進度與碰撞未變。');}}>還原匯入時的模型</button><p className="fine-print">只替換目前預覽的相同資產；自動對齊原占位尺寸與底部。僅支援靜態、內嵌資源 GLB，最多 4 MB。</p>{replacementInfo&&<p className="fine-print">{replacementInfo}</p>}</section>}
 <div className="content-actions"><button disabled={busy} onClick={()=>void start(mock,modEnabled&&!session?.original,false)}>回到原創場景</button><button disabled={busy||!session} onClick={()=>observed673BundleRef.current?void importOriginal(undefined,observed673BundleRef.current):void start(session?.original?originalPackage:mock,modEnabled,!!session?.original)}>重新開始</button></div></details>
@@ -318,6 +335,7 @@ export default function App(){
     </main>
     <footer><span>江湖初行 <i>·</i> JY Web Remake</span><span>占位美術／原創測試內容。非原版遊戲完整重製。</span></footer>
     <input ref={originalInput} type="file" accept=".json,application/json" hidden aria-label="選擇原版預覽包" onChange={event=>void importOriginal(event.target.files?.[0])}/>
+    <input ref={originalEventsInput} type="file" accept=".json,application/json" hidden aria-label="選擇原版事件包" onChange={event=>void importOriginalEvents(event.target.files?.[0])}/>
 <input ref={regionInput} type="file" accept=".json,application/json" hidden aria-label="選擇地圖區域預覽包" onChange={event=>void importRegionPreview(event.target.files?.[0])}/>
     <input ref={saveInput} type="file" accept=".json,application/json" hidden aria-label="選擇存檔" onChange={event=>void importSave(event.target.files?.[0])}/>
     <input ref={modelInput} type="file" accept=".glb,model/gltf-binary" hidden aria-label="選擇替換 GLB" onChange={event=>void importReplacement(event.target.files?.[0])}/>

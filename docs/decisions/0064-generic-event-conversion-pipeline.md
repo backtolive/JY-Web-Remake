@@ -29,10 +29,19 @@
 
 內容包 id `original.jy.events`，事件 `original.jy.events:event/{id}`、對話 `original.jy.events:talk/{id}`，分類 `original-derived`；決策領域為 `original.jy:party`、`original.jy:inventory`、`original.jy:scene-slots`、`original.jy:scene-records` 及 12 個角色欄位領域。輸出寫入 git-ignored 的 `assets/generated/original-events/`，含內容包與診斷 sidecar；本機輸出 732 轉換／286 阻擋／1,822 對話，opcode 標籤 Community Implementation 6,025、Inferred 1,198、Unknown 1、Verified Original 23。
 
+## Fresh-State 執行相容
+
+Web 預覽與 `tools/analyzer/verify_original_events_preview.mjs` 都以全新決策狀態（全零、空隊伍）獨立執行事件，因此轉換器做兩項相容調整（不改變有狀態的遊玩行為）：
+
+- 物品領域 `original.jy:inventory` 的 min 改為對稱 `-1,000,000`：消耗效果（負 add）在全零狀態不會 `DECISION_VALUE_RANGE`；正式遊玩由遊戲起始狀態注入真實數值。
+- opcode 21 離隊效果改發帶 `contains` 守衛的 plan case：成員在隊伍中才 `listRemove`，否則 no-op（社群來源未定義「移除不在隊者」的行為，標籤 Inferred）；避免空队伍的 fresh-state 預覽 `DECISION_LIST_MISSING`。
+
+驗證結果：732 筆轉換事件全部可由 fresh-state 驅動至終止狀態（對話續行、選單取第一項、戰鬥模擬勝利、選擇取第一候選），`verify_original_events_preview.mjs` 通過。
+
 ## 限制
 
 - 場景 `-2` 以固定 `current` key 近似，場景切換不追蹤；`-2` 的欄位規則未逐欄隔離。
 - opcode 3／26／27 的槽位欄位寫入是 Inferred，不是 Verified Original。
 - 銀兩與物品「持有」以數量 ≥1 近似成員判斷；技能（33／35）、隨身物品（41）、opcode 50 動態變體未建狀態領域，映射為 no-op。
 - 社群 Pascal 語意等同原版 DOS 的假設未逐事件重播自然可達性；286 筆阻擋事件不轉換。
-- 內容包尚未接入 Web 宿主；此為可驗證的內容資料，不是可遊玩場景。
+- Web 宿主已提供本機唯讀預覽（`apps/web/src/original-events-preview.tsx`）：玩家手動選檔載入內容包，逐事件操作對話／選項／分支／決策效果，戰鬥為模擬結果；這是內容預覽，非完整原版遊玩，不影響預設 Mock。

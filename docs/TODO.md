@@ -7,7 +7,7 @@
 
 - [x] 為受控事件新增 `branch` 步驟（條件＋yes／no 目標）與 JUMP_TARGET 驗證；為決策引擎新增 `keyFrom` 動態 key、`patchList` 稀疏清單效果、`listSize` 條件，各補專責單元測試並匯出 `decision-condition.schema.json`。見 [ADR 0064](decisions/0064-generic-event-conversion-pipeline.md)。
 - [x] 建立 `tools/extractor/convert_original_events_generic.mjs`：54-opcode 證據映射表（Tier 1 本地 DOS／Tier 2 社群 Pascal）、word offset→step index 分支重映射、TALK 對話抽取、14 個未證 opcode 的逐事件阻擋診斷；本機輸出 732 轉換／286 阻擋／1,822 對話，內容包通過 `resolveControlledEventContent` 全驗證。
-- [ ] 將產出的 `original.jy.events` 內容包接入 Web 宿主做本機唯讀預覽（對話、選項、分支、決策效果），不把它當成可遊玩完整原版。
+- [x] 將產出的 `original.jy.events` 內容包接入 Web 宿主做本機唯讀預覽（對話、選項、分支、決策效果），不把它當成可遊玩完整原版：側欄「載入原版事件包（local）」選檔後以獨立 Runtime 逐事件操作，戰鬥為模擬結果；fresh-state 全事件驅動驗證 732/732 通過。見 [ADR 0064](decisions/0064-generic-event-conversion-pipeline.md)。
 - [ ] 逐功能補技能（33／35）、隨身物品（41）與 opcode 50 動態變體的狀態領域；場景 `-2` 改為追蹤當前場景的動態 key。
 - [ ] 依證據逐一解鎖阻擋 opcode 4／15／19／24／25／30／44／51／57／58／60／61／62／64；未證前該事件維持阻擋。
 
