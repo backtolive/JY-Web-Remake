@@ -14,10 +14,14 @@ export function OriginalEventsPreview({ content, onClose }:
     (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
   const [filter, setFilter] = useState('');
   const [eventId, setEventId] = useState('');
+  const [useItemId, setUseItemId] = useState('');
   const [state, setState] = useState<ControlledEventState | null>(null);
   const [changes, setChanges] = useState<DecisionChange[]>([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const itemOptions = useMemo(() => Object.keys(content.data.items ?? {}).sort((a, b) =>
+    (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
+  const itemName = (id: string) => content.data.items?.[`${content.identity.id}:item/${id}`]?.name ?? '';
   const filtered = filter ? events.filter(id => id.includes(filter)) : events;
   const cursor = state?.cursor;
   const step = cursor ? content.data.events[cursor.eventId]?.steps[cursor.pc] : undefined;
@@ -26,10 +30,22 @@ export function OriginalEventsPreview({ content, onClose }:
   function start(id: string) {
     if (!id) return;
     try {
-      const result = dispatchControlledEvent(content, createControlledEventState(content), { type: 'START', eventId: id });
+      // A no-cursor state (e.g. after a USE_ITEM selection) is kept so the event sees it.
+      const base = state && !state.cursor ? state : createControlledEventState(content);
+      const result = dispatchControlledEvent(content, base, { type: 'START', eventId: id });
       setState(result.state); setChanges(result.notices.flatMap(n => n.changes ?? []));
       setError(''); setMessage(`事件 ${id.split('/').pop()} 已開始。`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : '無法啟動事件。'); }
+  }
+  function useItem() {
+    if (!useItemId) return;
+    try {
+      const result = dispatchControlledEvent(content, createControlledEventState(content),
+        { type: 'USE_ITEM', itemId: Number(useItemId) });
+      setState(result.state); setChanges(result.notices.flatMap(n => n.changes ?? []));
+      setError('');
+      setMessage(`已使用物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''}；現在可啟動會檢查目前物品的場景事件（例如事件 16）。`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : '使用物品失敗。'); }
   }
   function act(action: Exclude<ControlledEventAction, { type: 'START' }>) {
     if (!state) return;
@@ -61,15 +77,22 @@ export function OriginalEventsPreview({ content, onClose }:
     <header><strong>原版事件 · 本機唯讀預覽</strong><button onClick={onClose}>關閉</button></header>
     {error && <p role="alert" className="oe-error">{error}</p>}
     <p className="oe-status" role="status">{message}</p>
-    {!state && <div className="oe-select">
+    {!cursor && <div className="oe-select">
       <label>選擇要預覽的事件<input type="search" placeholder="以編號過濾，例如 581" value={filter} onChange={e => setFilter(e.target.value)}/></label>
       <select value={eventId} onChange={e => setEventId(e.target.value)}>
         <option value="">選取事件（{filtered.length}）</option>
         {filtered.map(id => <option key={id} value={id}>事件 {id.split('/').pop()}</option>)}
       </select>
+      {itemOptions.length > 0 && <label>使用物品（選填；啟動前寫入「目前物品」，供檢查該欄的事件分支）
+        <select value={useItemId} onChange={e => setUseItemId(e.target.value)}>
+          <option value="">不選擇</option>
+          {itemOptions.map(id => <option key={id} value={id.split('/').pop()}>
+            {id.split('/').pop()}{content.data.items?.[id]?.name ? ` ${content.data.items[id].name}` : ''}</option>)}
+        </select></label>}
       <button className="primary" disabled={!eventId} onClick={() => start(eventId)}>開始事件</button>
+      <button disabled={!useItemId} onClick={useItem}>使用物品</button>
       <button onClick={load}>讀取進度</button>
-      <p className="oe-note">僅含 54 個已證 opcode 的 {events.length} 筆事件；對話、選項、分支與決策效果可操作，戰鬥為模擬結果。此為內容預覽，非完整原版遊玩。</p>
+      <p className="oe-note">全量 {events.length} 筆事件（68 個已證 opcode）；對話、選項、分支與決策效果可操作，戰鬥為模擬結果。此為內容預覽，非完整原版遊玩。</p>
     </div>}
     {state && <>
       <p className="oe-event">目前事件 <strong>{cursor ? cursor.eventId.split('/').pop() : '已結束'}</strong> · 步驟 {cursor ? cursor.pc : '—'}</p>
@@ -86,7 +109,7 @@ export function OriginalEventsPreview({ content, onClose }:
         <button onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'transition', outcome: 'completed' })}>完成切換場景</button></div>}
       {pending?.command.kind === 'selection' && <div className="oe-choices"><p>選擇角色</p>
         {pending.command.candidates.map(id => <button key={id} onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'selection', selectedId: id })}>{id}</button>)}</div>}
-      {!cursor && <p className="oe-ended">事件已結束，可重新開始另一個事件。</p>}
+      {!cursor && <p className="oe-ended">事件已結束。</p>}
       <p className="oe-state">目前狀態變更 {changes.length} 項{changes.length ? `；最近：${changes.slice(-6).map(c =>
         `${(c.target.domain.split(':').pop() ?? '')}/${(c.target.key?.split('/').pop() ?? '')} ${JSON.stringify(c.before)}→${JSON.stringify(c.after)}`).join('；')}` : ''}</p>
       <div className="oe-actions"><button disabled={!cursor} onClick={save}>儲存此進度</button><button onClick={restart}>重新開始</button></div>

@@ -386,6 +386,9 @@
         "additionalProperties": false
       },
       "maxProperties": 100000
+    },
+    "currentItem": {
+      "$ref": "https://jy-web-remake.local/schema/decision-state-v1.json#/definitions/reference"
     }
   },
   "required": [

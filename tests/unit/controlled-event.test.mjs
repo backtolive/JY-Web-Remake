@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolveControlledEventContent, createControlledEventState, dispatchControlledEvent,
-  readDecisionValue, restoreControlledEventSave } from '../../packages/game-core/src/index.ts';
+  readDecisionValue, restoreControlledEventSave, serializeControlledEventSave } from '../../packages/game-core/src/index.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
   controlledEventSaveSchema } from '../../packages/game-core/src/controlled-event-schema.ts';
 import { controlledEventSaveKey, loadControlledEvent, saveControlledEvent } from '../../apps/web/src/storage.ts';
@@ -21,8 +21,11 @@ const contentSource = {
     'mock:flags': { kind: 'boolean', default: false, allowedKeys: [flag.key] },
     'mock:party': { kind: 'list', default: [], maxItems: 2, unique: true,
       allowedKeys: [party.key], allowedValues: ['mock:friend/a', 'mock:friend/b'] },
+    'mock:current-item': { kind: 'integer', default: 0, min: -1, max: 1000,
+      allowedKeys: ['mock:item/current'] },
   } },
   dialogues: { 'mock:dialogue/start': { speaker: 'Guide', text: 'Ready?' } },
+  currentItem: { domain: 'mock:current-item', key: 'mock:item/current' },
   events: { 'mock:event/quest': { steps: [
     { op: 'say', dialogueId: 'mock:dialogue/start' },
     { op: 'invoke', command: { kind: 'battle', encounterId: 'mock:battle/one' }, outcomes: [
@@ -117,6 +120,37 @@ test('Late decision failure keeps battle result unapplied and request available 
     resolve(battle.pending, { kind: 'battle', outcome: 'victory' })), /DECISION_VALUE_RANGE/);
   assert.equal(JSON.stringify(battle), before);
   assert.equal(battle.cursor.waiting, 'external');
+});
+
+test('USE_ITEM host command writes the declared current-item ref between events', async () => {
+  const content = await resolveControlledEventContent(contentSource);
+  const currentRef = { domain: 'mock:current-item', key: 'mock:item/current' };
+  const fresh = createControlledEventState(content);
+  const used = dispatchControlledEvent(content, fresh, { type: 'USE_ITEM', itemId: 7 });
+  assert.equal(readDecisionValue(content.data.decision, used.state.decision, currentRef), 7);
+  assert.equal(used.notices[0].type, 'DECISION_APPLIED');
+  assert.equal(used.notices[0].changes[0].after, 7);
+  // While an event is active the menu is closed: the command is rejected, state untouched.
+  const active = dispatchControlledEvent(content, used.state, { type: 'START', eventId: 'mock:event/quest' });
+  assert.throws(() => dispatchControlledEvent(content, active.state, { type: 'USE_ITEM', itemId: 8 }), /USE_ITEM_BUSY/);
+  // Out-of-range and non-integer item ids are rejected without changing state.
+  assert.throws(() => dispatchControlledEvent(content, used.state, { type: 'USE_ITEM', itemId: 2000 }), /DECISION_VALUE_RANGE/);
+  assert.throws(() => dispatchControlledEvent(content, used.state, { type: 'USE_ITEM', itemId: 1.5 }), /USE_ITEM_VALUE/);
+  // Content without a declared current-item ref rejects the command at dispatch.
+  const noRef = structuredClone(contentSource); delete noRef.currentItem;
+  const bare = await resolveControlledEventContent(noRef);
+  assert.throws(() => dispatchControlledEvent(bare, createControlledEventState(bare),
+    { type: 'USE_ITEM', itemId: 1 }), /NO_CURRENT_ITEM/);
+  // A declared ref outside the domain key set, or an unknown domain, fails resolution.
+  const badRef = structuredClone(contentSource);
+  badRef.currentItem = { domain: 'mock:current-item', key: 'mock:item/other' };
+  await assert.rejects(resolveControlledEventContent(badRef), /CURRENT_ITEM_REF/);
+  const badDomain = structuredClone(contentSource);
+  badDomain.currentItem = { domain: 'mock:missing', key: 'mock:item/current' };
+  await assert.rejects(resolveControlledEventContent(badDomain), /CURRENT_ITEM_DOMAIN/);
+  // The write survives a save/restore round trip.
+  const restored = restoreControlledEventSave(content, serializeControlledEventSave(content, used.state));
+  assert.equal(readDecisionValue(content.data.decision, restored.decision, currentRef), 7);
 });
 
 test('Versioned command/result/content/save schemas are exported; unknown outcomes are rejected', async () => {

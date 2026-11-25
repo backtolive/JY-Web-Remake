@@ -14,9 +14,10 @@
 - [x] 探測 RANGER.GRP 物品表欄位佈局（190B×200，`Thing_S` 社群佈局，8 筆抽樣含全部 DOS 觀察案例物品均吻合）；確認記錄無圖片欄位、使用效果在事件腳本。見 PROGRESS 2026-11-25 物品記錄探測。
 - [x] 定義通用物品定義合約（engine-owned schema：id／name／alias／description／imageRef?／category／equipSlot?／stackable＋maxStack；use 層 useDialogueRef／useConditions／useEffects／useCommand 可選，腳本與宣告式互斥）並加入 schema 匯出（decision-effect-v1）與引用驗證（ITEM_* 檢查）。見 [ADR 0065](decisions/0065-item-definition-contract.md)。
 - [x] 建立 RANGER 物品表轉接器（190B×200，Thing_S 佈局），產出 git-ignored 物品定義（200/200、0 空記錄，含來源雜湊／偏移／解析器版本）；use 欄位全空（效果在場景事件）；接線約定 inventory key／current-item 值 ↔ `original.jy.events:item/{id}`，測試釘選每個 inventory allowedKey 皆有定義。
+- [x] 「使用物品」宿主命令契約（USE_ITEM）：內容宣告 `currentItem` 引用、runtime 動作（無游標時寫入、不消耗）、Web 預覽物品選單；E2E 與 opcode-4 DOS 觀察一致。見 [ADR 0066](decisions/0066-use-item-host-command.md)。
 - [ ] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源；確認前不假設圖片欄位。
-- [ ] 「使用物品」宿主命令契約（選單選中→寫 current-item→啟動場景事件），與移動／連戰／商店同列宿主效果缺口。
-- [ ] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）。
+- [ ] 裝備／修煉宿主命令（type 1/2 子流程：EQUIP／PRACTICE＋裝備領域 `Rrole.Equip`/`PracticeMagic`）；消耗（type 3）已可由事件腳本 `inventoryAdd -1` 表達。
+- [ ] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）——物品選單已顯示名稱，完整資訊面板待補。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

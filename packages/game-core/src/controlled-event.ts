@@ -2,8 +2,9 @@
 import { Ajv } from 'ajv';
 import { canonical, contentHash } from './content.ts';
 import { nextRandom } from './runtime.ts';
-import { applyDecisionPlan, createDecisionState, evaluateDecision, validateDecisionState } from './decision.ts';
-import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition, DecisionEffect } from './decision.ts';
+import { applyDecisionPlan, applyDecisionTransaction, createDecisionState, evaluateDecision, validateDecisionState } from './decision.ts';
+import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition, DecisionEffect,
+  DecisionRef } from './decision.ts';
 import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema,
   decisionEffectSchema } from './decision-schema.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
@@ -34,6 +35,7 @@ export interface ControlledEventContent {
   dialogues: Record<string, { speaker: string; text: string }>;
   events: Record<string, { steps: Step[] }>;
   items?: Record<string, ItemDefinition>;
+  currentItem?: DecisionRef;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
@@ -44,7 +46,10 @@ export interface ControlledEventState {
   rngState: number; nextRequest: number; pending: ControlledRequest | null;
 }
 export type ControlledEventAction = { type: 'START'; eventId: string } | { type: 'CONTINUE' } |
-  { type: 'CHOOSE'; optionId: string } | { type: 'RESOLVE'; result: ControlledResult };
+  { type: 'CHOOSE'; optionId: string } | { type: 'RESOLVE'; result: ControlledResult } |
+  /** Host item-menu selection: writes the declared current-item ref. Original flow: the menu
+   * sets CurItem before a scene event runs; the event script (opcode 4) branches on it. */
+  { type: 'USE_ITEM'; itemId: number };
 export type ControlledEventNotice = { type: 'DIALOGUE' | 'CHOICE' | 'REQUEST' | 'DECISION_APPLIED' | 'EVENT_ENDED';
   id?: string; request?: ControlledRequest; changes?: DecisionChange[] };
 const ajv = new Ajv({ strict: true, allErrors: true });
@@ -106,6 +111,12 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     for (const condition of item.useConditions ?? []) if (!validCondition(condition)) fail('ITEM_CONDITION', itemId);
     for (const effect of item.useEffects ?? []) if (!validEffect(effect)) fail('ITEM_EFFECT', itemId);
   }
+  if (data.currentItem) {
+    const domain = data.decision.domains[data.currentItem.domain];
+    if (!domain) fail('CURRENT_ITEM_DOMAIN');
+    if (data.currentItem.keyFrom?.length || data.currentItem.key === undefined) fail('CURRENT_ITEM_REF');
+    if (!domain.allowedKeys.includes(data.currentItem.key)) fail('CURRENT_ITEM_REF');
+  }
   const identity = { id: data.id, version: data.version, sha256: await contentHash(data) };
   return freeze({ identity, data });
 }
@@ -166,6 +177,17 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
     if (step.command.kind === 'transition') state.location = structuredClone(step.command.destination);
     state.pending = null;
     state.cursor.pc = outcome.target;
+  } else if (action.type === 'USE_ITEM') {
+    // Host item-menu selection between events: writes the declared current-item ref. The
+    // original does not consume the item here; consumption is an effect of the event script.
+    if (state.cursor) fail('USE_ITEM_BUSY');
+    const target = content.data.currentItem;
+    if (!target) fail('NO_CURRENT_ITEM');
+    if (!Number.isInteger(action.itemId)) fail('USE_ITEM_VALUE');
+    const applied = applyDecisionTransaction(content.data.decision, state.decision,
+      { schemaVersion: 1, guards: [], effects: [{ op: 'set', target, value: { kind: 'literal', value: action.itemId } }] }, budget);
+    state.decision = applied.state;
+    if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
   } else fail('ACTION');
   for (let count = 0; state.cursor; count++) {
     if (count >= budget) fail('BUDGET');

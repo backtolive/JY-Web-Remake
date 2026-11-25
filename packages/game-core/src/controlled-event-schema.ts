@@ -7,6 +7,8 @@ const object = (properties: Record<string, unknown>, required = Object.keys(prop
   ({ type: 'object', properties, required, additionalProperties: false });
 const array = (items: unknown, maxItems = 10000) => ({ type: 'array', items, maxItems });
 const location = object({ mapId: id, x: { type: 'integer', minimum: 0 }, y: { type: 'integer', minimum: 0 } });
+/** Static reference to the "currently used item" state; target of the USE_ITEM host command. */
+const currentItemRef = { $ref: `${decisionStateSchema.$id}#/definitions/reference` };
 export const controlledCommandSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#', $id: 'https://jy-web-remake.local/schema/controlled-command-v1.json',
   oneOf: [
@@ -63,7 +65,9 @@ export const controlledEventContentSchema = {
   ...object({ ...base, schemaVersion: { const: 3 }, decision: { $ref: decisionDomainsSchema.$id },
     events: { type: 'object', propertyNames: id, additionalProperties: object({ steps: { ...array(step), minItems: 1 } }), maxProperties: 10000 },
     // Optional: content without item definitions remains valid.
-    items: { type: 'object', propertyNames: id, additionalProperties: itemDefinition, maxProperties: 100000 } },
+    items: { type: 'object', propertyNames: id, additionalProperties: itemDefinition, maxProperties: 100000 },
+    // Optional: declares which decision ref the USE_ITEM host command writes to.
+    currentItem: currentItemRef },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

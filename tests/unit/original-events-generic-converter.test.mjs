@@ -243,9 +243,14 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/160'].description, '普通百姓都懂的唐詩三百首');
     assert.equal(content.items['original.jy.events:item/174'].name, '銀兩');
     assert.equal(content.items['original.jy.events:item/110'].name, '金蛇劍');
-    assert.equal(content.items['original.jy.events:item/110'].category, 'weapon');
+    // Category labels follow the UseItem case labels in kys_main.pas (0 story, 1 equipment,
+    // 2 secret manual, 3 medicine).
+    assert.equal(content.items['original.jy.events:item/110'].category, 'equipment');
     assert.equal(content.items['original.jy.events:item/0'].name, '康倍特');
-    assert.equal(content.items['original.jy.events:item/0'].category, 'consumable');
+    assert.equal(content.items['original.jy.events:item/0'].category, 'medicine');
+    assert.equal(content.items['original.jy.events:item/160'].category, 'story');
+    // USE_ITEM target is declared: the current-item domain ref from the opcode-4 pipeline.
+    assert.deepEqual(content.currentItem, { domain: 'original.jy:current-item', key: 'original.jy:item/current' });
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

@@ -7,7 +7,7 @@
  * The output is written only to the git-ignored generated folder and is not executable
  * content until the host loads it; commercial text stays local-only.
  */
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolveControlledEventContent } from '../../packages/game-core/src/controlled-event.ts';
 import { canonical } from '../../packages/game-core/src/content.ts';
@@ -24,9 +24,10 @@ const RANGER_FILE = 'original/dos/RANGER.GRP';
 const ITEM_TABLE_OFFSET = 59076;
 const ITEM_RECORD_SIZE = 190;
 const ITEM_COUNT = 200;
-// Community-Implementation category mapping from the 8 sampled records (probe_item_records):
-// 0 misc (food/books), 1 weapon (Jinse sword, equipType 0), 2 skill book, 3 consumable (drink).
-const ITEM_CATEGORY = { 0: 'misc', 1: 'weapon', 2: 'skill-book', 3: 'consumable' };
+// Community-Implementation category mapping from the UseItem case labels in
+// references/kys-jedisdl/kys_main.pas (0 story item, 1 equipment, 2 secret manual,
+// 3 medicine, 4 hidden weapon), cross-checked against the 8 sampled records.
+const ITEM_CATEGORY = { 0: 'story', 1: 'equipment', 2: 'secret-manual', 3: 'medicine', 4: 'hidden-weapon' };
 
 // The 68 evidence-scoped opcodes. `kind` drives step generation; `label` is the rule status.
 const OPCODES = {
@@ -605,6 +606,9 @@ export function buildOriginalEventsContent() {
     schemaVersion: 3, id: PACKAGE_ID, version: VERSION, classification: 'original-derived',
     entry: { mapId: `${PACKAGE_ID}:map/start`, x: 0, y: 0 },
     decision: { schemaVersion: 1, domains }, dialogues, events, items,
+    // USE_ITEM host command target: the menu selection writes this ref before a scene
+    // event runs; opcode-4 events branch on it (CurItem in the community Pascal).
+    currentItem: { domain: 'original.jy:current-item', key: 'original.jy:item/current' },
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);
@@ -636,6 +640,11 @@ export function writeOriginalEventsLocal(projectRoot, { content, diagnostics, di
   const output = new URL(`file://${projectRoot}/assets/generated/original-events/`.replace(/\\/g, '/'));
   const dir = output.pathname.replace(/^\/([A-Za-z]:)/, '$1');
   mkdirSync(dir, { recursive: true });
+  // Single current package: readers assume one content file, so drop older generations.
+  for (const name of readdirSync(dir)) {
+    if (/^original-events-[a-f0-9]{16}(\.diagnostics)?\.local\.json$/.test(name) && !name.includes(digest))
+      rmSync(`${dir}/${name}`);
+  }
   const contentPath = `${dir}/original-events-${digest}.local.json`;
   const diagnosticsPath = `${dir}/original-events-${digest}.diagnostics.local.json`;
   writeFileSync(contentPath, JSON.stringify(content, null, 2) + '\n', 'utf8');
