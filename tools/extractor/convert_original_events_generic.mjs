@@ -20,6 +20,11 @@ const ROLE_COUNT = 84;
 const SLOT_FIELDS = 8;
 const CORPUS_DIR = 'assets/generated/event-corpus';
 const RANGER_FILE = 'original/dos/RANGER.GRP';
+const ALLDEF_FILE = 'original/dos/ALLDEF.GRP';
+// ALLDEF.GRP: 200 slots × 11 int16 fields per scene; field 0 = event ID.
+const ALLDEF_SLOTS_PER_SCENE = 200;
+const ALLDEF_FIELDS_PER_SLOT = 11;
+const ALLDEF_BYTES_PER_SLOT = ALLDEF_FIELDS_PER_SLOT * 2;
 // RANGER.GRP item table: 190-byte records x 200 records (source-index byte span 38,000;
 // community Thing_S layout in references/jinyong-legend/script/jyconst.lua).
 const ITEM_TABLE_OFFSET = 59076;
@@ -190,6 +195,22 @@ function loadItemRecords() {
 }
 
 const sha256Of = buf => createHash('sha256').update(buf).digest('hex');
+
+/** Extract the (scene, slot) → event ID mapping from ALLDEF.GRP. Only non-zero event IDs
+ * are included. The mapping is a flat object: "scene/slot" → eventId. */
+function loadSceneSlots() {
+  const buf = readFileSync(ALLDEF_FILE);
+  const sceneCount = Math.floor(buf.length / (ALLDEF_SLOTS_PER_SCENE * ALLDEF_BYTES_PER_SLOT));
+  const slots = {};
+  for (let scene = 0; scene < sceneCount; scene++) {
+    for (let slot = 0; slot < ALLDEF_SLOTS_PER_SCENE; slot++) {
+      const offset = (scene * ALLDEF_SLOTS_PER_SCENE + slot) * ALLDEF_BYTES_PER_SLOT;
+      const eventId = buf.readInt16LE(offset); // field 0 = event ID
+      if (eventId > 0) slots[`${scene}/${slot}`] = eventId;
+    }
+  }
+  return { slots, sceneCount, sha256: createHash('sha256').update(buf).digest('hex') };
+}
 
 /** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
  * only when its IDX range is exactly ICON_SIZE bytes and the header is 40x40; otherwise
@@ -740,6 +761,7 @@ function convertEvent(event, bundle) {
 export function buildOriginalEventsContent() {
   const bundle = loadCorpus();
   const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
+  const sceneSlotData = loadSceneSlots();
   const iconAtlas = loadItemIconAtlas();
   const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
   const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
@@ -803,6 +825,9 @@ export function buildOriginalEventsContent() {
     // Scene transition: writes the current scene ID when a transition command resolves.
     // The -2 (current scene) slot refs compose their key from this value via keyFrom.
     sceneTransition: { domain: 'original.jy:current-scene', key: 'original.jy:scene/current' },
+    // Scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference for the
+    // preview to simulate NPC interactions: "scene/slot" → eventId.
+    sceneSlots: sceneSlotData.slots,
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);

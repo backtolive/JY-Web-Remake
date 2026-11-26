@@ -72,6 +72,9 @@ export interface ControlledEventContent {
   /** Where the current scene ID lives; written when a transition command resolves.
    * The engine stays naming-free: content declares the domain + key. */
   sceneTransition?: DecisionRef;
+  /** Scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference for the
+   * preview to simulate NPC interactions. Keys are "scene/slot" strings. */
+  sceneSlots?: Record<string, number>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;

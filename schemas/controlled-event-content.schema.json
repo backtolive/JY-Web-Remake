@@ -830,6 +830,19 @@
     },
     "sceneTransition": {
       "$ref": "https://jy-web-remake.local/schema/decision-state-v1.json#/definitions/reference"
+    },
+    "sceneSlots": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^\\d+/\\d+$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10000
+      },
+      "maxProperties": 20000
     }
   },
   "required": [

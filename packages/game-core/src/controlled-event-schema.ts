@@ -122,7 +122,11 @@ export const controlledEventContentSchema = {
     // Optional: equipment/practice state for the EQUIP/PRACTICE host commands.
     equipment: equipmentDecl,
     // Optional: where the current scene ID lives; written when a transition resolves.
-    sceneTransition: currentItemRef },
+    sceneTransition: currentItemRef,
+    // Optional: scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference
+    // for simulating NPC interactions in the preview. Keys are "scene/slot" strings.
+    sceneSlots: { type: 'object', propertyNames: { type: 'string', pattern: '^\\d+/\\d+$' },
+      additionalProperties: { type: 'integer', minimum: 0, maximum: 10000 }, maxProperties: 20000 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

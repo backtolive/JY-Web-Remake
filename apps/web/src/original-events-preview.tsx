@@ -17,6 +17,8 @@ export function OriginalEventsPreview({ content, onClose }:
   const [useItemId, setUseItemId] = useState('');
   const [hostRole, setHostRole] = useState('0');
   const [hostSlot, setHostSlot] = useState('0');
+  const [sceneId, setSceneId] = useState('');
+  const [slotId, setSlotId] = useState('');
   const [state, setState] = useState<ControlledEventState | null>(null);
   const [changes, setChanges] = useState<DecisionChange[]>([]);
   const [error, setError] = useState('');
@@ -82,6 +84,14 @@ export function OriginalEventsPreview({ content, onClose }:
         ? `已將物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''} 裝備給角色 ${role} 槽 ${slot}。`
         : `角色 ${role} 已修煉物品 ${useItemId}${itemName(useItemId) ? `（${itemName(useItemId)}）` : ''}。`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : (kind === 'EQUIP' ? '裝備失敗。' : '修煉失敗。')); }
+  }
+  /** Trigger an event from a scene slot (simulates NPC interaction). Looks up the event ID
+   * from the content's sceneSlots mapping (ALLDEF.GRP field 0). */
+  function triggerSceneSlot() {
+    const key = `${sceneId}/${slotId}`;
+    const eventId = content.data.sceneSlots?.[key];
+    if (!eventId) { setError(`場景 ${sceneId} 槽 ${slotId} 沒有事件。`); return; }
+    start(`${content.identity.id}:event/${eventId}`);
   }
   function act(action: Exclude<ControlledEventAction, { type: 'START' }>) {
     if (!state) return;
@@ -152,6 +162,13 @@ export function OriginalEventsPreview({ content, onClose }:
         <option value="">選取事件（{filtered.length}）</option>
         {filtered.map(id => <option key={id} value={id}>事件 {id.split('/').pop()}</option>)}
       </select>
+      {content.data.sceneSlots && <>
+        <label>場景槽觸發（模擬 NPC 互動）
+          <input type="number" min={0} placeholder="場景" value={sceneId} onChange={e => setSceneId(e.target.value)} />
+          <input type="number" min={0} max={199} placeholder="槽" value={slotId} onChange={e => setSlotId(e.target.value)} />
+          <button disabled={!sceneId && !slotId} onClick={triggerSceneSlot}>觸發</button>
+        </label>
+      </>}
       {itemOptions.length > 0 && <>
         <label>使用物品（選填；啟動前寫入「目前物品」，供檢查該欄的事件分支）
           <select value={useItemId} onChange={e => setUseItemId(e.target.value)}>
