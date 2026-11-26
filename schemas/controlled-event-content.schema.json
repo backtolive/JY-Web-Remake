@@ -413,6 +413,16 @@
                 "type": "integer",
                 "minimum": -1000000,
                 "maximum": 1000000
+              },
+              "onlyPracRole": {
+                "type": "integer",
+                "minimum": -1,
+                "maximum": 1000000
+              },
+              "magic": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
               }
             },
             "additionalProperties": false
@@ -768,6 +778,26 @@
               "additionalProperties": false
             },
             "hidWeapon": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "magicCount": {
               "type": "object",
               "properties": {
                 "domain": {

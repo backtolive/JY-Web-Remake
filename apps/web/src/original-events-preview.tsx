@@ -38,7 +38,9 @@ export function OriginalEventsPreview({ content, onClose }:
       signed('醫毒', canEquip.medPoi), signed('拳法', canEquip.fist),
       signed('劍法', canEquip.sword), signed('刀法', canEquip.knife),
       signed('奇門', canEquip.unusual), signed('暗器', canEquip.hidWeapon),
-      typeof canEquip.mpType === 'number' ? `內力性質=${canEquip.mpType}` : ''].filter(Boolean);
+      typeof canEquip.mpType === 'number' ? `內力性質=${canEquip.mpType}` : '',
+      typeof canEquip.onlyPracRole === 'number' && canEquip.onlyPracRole >= 0 ? `專用人物=${canEquip.onlyPracRole}` : '',
+      typeof canEquip.magic === 'number' && canEquip.magic > 0 ? `武功=${canEquip.magic}` : ''].filter(Boolean);
     return parts.join('、');
   };
   const filtered = filter ? events.filter(id => id.includes(filter)) : events;

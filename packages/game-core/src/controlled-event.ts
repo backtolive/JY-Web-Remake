@@ -32,7 +32,11 @@ export interface ItemDefinition {
    * equipment declaration's roleAttributes binding; it keeps no naming of its own. */
   canEquip?: { mp?: number; attack?: number; speed?: number; aptitude?: number; mpType?: number;
     usePoi?: number; medicine?: number; medPoi?: number; fist?: number; sword?: number;
-    knife?: number; unusual?: number; hidWeapon?: number };
+    knife?: number; unusual?: number; hidWeapon?: number;
+    /** If >= 0, only that role can equip (overrides all other checks). */
+    onlyPracRole?: number;
+    /** Magic ID taught by this item; 0 = no magic. If > 0 and role has >= 10 magics, reject. */
+    magic?: number };
   stackable: boolean; maxStack?: number;
   useDialogueRef?: string; useConditions?: DecisionCondition[]; useEffects?: DecisionEffect[]; useCommand?: string;
 }
@@ -55,7 +59,7 @@ export interface EquipmentDeclaration {
     aptitude?: EquipmentBinding; mpType?: EquipmentBinding;
     usePoi?: EquipmentBinding; medicine?: EquipmentBinding; medPoi?: EquipmentBinding;
     fist?: EquipmentBinding; sword?: EquipmentBinding; knife?: EquipmentBinding;
-    unusual?: EquipmentBinding; hidWeapon?: EquipmentBinding };
+    unusual?: EquipmentBinding; hidWeapon?: EquipmentBinding; magicCount?: EquipmentBinding };
 }
 export interface ControlledEventContent {
   schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
@@ -139,6 +143,20 @@ function canEquipGate(schema: DecisionSchema, state: DecisionState, declaration:
   if (typeof mpType === 'number') {
     const value = readAttr('mpType');
     if (value < 2 && mpType < 2 && value !== mpType) fail('EQUIP_CONDITION', 'mpType');
+  }
+  // OnlyPracRole (kys_main.pas:4714-4718): if >= 0, overrides all previous checks.
+  // The role must match; a match forces pass, a mismatch forces fail.
+  const onlyPracRole = canEquip.onlyPracRole;
+  if (typeof onlyPracRole === 'number' && onlyPracRole >= 0) {
+    if (role !== onlyPracRole) fail('EQUIP_CONDITION', 'onlyPracRole');
+    return; // Match: all previous checks are void, pass.
+  }
+  // Magic count (kys_main.pas:4720-4726): if the item teaches a magic (Magic > 0)
+  // and the role already has >= 10 magics, reject.
+  const magic = canEquip.magic;
+  if (typeof magic === 'number' && magic > 0) {
+    const count = readAttr('magicCount');
+    if (count >= 10) fail('EQUIP_CONDITION', 'magicCount');
   }
 }
 /** Mutual unbinding (Community Implementation, kys_main.pas UseItem type 1/2): before the new

@@ -121,7 +121,9 @@ const OPCODES = {
 const ROLE_FIELDS = ['poison', 'aptitude', 'ethics', 'speed', 'max-mp', 'current-mp', 'attack',
   'max-hp', 'current-hp', 'mp-type', 'repute', 'sexual',
   // CanEquip Need* fields (kys_type.pas TItem): skill/knowledge attributes.
-  'use-poi', 'medicine', 'med-poi', 'fist', 'sword', 'knife', 'unusual', 'hid-weapon'];
+  'use-poi', 'medicine', 'med-poi', 'fist', 'sword', 'knife', 'unusual', 'hid-weapon',
+  // CanEquip magic count (kys_main.pas: role has >= 10 magics).
+  'magic-count'];
 
 const literal = value => ({ kind: 'literal', value });
 const read = (domain, key) => ({ kind: 'read', ref: { domain, key } });
@@ -173,9 +175,11 @@ function loadItemRecords() {
   const records = [];
   for (let id = 0; id < ITEM_COUNT; id++) {
     const offset = ITEM_TABLE_OFFSET + id * ITEM_RECORD_SIZE;
-    // CanEquip thresholds (kys_type.pas TItem, Community Implementation): all 12 Need* fields.
+    // CanEquip thresholds (kys_type.pas TItem, Community Implementation): all 12 Need* fields
+    // + OnlyPracRole@136 + Magic@72.
     records.push({ id, name: text(offset + 2, 20), name2: text(offset + 22, 20),
       description: text(offset + 42, 30), type: i16(offset + 82), equipType: i16(offset + 78),
+      magic: i16(offset + 72), onlyPracRole: i16(offset + 136),
       needMPType: i16(offset + 138), needMP: i16(offset + 140), needAttack: i16(offset + 142),
       needSpeed: i16(offset + 144), needUsePoi: i16(offset + 146), needMedcine: i16(offset + 148),
       needMedPoi: i16(offset + 150), needFist: i16(offset + 152), needSword: i16(offset + 154),
@@ -297,8 +301,10 @@ function buildItemDefinitions(records, iconPresent) {
     // out-of-range values to slot 0 before writing Rrole[r].Equip[p].
     if (record.type === 1) {
       definition.equipSlot = String(record.equipType < 0 || record.equipType > 1 ? 0 : record.equipType);
-      // CanEquip thresholds (kys_main.pas CanEquip): declared only for equipment with a
-      // non-zero Need* field; a zero/absent threshold imposes no gate.
+    }
+    // CanEquip thresholds (kys_main.pas CanEquip): used for BOTH equipment (type 1) and
+    // practice manuals (type 2). Declared only when a non-zero/active field is present.
+    if (record.type === 1 || record.type === 2) {
       const canEquip = {};
       if (record.needMP !== 0) canEquip.mp = record.needMP;
       if (record.needAttack !== 0) canEquip.attack = record.needAttack;
@@ -313,6 +319,8 @@ function buildItemDefinitions(records, iconPresent) {
       if (record.needKnife !== 0) canEquip.knife = record.needKnife;
       if (record.needUnusual !== 0) canEquip.unusual = record.needUnusual;
       if (record.needHidWeapon !== 0) canEquip.hidWeapon = record.needHidWeapon;
+      if (record.onlyPracRole >= 0) canEquip.onlyPracRole = record.onlyPracRole;
+      if (record.magic > 0) canEquip.magic = record.magic;
       if (Object.keys(canEquip).length) definition.canEquip = canEquip;
     }
     items[`${PACKAGE_ID}:item/${record.id}`] = definition;
@@ -789,6 +797,7 @@ export function buildOriginalEventsContent() {
         knife: { domain: 'original.jy:role/knife', key: 'original.jy:role/{role}' },
         unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
         hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
+        magicCount: { domain: 'original.jy:role/magic-count', key: 'original.jy:role/{role}' },
       },
     },
     // Scene transition: writes the current scene ID when a transition command resolves.

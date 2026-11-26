@@ -35,6 +35,11 @@ const canEquip = {
     knife: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
     unusual: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
     hidWeapon: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    // OnlyPracRole (kys_type.pas TItem@136): if >= 0, only that role can equip (overrides all).
+    onlyPracRole: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+    // Magic (kys_type.pas TItem@72): magic ID taught by this item; 0 = no magic.
+    // If > 0 and the role already has >= 10 magics, the item is rejected.
+    magic: { type: 'integer', minimum: 0, maximum: 1_000_000 },
   },
   additionalProperties: false,
 };
@@ -50,7 +55,7 @@ const equipmentDecl = object({
       aptitude: equipmentBinding, mpType: equipmentBinding,
       usePoi: equipmentBinding, medicine: equipmentBinding, medPoi: equipmentBinding,
       fist: equipmentBinding, sword: equipmentBinding, knife: equipmentBinding,
-      unusual: equipmentBinding, hidWeapon: equipmentBinding },
+      unusual: equipmentBinding, hidWeapon: equipmentBinding, magicCount: equipmentBinding },
     additionalProperties: false,
   },
 }, ['slots', 'practice', 'itemUser']);

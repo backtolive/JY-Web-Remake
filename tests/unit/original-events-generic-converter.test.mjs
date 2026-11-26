@@ -273,6 +273,7 @@ test('Generic converter emits static item definitions from the RANGER item table
         knife: { domain: 'original.jy:role/knife', key: 'original.jy:role/{role}' },
         unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
         hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
+        magicCount: { domain: 'original.jy:role/magic-count', key: 'original.jy:role/{role}' },
       },
     });
     // Equipment domains cover exactly the party role set: 2 slots per role
@@ -293,7 +294,11 @@ test('Generic converter emits static item definitions from the RANGER item table
     // non-zero Need* field declares a gate; a zero/absent threshold declares none.
     assert.deepEqual(content.items['original.jy.events:item/110'].canEquip, { mp: 50, attack: 50, mpType: 2, sword: 40 });
     assert.equal(content.items['original.jy.events:item/160'].canEquip, undefined); // story item
-    assert.equal(diagnostics.summary.canEquipCount, 20);
+    // Practice manuals (type 2) also carry CanEquip: magic ID + OnlyPracRole.
+    assert.equal(content.items['original.jy.events:item/54'].canEquip?.magic, 11); // 鐵掌拳譜
+    assert.equal(content.items['original.jy.events:item/60'].canEquip?.onlyPracRole, 38); // 太玄經
+    assert.equal(content.items['original.jy.events:item/60'].canEquip?.magic, 23);
+    assert.equal(diagnostics.summary.canEquipCount, 77);
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;
