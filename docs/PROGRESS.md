@@ -1,6 +1,16 @@
 # 進度 — 2026-11-26
 
-## 2026-11-26：裝備／修煉互斥解綁＋CanEquip 資質門檻（最新）
+## 2026-11-26：Web 預覽完整物品定義顯示面板（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **物品定義面板完成（名稱／說明／分類／裝備槽／可堆疊／圖片引用／使用層欄位）**
+- Completed Tasks: `original-events-preview.tsx` 新增 `ItemDetailPanel` 元件（`<details>` 折疊、表格列出所有已宣告欄位）；`original-events-preview.css` 新增面板樣式。
+- Files Changed: `apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、docs。
+- Tests Executed: 單元 148/148；web typecheck。
+- Test Results: 全通過；瀏覽器實測 item 110（金蛇劍）面板顯示正確。
+- Known Limitations: 面板只顯示已宣告欄位；useConditions/useEffects 只顯示數量（未展開逐項）。
+- Next Recommended Tasks: 視需要展開 useConditions/useEffects 逐項顯示；current-scene 寫入正式 Runtime。
+
+## 2026-11-26：裝備／修煉互斥解綁＋CanEquip 資質門檻
 
 Phase: Phase 6 宿主命令基礎契約延伸；語意 Community Implementation（社群 Pascal `CanEquip`／`UseItem`），RANGER bytes 實測欄位偏移與門檻值。Status: **互斥解綁（結構性原子）＋CanEquip 門檻（內容效果層）完成，20 個物品帶 canEquip；Web 預覽顯示資質與拒絕**
 - Completed Tasks: `controlled-event.ts` 新增 `canEquip`（物品定義）＋`roleAttributes`（裝備宣告）＋`canEquipGate`／`unbindingEffects`；EQUIP/PRACTICE dispatch 寫入前做 CanEquip 門檻（sign 雙向＋內力性質）與互斥解綁（讀當前綁定、條件清空、與兩個寫入同一 `applyDecisionTransaction` 原子）；`convert_original_events_generic.mjs` 實測 RANGER `TItem` 偏移（NeedMPType@138／NeedMP@140／NeedAttack@142／NeedSpeed@144／NeedAptitude@162）、對裝備 type 1 且非零者寫 `canEquip`、宣告 `roleAttributes`；`original-events-preview.tsx` 顯示資質門檻與 `EQUIP_CONDITION` 拒絕。

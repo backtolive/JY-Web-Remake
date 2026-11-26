@@ -164,6 +164,7 @@ export function OriginalEventsPreview({ content, onClose }:
           </span>}
         {useItemId && canEquipText(useItemId) &&
           <p className="oe-can-equip">裝備資質（CanEquip）：{canEquipText(useItemId)}。預覽以空狀態（屬性 0）試算，未達門檻會以 EQUIP_CONDITION 拒絕。</p>}
+        {useItemId && <ItemDetailPanel id={useItemId} content={content} iconUrl={iconUrls?.get(`${content.identity.id}:item/${useItemId}`)} />}
       </>}
       <button className="primary" disabled={!eventId} onClick={() => start(eventId)}>開始事件</button>
       <button disabled={!useItemId} onClick={useItem}>使用物品</button>
@@ -208,4 +209,35 @@ export function OriginalEventsPreview({ content, onClose }:
       <div className="oe-actions"><button disabled={!cursor} onClick={save}>儲存此進度</button><button onClick={restart}>重新開始</button></div>
     </>}
   </section>;
+}
+
+/** Full item-definition display panel. Shows all declared fields of an item from the
+ * content package so the user can inspect name, description, category, equipment slot,
+ * CanEquip thresholds, stackability, and use-layer fields (dialogue/conditions/effects/command). */
+function ItemDetailPanel({ id, content, iconUrl }:
+  { id: string; content: ResolvedControlledEventContent; iconUrl?: string }) {
+  const def = content.data.items?.[`${content.identity.id}:item/${id}`];
+  if (!def) return null;
+  const rows: Array<[string, string]> = [];
+  if (def.alias) rows.push(['別名', def.alias]);
+  if (def.description) rows.push(['說明', def.description]);
+  if (def.category) rows.push(['分類', def.category]);
+  if (def.equipSlot !== undefined) rows.push(['裝備槽', def.equipSlot]);
+  rows.push(['可堆疊', def.stackable ? '是' : '否']);
+  if (def.maxStack !== undefined) rows.push(['堆疊上限', String(def.maxStack)]);
+  if (def.imageRef) rows.push(['圖片引用', def.imageRef]);
+  if (def.useDialogueRef) rows.push(['使用對話', def.useDialogueRef]);
+  if (def.useCommand) rows.push(['使用命令', def.useCommand]);
+  if (def.useConditions?.length) rows.push(['使用條件', `${def.useConditions.length} 項`]);
+  if (def.useEffects?.length) rows.push(['使用效果', `${def.useEffects.length} 項`]);
+  return <details className="oe-item-detail">
+    <summary>物品定義（{id} {def.name}）</summary>
+    {iconUrl && <img className="oe-item-detail-icon" src={iconUrl} alt={def.name} />}
+    <table className="oe-item-detail-table">
+      <tbody>
+        <tr><th>名稱</th><td>{def.name}</td></tr>
+        {rows.map(([label, value]) => <tr key={label}><th>{label}</th><td>{value}</td></tr>)}
+      </tbody>
+    </table>
+  </details>;
 }
