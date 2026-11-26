@@ -251,11 +251,19 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/160'].category, 'story');
     // USE_ITEM target is declared: the current-item domain ref from the opcode-4 pipeline.
     assert.deepEqual(content.currentItem, { domain: 'original.jy:current-item', key: 'original.jy:item/current' });
-    // EQUIP/PRACTICE targets are declared (ADR 0067): per-role slot + per-item user bindings.
+    // EQUIP/PRACTICE targets are declared (ADR 0067): per-role slot + per-item user bindings,
+    // plus roleAttributes so the CanEquip gate stays naming-free (ADR 0069).
     assert.deepEqual(content.equipment, {
       slots: { domain: 'original.jy:equip', key: 'original.jy:equip/{role}/{slot}' },
       practice: { domain: 'original.jy:practice', key: 'original.jy:practice/{role}' },
       itemUser: { domain: 'original.jy:item-user', key: 'original.jy:item-user/{item}' },
+      roleAttributes: {
+        mp: { domain: 'original.jy:role/current-mp', key: 'original.jy:role/{role}' },
+        attack: { domain: 'original.jy:role/attack', key: 'original.jy:role/{role}' },
+        speed: { domain: 'original.jy:role/speed', key: 'original.jy:role/{role}' },
+        aptitude: { domain: 'original.jy:role/aptitude', key: 'original.jy:role/{role}' },
+        mpType: { domain: 'original.jy:role/mp-type', key: 'original.jy:role/{role}' },
+      },
     });
     // Equipment domains cover exactly the party role set: 2 slots per role
     // (kys_type.pas Equip array[0..1]), one practice slot per role, one user binding
@@ -271,6 +279,11 @@ test('Generic converter emits static item definitions from the RANGER item table
     // non-equipment items have no slot.
     assert.equal(content.items['original.jy.events:item/110'].equipSlot, '0');
     assert.equal(content.items['original.jy.events:item/160'].equipSlot, undefined);
+    // CanEquip thresholds (kys_main.pas CanEquip, RANGER Need* offsets): equipment with a
+    // non-zero Need* field declares a gate; a zero/absent threshold declares none.
+    assert.deepEqual(content.items['original.jy.events:item/110'].canEquip, { mp: 50, attack: 50, mpType: 2 });
+    assert.equal(content.items['original.jy.events:item/160'].canEquip, undefined); // story item
+    assert.equal(diagnostics.summary.canEquipCount, 20);
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

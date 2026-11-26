@@ -346,6 +346,37 @@
             "minLength": 1,
             "maxLength": 64
           },
+          "canEquip": {
+            "type": "object",
+            "properties": {
+              "mp": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "attack": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "speed": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "aptitude": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "mpType": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              }
+            },
+            "additionalProperties": false
+          },
           "stackable": {
             "type": "boolean"
           },
@@ -451,6 +482,112 @@
             "domain",
             "key"
           ],
+          "additionalProperties": false
+        },
+        "roleAttributes": {
+          "type": "object",
+          "properties": {
+            "mp": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "attack": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "speed": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "aptitude": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "mpType": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            }
+          },
           "additionalProperties": false
         }
       },

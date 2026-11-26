@@ -26,6 +26,17 @@ export function OriginalEventsPreview({ content, onClose }:
   const itemOptions = useMemo(() => Object.keys(content.data.items ?? {}).sort((a, b) =>
     (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
   const itemName = (id: string) => content.data.items?.[`${content.identity.id}:item/${id}`]?.name ?? '';
+  /** Human-readable CanEquip thresholds (positive = floor ≥, negative = cap ≤, mpType = nature). */
+  const canEquipText = (id: string): string => {
+    const canEquip = content.data.items?.[`${content.identity.id}:item/${id}`]?.canEquip;
+    if (!canEquip) return '';
+    const signed = (label: string, value?: number) =>
+      typeof value === 'number' ? `${label} ${value > 0 ? `≥${value}` : `≤${-value}`}` : '';
+    const parts = [signed('內力', canEquip.mp), signed('攻擊', canEquip.attack),
+      signed('速度', canEquip.speed), signed('資質', canEquip.aptitude),
+      typeof canEquip.mpType === 'number' ? `內力性質=${canEquip.mpType}` : ''].filter(Boolean);
+    return parts.join('、');
+  };
   const filtered = filter ? events.filter(id => id.includes(filter)) : events;
   const cursor = state?.cursor;
   const step = cursor ? content.data.events[cursor.eventId]?.steps[cursor.pc] : undefined;
@@ -151,6 +162,8 @@ export function OriginalEventsPreview({ content, onClose }:
               alt={`${useItemId} ${itemName(useItemId)}`} />
             <span className="oe-item-icon-label">{useItemId} {itemName(useItemId)}</span>
           </span>}
+        {useItemId && canEquipText(useItemId) &&
+          <p className="oe-can-equip">裝備資質（CanEquip）：{canEquipText(useItemId)}。預覽以空狀態（屬性 0）試算，未達門檻會以 EQUIP_CONDITION 拒絕。</p>}
       </>}
       <button className="primary" disabled={!eventId} onClick={() => start(eventId)}>開始事件</button>
       <button disabled={!useItemId} onClick={useItem}>使用物品</button>

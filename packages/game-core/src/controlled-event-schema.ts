@@ -12,11 +12,33 @@ const currentItemRef = { $ref: `${decisionStateSchema.$id}#/definitions/referenc
 /** Equipment state declaration: domain name + key template per binding. Templates use
  * {role}/{slot}/{item} placeholders substituted at dispatch; keys must land in allowedKeys. */
 const equipmentBinding = object({ domain: id, key: { type: 'string', minLength: 1, maxLength: 160 } });
+/** CanEquip threshold: a single declared `Need*` value (Community Implementation, kys_main.pas
+ * CanEquip). Positive = the role attribute must be >= value; negative = <= -value (a cap).
+ * mpType is the MP-nature rule (both < 2 must match), not a signed threshold. */
+const canEquip = {
+  type: 'object',
+  properties: {
+    mp: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    attack: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    speed: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    aptitude: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    mpType: { type: 'integer', minimum: 0, maximum: 1_000_000 },
+  },
+  additionalProperties: false,
+};
 const equipmentDecl = object({
   slots: equipmentBinding,      // per-role equipment slot: {role}/{slot}
   practice: equipmentBinding,   // per-role practice slot: {role}
   itemUser: equipmentBinding,   // per-item "who uses this": {item}
-});
+  // Optional: where each CanEquip role attribute lives, so the engine stays naming-free. The
+  // key template uses {role}; it is required only when an item declares canEquip thresholds.
+  roleAttributes: {
+    type: 'object',
+    properties: { mp: equipmentBinding, attack: equipmentBinding, speed: equipmentBinding,
+      aptitude: equipmentBinding, mpType: equipmentBinding },
+    additionalProperties: false,
+  },
+}, ['slots', 'practice', 'itemUser']);
 export const controlledCommandSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#', $id: 'https://jy-web-remake.local/schema/controlled-command-v1.json',
   oneOf: [
@@ -47,6 +69,7 @@ const itemDefinition = object({
   imageRef: id,
   category: { type: 'string', minLength: 1, maxLength: 64 },
   equipSlot: { type: 'string', minLength: 1, maxLength: 64 },
+  canEquip: canEquip,
   stackable: { type: 'boolean' },
   maxStack: { type: 'integer', minimum: 1, maximum: 1_000_000 },
   useDialogueRef: id,

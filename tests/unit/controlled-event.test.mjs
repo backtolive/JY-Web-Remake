@@ -218,6 +218,52 @@ test('EQUIP/PRACTICE host commands write the declared per-role slot and per-item
   assert.equal(readDecisionValue(content.data.decision, restored.decision, userRef(8)), 1);
 });
 
+test('EQUIP/PRACTICE apply the CanEquip gate and mutual unbinding', async () => {
+  const source = structuredClone(contentSource);
+  // Role attribute domains + CanEquip bindings (the engine stays naming-free).
+  source.decision.domains['mock:role/mp'] = { kind: 'integer', default: 0, min: -1000, max: 1000,
+    allowedKeys: ['mock:role/0', 'mock:role/1'] };
+  source.equipment.roleAttributes = { mp: { domain: 'mock:role/mp', key: 'mock:role/{role}' } };
+  source.items = {
+    'mock:item/7': { name: 'Sword', stackable: true, canEquip: { mp: 10 } },
+    'mock:item/8': { name: 'Manual', stackable: true },
+  };
+  const content = await resolveControlledEventContent(source);
+  const equipRef = (role, slot) => ({ domain: 'mock:equip', key: `mock:equip/${role}/${slot}` });
+  const userRef = itemId => ({ domain: 'mock:item-user', key: `mock:item-user/${itemId}` });
+  const fresh = createControlledEventState(content);
+  // CanEquip gate: item 7 needs mp 10; fresh state has mp 0 -> rejected before any write.
+  assert.throws(() => dispatchControlledEvent(content, fresh, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }),
+    /EQUIP_CONDITION/);
+  assert.equal(readDecisionValue(content.data.decision, fresh.decision, equipRef(0, 0)), -1);
+  // Seed mp 10 -> passes; the write lands atomically.
+  const seeded = structuredClone(fresh);
+  seeded.decision.values['mock:role/mp'] = { 'mock:role/0': 10 };
+  const r1 = dispatchControlledEvent(content, seeded, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 });
+  assert.equal(readDecisionValue(content.data.decision, r1.state.decision, equipRef(0, 0)), 7);
+  assert.equal(readDecisionValue(content.data.decision, r1.state.decision, userRef(7)), 0);
+  // Item 8 has no canEquip -> always equippable; equipping it over slot 0 unbinds item 7.
+  const r2 = dispatchControlledEvent(content, r1.state, { type: 'EQUIP', itemId: 8, role: 0, slot: 0 });
+  assert.equal(readDecisionValue(content.data.decision, r2.state.decision, equipRef(0, 0)), 8);
+  assert.equal(readDecisionValue(content.data.decision, r2.state.decision, userRef(7)), -1);
+  assert.equal(readDecisionValue(content.data.decision, r2.state.decision, userRef(8)), 0);
+  // A negative threshold is a cap (mp <= -need): mp 10 fails a cap of -5.
+  const capSource = structuredClone(source);
+  capSource.items['mock:item/7'].canEquip = { mp: -5 };
+  const capContent = await resolveControlledEventContent(capSource);
+  assert.throws(() => dispatchControlledEvent(capContent, seeded, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }),
+    /EQUIP_CONDITION/);
+  const capOk = structuredClone(fresh);
+  capOk.decision.values['mock:role/mp'] = { 'mock:role/0': 3 };
+  const capPass = dispatchControlledEvent(capContent, capOk, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 });
+  assert.equal(readDecisionValue(capContent.data.decision, capPass.state.decision, equipRef(0, 0)), 7);
+  // An item with canEquip but no roleAttributes binding is a content error.
+  const noAttrs = structuredClone(source); delete noAttrs.equipment.roleAttributes;
+  const content2 = await resolveControlledEventContent(noAttrs);
+  assert.throws(() => dispatchControlledEvent(content2, createControlledEventState(content2),
+    { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }), /EQUIP_NO_ATTRIBUTES/);
+});
+
 test('Versioned command/result/content/save schemas are exported; unknown outcomes are rejected', async () => {
   for (const [name, schema] of [
     ['controlled-command.schema.json', controlledCommandSchema],

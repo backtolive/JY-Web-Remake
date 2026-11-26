@@ -171,8 +171,14 @@ function loadItemRecords() {
   const records = [];
   for (let id = 0; id < ITEM_COUNT; id++) {
     const offset = ITEM_TABLE_OFFSET + id * ITEM_RECORD_SIZE;
+    // CanEquip thresholds (kys_type.pas TItem, Community Implementation): NeedMPType@138,
+    // NeedMP@140, NeedAttack@142, NeedSpeed@144, NeedAptitude@162. Only these map to role
+    // attributes present in the decision state; the other Need* (UsePoi/Medcine/...) are not
+    // modeled (their role attributes are not in state).
     records.push({ id, name: text(offset + 2, 20), name2: text(offset + 22, 20),
-      description: text(offset + 42, 30), type: i16(offset + 82), equipType: i16(offset + 78) });
+      description: text(offset + 42, 30), type: i16(offset + 82), equipType: i16(offset + 78),
+      needMPType: i16(offset + 138), needMP: i16(offset + 140), needAttack: i16(offset + 142),
+      needSpeed: i16(offset + 144), needAptitude: i16(offset + 162) });
   }
   return { records, sha256: createHash('sha256').update(buf).digest('hex') };
 }
@@ -287,8 +293,18 @@ function buildItemDefinitions(records, iconPresent) {
     if (iconPresent.has(record.id)) definition.imageRef = `${PACKAGE_ID}:pic/item/${record.id}`;
     // Equipment slot from the RANGER EquipType field (offset 78); kys_main.pas clamps
     // out-of-range values to slot 0 before writing Rrole[r].Equip[p].
-    if (record.type === 1)
+    if (record.type === 1) {
       definition.equipSlot = String(record.equipType < 0 || record.equipType > 1 ? 0 : record.equipType);
+      // CanEquip thresholds (kys_main.pas CanEquip): declared only for equipment with a
+      // non-zero Need* field; a zero/absent threshold imposes no gate.
+      const canEquip = {};
+      if (record.needMP !== 0) canEquip.mp = record.needMP;
+      if (record.needAttack !== 0) canEquip.attack = record.needAttack;
+      if (record.needSpeed !== 0) canEquip.speed = record.needSpeed;
+      if (record.needAptitude !== 0) canEquip.aptitude = record.needAptitude;
+      if (record.needMPType !== 0) canEquip.mpType = record.needMPType;
+      if (Object.keys(canEquip).length) definition.canEquip = canEquip;
+    }
     items[`${PACKAGE_ID}:item/${record.id}`] = definition;
   }
   return { items, empty };
@@ -747,6 +763,15 @@ export function buildOriginalEventsContent() {
       slots: { domain: 'original.jy:equip', key: 'original.jy:equip/{role}/{slot}' },
       practice: { domain: 'original.jy:practice', key: 'original.jy:practice/{role}' },
       itemUser: { domain: 'original.jy:item-user', key: 'original.jy:item-user/{item}' },
+      // CanEquip role attributes (kys_main.pas CanEquip reads Rrole[r].CurrentMP/Attack/
+      // Speed/Aptitude/MPType). Key is the per-role record; the engine substitutes {role}.
+      roleAttributes: {
+        mp: { domain: 'original.jy:role/current-mp', key: 'original.jy:role/{role}' },
+        attack: { domain: 'original.jy:role/attack', key: 'original.jy:role/{role}' },
+        speed: { domain: 'original.jy:role/speed', key: 'original.jy:role/{role}' },
+        aptitude: { domain: 'original.jy:role/aptitude', key: 'original.jy:role/{role}' },
+        mpType: { domain: 'original.jy:role/mp-type', key: 'original.jy:role/{role}' },
+      },
     },
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
@@ -761,6 +786,7 @@ export function buildOriginalEventsContent() {
     summary: { totalEvents: bundle.events.length, converted: convertible.length, blocked: blocked.length,
       dialogues: Object.keys(dialogues).length,
       itemCount: Object.keys(items).length, emptyItemRecords,
+      canEquipCount: Object.values(items).filter(item => item.canEquip).length,
       iconCount: iconAtlas.present.length, iconMissing: iconAtlas.missing,
       opcodeLabels: Object.fromEntries(Object.entries(
         eventDiagnostics.reduce((acc, row) => { for (const [label, count] of Object.entries(row.labels)) acc[label] = (acc[label] ?? 0) + count; return acc; }, {}))

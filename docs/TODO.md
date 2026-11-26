@@ -18,7 +18,7 @@
 - [x] 追查 ALLDEF.GRP（4,400×100）是否為物品圖片來源：確認**不是**（是場景事件槽表 100×200 slot×11 int16）；物品圖在分割地圖圖集 WMP000-025/SMP000-083（+WDX/SDX），logical index 3501+itemNumber（Pascal `ITEM_BEGIN_PIC=3501`），199 個 40×40 icon（物品 0..198，每個 1728B；物品 199 空），icon 格式＝8B header＋逐列 RLE＋MMAP.COL 256×3 palette；解碼物品 0/110/160 視覺驗證（藥丸／劍／書）吻合。見 PROGRESS 2026-11-26 ALLDEF 追查。
 - [x] 把物品 icon 提取接入轉接器（`imageRef` → `original.jy.events:pic/item/{id}`，scene 圖集 logical `3501+id`）與 Web 預覽顯示；scene/world 雙圖集以 scene 為權威（world 缺 item 198、item 199 兩圖集皆空），199 張圖示打包成 800×400 圖集 PNG；順手修 `App.tsx` v3 檢查。見 [ADR 0068](decisions/0068-item-icon-extraction.md)。
 - [x] 裝備／修煉宿主命令（EQUIP／PRACTICE）：內容宣告 `equipment`（slots/practice/itemUser 三個「域＋key 模板」綁定）、runtime 動作（無游標時雙寫入、key 代入驗證）、轉換器三域＋`equipSlot` 欄（EquipType clamp 0..1）、Web 預覽裝備／修煉控制；E2E 與 Pascal 寫入一致。見 [ADR 0067](decisions/0067-equip-practice-host-commands.md)。
-- [ ] 裝備／修煉的互斥解綁與 `CanEquip` 屬性門檻（內容效果層：事件腳本 plan 或 useConditions）。
+- [x] 裝備／修煉的互斥解綁與 `CanEquip` 屬性門檻（內容效果層）：互斥解綁為結構性不變量（宿主命令讀當前綁定、與兩個寫入同一 transaction 原子）；`CanEquip` 以物品定義 `canEquip`（RANGER `Need*`）＋裝備宣告 `roleAttributes` 表之，sign 雙向＋內力性質；5 個有角色屬性域欄的 `Need*`（mp/attack/speed/aptitude/mpType）建模，其餘 8 個與 OnlyPracRole／武功數未建模。見 [ADR 0069](decisions/0069-equip-can-equip-and-unbinding.md)。
 - [ ] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）——物品選單已顯示名稱，完整資訊面板待補。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對

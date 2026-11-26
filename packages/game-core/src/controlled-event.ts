@@ -2,7 +2,7 @@
 import { Ajv } from 'ajv';
 import { canonical, contentHash } from './content.ts';
 import { nextRandom } from './runtime.ts';
-import { applyDecisionPlan, applyDecisionTransaction, createDecisionState, evaluateDecision, validateDecisionState } from './decision.ts';
+import { applyDecisionPlan, applyDecisionTransaction, createDecisionState, evaluateDecision, readDecisionValue, validateDecisionState } from './decision.ts';
 import type { DecisionPlan, DecisionSchema, DecisionState, DecisionChange, DecisionCondition, DecisionEffect,
   DecisionRef } from './decision.ts';
 import { decisionDomainsSchema, decisionStateSchema, decisionPlanSchema, decisionConditionSchema,
@@ -26,6 +26,11 @@ type Step = { op: 'say'; dialogueId: string } | { op: 'choice'; options: { id: s
 export interface ItemDefinition {
   name: string; alias?: string; description?: string; imageRef?: string;
   category?: string; equipSlot?: string;
+  /** CanEquip thresholds (Community Implementation, kys_main.pas CanEquip). A positive value
+   * requires the role attribute >= value; a negative value caps it at -value. `mpType` is the
+   * MP-nature rule (both < 2 must match). The engine reads the role attribute via the
+   * equipment declaration's roleAttributes binding; it keeps no naming of its own. */
+  canEquip?: { mp?: number; attack?: number; speed?: number; aptitude?: number; mpType?: number };
   stackable: boolean; maxStack?: number;
   useDialogueRef?: string; useConditions?: DecisionCondition[]; useEffects?: DecisionEffect[]; useCommand?: string;
 }
@@ -42,6 +47,10 @@ export interface EquipmentDeclaration {
   practice: EquipmentBinding;
   /** Per-item "currently used by role" (Pascal Ritem[i].User); template uses {item}. */
   itemUser: EquipmentBinding;
+  /** Where each CanEquip role attribute lives (template uses {role}). Required only when an
+   * item declares canEquip thresholds; the engine stays naming-free. */
+  roleAttributes?: { mp?: EquipmentBinding; attack?: EquipmentBinding; speed?: EquipmentBinding;
+    aptitude?: EquipmentBinding; mpType?: EquipmentBinding };
 }
 export interface ControlledEventContent {
   schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
@@ -93,6 +102,56 @@ function substituteKey(template: string, values: Record<string, number>, binding
   });
   if (!domains[domain]?.allowedKeys.includes(key)) fail('EQUIPMENT_KEY', binding);
   return key;
+}
+/** CanEquip gate (Community Implementation, kys_main.pas CanEquip). A positive threshold
+ * requires the role attribute >= value; a negative one caps it at -value. `mpType` is the
+ * MP-nature rule (both < 2 must match). Reads the role attribute via the declared binding so
+ * the engine keeps no naming of its own; an item with thresholds but no binding is a content
+ * error (EQUIP_NO_ATTRIBUTES). */
+function canEquipGate(schema: DecisionSchema, state: DecisionState, declaration: EquipmentDeclaration,
+  item: ItemDefinition | undefined, role: number): void {
+  const canEquip = item?.canEquip;
+  if (!canEquip) return;
+  const attrs = declaration.roleAttributes;
+  if (!attrs) fail('EQUIP_NO_ATTRIBUTES');
+  const readAttr = (attr: 'mp' | 'attack' | 'speed' | 'aptitude' | 'mpType'): number => {
+    const binding = attrs[attr];
+    if (!binding) return 0;
+    const key = substituteKey(binding.key, { role }, `roleAttributes.${attr}`, schema.domains, binding.domain);
+    return readDecisionValue(schema, state, { domain: binding.domain, key }) as number;
+  };
+  for (const attr of ['mp', 'attack', 'speed', 'aptitude'] as const) {
+    const need = canEquip[attr];
+    if (typeof need !== 'number') continue;
+    const value = readAttr(attr);
+    if (need >= 0 ? value < need : value > -need) fail('EQUIP_CONDITION', attr);
+  }
+  const mpType = canEquip.mpType;
+  if (typeof mpType === 'number') {
+    const value = readAttr('mpType');
+    if (value < 2 && mpType < 2 && value !== mpType) fail('EQUIP_CONDITION', 'mpType');
+  }
+}
+/** Mutual unbinding (Community Implementation, kys_main.pas UseItem type 1/2): before the new
+ * binding, clear the target slot of the item's previous user and clear the user of the slot's
+ * previous item. Structural invariant of the equipment binding — applied atomically with the
+ * two writes, not per-item content. Reads the current (pre-write) values. */
+function unbindingEffects(schema: DecisionSchema, state: DecisionState, declaration: EquipmentDeclaration,
+  binding: EquipmentBinding, slotKey: string, userKey: string, role: number, slot: number, itemId: number): DecisionEffect[] {
+  const effects: DecisionEffect[] = [];
+  const prevUser = readDecisionValue(schema, state, { domain: declaration.itemUser.domain, key: userKey }) as number;
+  if (Number.isInteger(prevUser) && prevUser >= 0) {
+    const prevSlotKey = substituteKey(binding.key, { role: prevUser, slot, item: itemId },
+      binding === declaration.practice ? 'practice' : 'slots', schema.domains, binding.domain);
+    effects.push({ op: 'set', target: { domain: binding.domain, key: prevSlotKey }, value: { kind: 'literal', value: -1 } });
+  }
+  const prevItem = readDecisionValue(schema, state, { domain: binding.domain, key: slotKey }) as number;
+  if (Number.isInteger(prevItem) && prevItem >= 0) {
+    const prevItemUserKey = substituteKey(declaration.itemUser.key, { role, item: prevItem },
+      'itemUser', schema.domains, declaration.itemUser.domain);
+    effects.push({ op: 'set', target: { domain: declaration.itemUser.domain, key: prevItemUserKey }, value: { kind: 'literal', value: -1 } });
+  }
+  return effects;
 }
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
@@ -151,11 +210,16 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     if (!domain.allowedKeys.includes(data.currentItem.key)) fail('CURRENT_ITEM_REF');
   }
   if (data.equipment) {
-    for (const [binding, row] of Object.entries(data.equipment)) {
-      if (!data.decision.domains[row.domain]) fail('EQUIPMENT_DOMAIN', binding);
+    const checkBinding = (binding: string, row: EquipmentBinding, allowed: string[]) => {
+      if (!row || !data.decision.domains[row.domain]) fail('EQUIPMENT_DOMAIN', binding);
       for (const match of row.key.matchAll(/\{([a-z]+)\}/g))
-        if (!['role', 'slot', 'item'].includes(match[1])) fail('EQUIPMENT_TEMPLATE', binding);
-    }
+        if (!allowed.includes(match[1] ?? '')) fail('EQUIPMENT_TEMPLATE', binding);
+    };
+    checkBinding('slots', data.equipment.slots, ['role', 'slot']);
+    checkBinding('practice', data.equipment.practice, ['role']);
+    checkBinding('itemUser', data.equipment.itemUser, ['item']);
+    for (const [attr, row] of Object.entries(data.equipment.roleAttributes ?? {}))
+      checkBinding(`roleAttributes.${attr}`, row, ['role']);
   }
   const identity = { id: data.id, version: data.version, sha256: await contentHash(data) };
   return freeze({ identity, data });
@@ -241,12 +305,18 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
         action.type, content.data.decision.domains, binding.domain);
       const userKey = substituteKey(declaration.itemUser.key, { role: action.role, item: action.itemId },
         'itemUser', content.data.decision.domains, declaration.itemUser.domain);
-      const applied = applyDecisionTransaction(content.data.decision, state.decision, {
-        schemaVersion: 1, guards: [], effects: [
-          { op: 'set', target: { domain: binding.domain, key: slotKey }, value: { kind: 'literal', value: action.itemId } },
-          { op: 'set', target: { domain: declaration.itemUser.domain, key: userKey }, value: { kind: 'literal', value: action.role } },
-        ],
-      }, budget);
+      // CanEquip gate: content-declared thresholds (RANGER Need*) checked against the role's
+      // live attributes. Fails before any state change (Pascal CanEquip guards the write).
+      const itemDefinition = content.data.items?.[`${content.data.id}:item/${action.itemId}`];
+      canEquipGate(content.data.decision, state.decision, declaration, itemDefinition, action.role);
+      // Mutual unbinding (structural invariant) + the two writes, applied atomically.
+      const effects: DecisionEffect[] = [
+        ...unbindingEffects(content.data.decision, state.decision, declaration, binding, slotKey, userKey,
+          action.role, slot, action.itemId),
+        { op: 'set', target: { domain: binding.domain, key: slotKey }, value: { kind: 'literal', value: action.itemId } },
+        { op: 'set', target: { domain: declaration.itemUser.domain, key: userKey }, value: { kind: 'literal', value: action.role } },
+      ];
+      const applied = applyDecisionTransaction(content.data.decision, state.decision, { schemaVersion: 1, guards: [], effects }, budget);
       state.decision = applied.state;
       if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
     }

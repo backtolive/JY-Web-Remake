@@ -1,6 +1,18 @@
 # 進度 — 2026-11-26
 
-## 2026-11-26：物品圖示提取接入轉接器＋Web 預覽（最新）
+## 2026-11-26：裝備／修煉互斥解綁＋CanEquip 資質門檻（最新）
+
+Phase: Phase 6 宿主命令基礎契約延伸；語意 Community Implementation（社群 Pascal `CanEquip`／`UseItem`），RANGER bytes 實測欄位偏移與門檻值。Status: **互斥解綁（結構性原子）＋CanEquip 門檻（內容效果層）完成，20 個物品帶 canEquip；Web 預覽顯示資質與拒絕**
+- Completed Tasks: `controlled-event.ts` 新增 `canEquip`（物品定義）＋`roleAttributes`（裝備宣告）＋`canEquipGate`／`unbindingEffects`；EQUIP/PRACTICE dispatch 寫入前做 CanEquip 門檻（sign 雙向＋內力性質）與互斥解綁（讀當前綁定、條件清空、與兩個寫入同一 `applyDecisionTransaction` 原子）；`convert_original_events_generic.mjs` 實測 RANGER `TItem` 偏移（NeedMPType@138／NeedMP@140／NeedAttack@142／NeedSpeed@144／NeedAptitude@162）、對裝備 type 1 且非零者寫 `canEquip`、宣告 `roleAttributes`；`original-events-preview.tsx` 顯示資質門檻與 `EQUIP_CONDITION` 拒絕。
+- Files Changed: `packages/game-core/src/controlled-event.ts`、`packages/game-core/src/controlled-event-schema.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`tools/extractor/convert_original_events_generic.mjs`、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`tests/unit/controlled-event.test.mjs`、`tests/unit/original-events-generic-converter.test.mjs`、`tools/analyzer/verify_can_equip_e2e.mjs`（新）、`docs/decisions/0069-equip-can-equip-and-unbinding.md`（新）、docs。
+- Tests Executed: 單元 148/148；root＋web typecheck；schema:check；web build；全量 fresh-state 驅動（背景）；Web 預覽瀏覽器實測。
+- Test Results: 全通過；內容包 digest `7a02a5cb3cc7b0e4`（20 canEquip／roleAttributes 宣告）；E2E 四案通過（fresh 拒／屬值過／覆蓋解綁／PRACTICE 解綁）。
+- Research Findings: `CanEquip` 12 個 `Need*` 欄＋內力性質＋OnlyPracRole＋武功數；`sign(NeedX)*Attr < NeedX` 正值下限／負值上限；`TItem` 欄位偏移實測；只有 5 個 `Need*`（mp/attack/speed/aptitude/mpType）對應決策狀態角色屬性域。
+- Known Limitations: 8 個 `Need*`（UsePoi/Medcine/…）與 OnlyPracRole／武功數規則未建模（角色屬性域未含）；Web 預覽以空狀態試算 CanEquip。
+- Unverified Assumptions: 社群 Pascal `CanEquip`／`UseItem` 語意與 DOS 原版一致；`TItem` 欄位偏移以 `kys_type.pas` 為準（Community Implementation）。
+- Next Recommended Tasks: 裝備/修煉完整資訊面板（TODO line 22）；current-scene 寫入正式 Runtime（場景切換）；補 8 個角色屬性域以擴充 CanEquip。詳 [ADR 0069](decisions/0069-equip-can-equip-and-unbinding.md)
+
+## 2026-11-26：物品圖示提取接入轉接器＋Web 預覽
 
 Phase: Phase 3 資料讀取／轉換＋Phase 5 Web 預覽；圖示來源 Community Implementation（社群 Pascal/Lua/C），本地 bytes 全量解碼視覺驗證。Status: **imageRef＋圖集提取完成，199 張圖示（物品 0..198）入內容包＋800×400 圖集 PNG；Web 預覽渲染實測通過；順手修 `App.tsx` v3 檢查**
 - Completed Tasks: 實測兩圖集 item 圖示塊（`verify_item_icon_block.mjs`：world 198／scene 199，共有 198 張像素相同，item 199 皆空）→ 定 scene 圖集為權威；`convert_original_events_generic.mjs` 新增 `loadItemIconAtlas`／`decodeIcon`／`composeIconAtlas`＋`png-encode.mjs`，對物品 0..198 寫入 `imageRef`、item 199 無，產出 800×400 圖集 PNG＋`diagnostics.itemIcons` provenance；`original-events-preview.tsx` 新增圖集載入＋圖示網格＋選取縮圖；`App.tsx` 修 `schemaVersion!==2`→`!==3`（v3 內容包原本無法載入）。
