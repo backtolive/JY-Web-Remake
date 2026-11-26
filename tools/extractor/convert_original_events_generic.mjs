@@ -773,6 +773,9 @@ export function buildOriginalEventsContent() {
         mpType: { domain: 'original.jy:role/mp-type', key: 'original.jy:role/{role}' },
       },
     },
+    // Scene transition: writes the current scene ID when a transition command resolves.
+    // The -2 (current scene) slot refs compose their key from this value via keyFrom.
+    sceneTransition: { domain: 'original.jy:current-scene', key: 'original.jy:scene/current' },
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);

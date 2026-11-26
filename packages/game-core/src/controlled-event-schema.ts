@@ -7,6 +7,9 @@ const object = (properties: Record<string, unknown>, required = Object.keys(prop
   ({ type: 'object', properties, required, additionalProperties: false });
 const array = (items: unknown, maxItems = 10000) => ({ type: 'array', items, maxItems });
 const location = object({ mapId: id, x: { type: 'integer', minimum: 0 }, y: { type: 'integer', minimum: 0 } });
+/** Transition destination: location + optional sceneId written to the sceneTransition ref. */
+const transitionDestination = { ...location, properties: { ...location.properties,
+  sceneId: { type: 'integer', minimum: 0, maximum: 1_000_000 } } };
 /** Static reference to the "currently used item" state; target of the USE_ITEM host command. */
 const currentItemRef = { $ref: `${decisionStateSchema.$id}#/definitions/reference` };
 /** Equipment state declaration: domain name + key template per binding. Templates use
@@ -44,7 +47,7 @@ export const controlledCommandSchema = {
   oneOf: [
     object({ kind: { const: 'battle' }, encounterId: id }),
     object({ kind: { const: 'animation' }, animationId: id }),
-    object({ kind: { const: 'transition' }, destination: location }),
+    object({ kind: { const: 'transition' }, destination: transitionDestination }),
     object({ kind: { const: 'selection' }, candidates: { ...array(id, 32), minItems: 1 } }),
   ],
 };
@@ -100,7 +103,9 @@ export const controlledEventContentSchema = {
     // Optional: declares which decision ref the USE_ITEM host command writes to.
     currentItem: currentItemRef,
     // Optional: equipment/practice state for the EQUIP/PRACTICE host commands.
-    equipment: equipmentDecl },
+    equipment: equipmentDecl,
+    // Optional: where the current scene ID lives; written when a transition resolves.
+    sceneTransition: currentItemRef },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

@@ -331,3 +331,27 @@ test('Branch step jumps on the decision condition and rejects out-of-range targe
   bad.events['mock:event/quest'].steps[0].yes = 99;
   await assert.rejects(resolveControlledEventContent(bad), /JUMP_TARGET/);
 });
+
+test('Transition resolution writes the scene ID to the declared sceneTransition ref', async () => {
+  const source = structuredClone(contentSource);
+  // Declare a current-scene domain + sceneTransition ref.
+  source.decision.domains['mock:scene'] = { kind: 'integer', default: 0, min: 0, max: 1000,
+    allowedKeys: ['mock:scene/current'] };
+  source.sceneTransition = { domain: 'mock:scene', key: 'mock:scene/current' };
+  // Build an event with a transition invoke step.
+  source.events['mock:event/transition'] = { steps: [
+    { op: 'invoke', command: { kind: 'transition', destination: { mapId: 'mock:map/5', x: 10, y: 20, sceneId: 5 } },
+      outcomes: [{ id: 'completed', target: 1 }] },
+    { op: 'end' },
+  ] };
+  const content = await resolveControlledEventContent(source);
+  const state = createControlledEventState(content);
+  const started = dispatchControlledEvent(content, state, { type: 'START', eventId: 'mock:event/transition' });
+  assert.equal(started.state.pending?.command.kind, 'transition');
+  // Resolve the transition: the scene ID should be written to the declared ref.
+  const resolved = dispatchControlledEvent(content, started.state,
+    { type: 'RESOLVE', result: { schemaVersion: 1, requestId: started.state.pending.requestId, kind: 'transition', outcome: 'completed' } });
+  assert.equal(readDecisionValue(content.data.decision, resolved.state.decision,
+    { domain: 'mock:scene', key: 'mock:scene/current' }), 5);
+  assert.equal(resolved.state.location.mapId, 'mock:map/5');
+});

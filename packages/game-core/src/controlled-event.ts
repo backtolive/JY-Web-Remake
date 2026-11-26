@@ -12,7 +12,7 @@ import { controlledCommandSchema, controlledResultSchema, controlledEventContent
 
 export type ControlledCommand = { kind: 'battle'; encounterId: string } |
   { kind: 'animation'; animationId: string } |
-  { kind: 'transition'; destination: { mapId: string; x: number; y: number } } |
+  { kind: 'transition'; destination: { mapId: string; x: number; y: number; sceneId?: number } } |
   { kind: 'selection'; candidates: string[] };
 export type ControlledResult = { schemaVersion: 1; requestId: string; kind: 'battle'; outcome: 'victory' | 'defeat' | 'escape' } |
   { schemaVersion: 1; requestId: string; kind: 'animation' | 'transition'; outcome: 'completed' } |
@@ -60,6 +60,9 @@ export interface ControlledEventContent {
   items?: Record<string, ItemDefinition>;
   currentItem?: DecisionRef;
   equipment?: EquipmentDeclaration;
+  /** Where the current scene ID lives; written when a transition command resolves.
+   * The engine stays naming-free: content declares the domain + key. */
+  sceneTransition?: DecisionRef;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
@@ -209,6 +212,12 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     if (data.currentItem.keyFrom?.length || data.currentItem.key === undefined) fail('CURRENT_ITEM_REF');
     if (!domain.allowedKeys.includes(data.currentItem.key)) fail('CURRENT_ITEM_REF');
   }
+  if (data.sceneTransition) {
+    const domain = data.decision.domains[data.sceneTransition.domain];
+    if (!domain) fail('SCENE_TRANSITION_DOMAIN');
+    if (data.sceneTransition.keyFrom?.length || data.sceneTransition.key === undefined) fail('SCENE_TRANSITION_REF');
+    if (!domain.allowedKeys.includes(data.sceneTransition.key)) fail('SCENE_TRANSITION_REF');
+  }
   if (data.equipment) {
     const checkBinding = (binding: string, row: EquipmentBinding, allowed: string[]) => {
       if (!row || !data.decision.domains[row.domain]) fail('EQUIPMENT_DOMAIN', binding);
@@ -278,7 +287,22 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
       state.decision = applied.state;
       if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
     }
-    if (step.command.kind === 'transition') state.location = structuredClone(step.command.destination);
+    if (step.command.kind === 'transition') {
+      // Write the current scene ID to the declared ref (content declares where it lives).
+      const sceneRef = content.data.sceneTransition;
+      const sceneId = step.command.destination.sceneId;
+      if (sceneRef && typeof sceneId === 'number') {
+        const applied = applyDecisionTransaction(content.data.decision, state.decision,
+          { schemaVersion: 1, guards: [], effects: [
+            { op: 'set', target: sceneRef, value: { kind: 'literal', value: sceneId } },
+          ] }, budget);
+        state.decision = applied.state;
+        if (applied.changes.length) notices.push({ type: 'DECISION_APPLIED', changes: applied.changes });
+      }
+      // Location state excludes sceneId (it's a decision-state concern, not a location field).
+      const { sceneId: _omit, ...dest } = step.command.destination;
+      state.location = structuredClone(dest);
+    }
     state.pending = null;
     state.cursor.pc = outcome.target;
   } else if (action.type === 'USE_ITEM' || action.type === 'EQUIP' || action.type === 'PRACTICE') {

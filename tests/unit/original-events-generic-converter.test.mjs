@@ -251,6 +251,8 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/160'].category, 'story');
     // USE_ITEM target is declared: the current-item domain ref from the opcode-4 pipeline.
     assert.deepEqual(content.currentItem, { domain: 'original.jy:current-item', key: 'original.jy:item/current' });
+    // Scene transition: writes the current scene ID when a transition command resolves.
+    assert.deepEqual(content.sceneTransition, { domain: 'original.jy:current-scene', key: 'original.jy:scene/current' });
     // EQUIP/PRACTICE targets are declared (ADR 0067): per-role slot + per-item user bindings,
     // plus roleAttributes so the CanEquip gate stays naming-free (ADR 0069).
     assert.deepEqual(content.equipment, {

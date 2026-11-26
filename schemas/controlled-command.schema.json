@@ -59,6 +59,11 @@
             "y": {
               "type": "integer",
               "minimum": 0
+            },
+            "sceneId": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
             }
           },
           "required": [

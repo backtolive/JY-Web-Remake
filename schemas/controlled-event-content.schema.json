@@ -597,6 +597,9 @@
         "itemUser"
       ],
       "additionalProperties": false
+    },
+    "sceneTransition": {
+      "$ref": "https://jy-web-remake.local/schema/decision-state-v1.json#/definitions/reference"
     }
   },
   "required": [
