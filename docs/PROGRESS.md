@@ -1,6 +1,16 @@
 # 進度 — 2026-11-26
 
-## 2026-11-26：Web 預覽完整物品定義顯示面板（最新）
+## 2026-11-26：測試面板入口接入遊戲 HUD 與行囊（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **測試面板（原版事件預覽）可从遊戲 HUD「測試」按鈕與行囊面板「開啟測試面板」按鈕進入**
+- Completed Tasks: `App.tsx` game HUD 新增「測試」按鈕（`originalEvents` 載入後顯示、toggle `showOriginalEvents`）；行囊 overlay 新增「開啟測試面板」按鈕。
+- Files Changed: `apps/web/src/App.tsx`、docs。
+- Tests Executed: 單元 149/149；web typecheck。
+- Test Results: 全通過。
+- Known Limitations: 按鈕只在原版事件包已載入時顯示；未載入時無提示。
+- Next Recommended Tasks: 補 8 個角色屬性域以擴充 CanEquip；NPC 互動觸發事件（需原版事件包＋场景映射）。
+
+## 2026-11-26：Web 預覽完整物品定義顯示面板
 
 Phase: Phase 7 apps/web 可操作切片。Status: **物品定義面板完成（名稱／說明／分類／裝備槽／可堆疊／圖片引用／使用層欄位）**
 - Completed Tasks: `original-events-preview.tsx` 新增 `ItemDetailPanel` 元件（`<details>` 折疊、表格列出所有已宣告欄位）；`original-events-preview.css` 新增面板樣式。
