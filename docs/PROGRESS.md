@@ -1,6 +1,16 @@
 # 進度 — 2026-11-26
 
-## 2026-11-26：測試面板入口接入遊戲 HUD 與行囊（最新）
+## 2026-11-26：CanEquip 擴充至全 12 個 Need* 欄位（最新）
+
+Phase: Phase 6 內容效果層。Status: **CanEquip 門檻從 5 個欄位擴充至全 12 個（mp/attack/speed/aptitude/mpType/usePoi/medicine/medPoi/fist/sword/knife/unusual/hidWeapon）**
+- Completed Tasks: `ROLE_FIELDS` 新增 8 個技能／知識屬性域（use-poi/medicine/med-poi/fist/sword/knife/unusual/hid-weapon）；`canEquip` schema＋runtime＋converter 全支援 12 欄；`roleAttributes` 宣告 13 個綁定；Web 預覽 `canEquipText` 顯示新欄位。
+- Files Changed: `controlled-event.ts`、`controlled-event-schema.ts`、`schemas/*`（重新匯出）、`convert_original_events_generic.mjs`、`original-events-preview.tsx`、`controlled-event.test.mjs`、`original-events-generic-converter.test.mjs`、docs。
+- Tests Executed: 單元 149/149；root＋web typecheck；schema:check。
+- Test Results: 全通過；內容包 digest `4ca12a3f7acba7a1`（20 物品帶 canEquip，例：玄鐵劍 106 `{mp:100, attack:60, mpType:2, sword:50}`、金蛇劍 110 `{mp:50, attack:50, mpType:2, sword:40}`）。
+- Known Limitations: OnlyPracRole（專用人物）與武功數 ≥10／武功等級規則仍未建模（需物品 Magic 欄與角色武功陣列）。
+- Next Recommended Tasks: NPC 互動觸發事件；OnlyPracRole＋武功數規則建模。
+
+## 2026-11-26：測試面板入口接入遊戲 HUD 與行囊
 
 Phase: Phase 7 apps/web 可操作切片。Status: **測試面板（原版事件預覽）可从遊戲 HUD「測試」按鈕與行囊面板「開啟測試面板」按鈕進入**
 - Completed Tasks: `App.tsx` game HUD 新增「測試」按鈕（`originalEvents` 載入後顯示、toggle `showOriginalEvents`）；行囊 overlay 新增「開啟測試面板」按鈕。

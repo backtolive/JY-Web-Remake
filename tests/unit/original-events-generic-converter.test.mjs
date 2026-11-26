@@ -265,6 +265,14 @@ test('Generic converter emits static item definitions from the RANGER item table
         speed: { domain: 'original.jy:role/speed', key: 'original.jy:role/{role}' },
         aptitude: { domain: 'original.jy:role/aptitude', key: 'original.jy:role/{role}' },
         mpType: { domain: 'original.jy:role/mp-type', key: 'original.jy:role/{role}' },
+        usePoi: { domain: 'original.jy:role/use-poi', key: 'original.jy:role/{role}' },
+        medicine: { domain: 'original.jy:role/medicine', key: 'original.jy:role/{role}' },
+        medPoi: { domain: 'original.jy:role/med-poi', key: 'original.jy:role/{role}' },
+        fist: { domain: 'original.jy:role/fist', key: 'original.jy:role/{role}' },
+        sword: { domain: 'original.jy:role/sword', key: 'original.jy:role/{role}' },
+        knife: { domain: 'original.jy:role/knife', key: 'original.jy:role/{role}' },
+        unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
+        hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
       },
     });
     // Equipment domains cover exactly the party role set: 2 slots per role
@@ -283,7 +291,7 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/160'].equipSlot, undefined);
     // CanEquip thresholds (kys_main.pas CanEquip, RANGER Need* offsets): equipment with a
     // non-zero Need* field declares a gate; a zero/absent threshold declares none.
-    assert.deepEqual(content.items['original.jy.events:item/110'].canEquip, { mp: 50, attack: 50, mpType: 2 });
+    assert.deepEqual(content.items['original.jy.events:item/110'].canEquip, { mp: 50, attack: 50, mpType: 2, sword: 40 });
     assert.equal(content.items['original.jy.events:item/160'].canEquip, undefined); // story item
     assert.equal(diagnostics.summary.canEquipCount, 20);
     // Every inventory key referenced by event effects has a matching item definition, so

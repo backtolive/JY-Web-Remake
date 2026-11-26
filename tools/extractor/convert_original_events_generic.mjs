@@ -119,7 +119,9 @@ const OPCODES = {
   67: { kind: 'noop', label: 'Community Implementation', note: 'sound' },
 };
 const ROLE_FIELDS = ['poison', 'aptitude', 'ethics', 'speed', 'max-mp', 'current-mp', 'attack',
-  'max-hp', 'current-hp', 'mp-type', 'repute', 'sexual'];
+  'max-hp', 'current-hp', 'mp-type', 'repute', 'sexual',
+  // CanEquip Need* fields (kys_type.pas TItem): skill/knowledge attributes.
+  'use-poi', 'medicine', 'med-poi', 'fist', 'sword', 'knife', 'unusual', 'hid-weapon'];
 
 const literal = value => ({ kind: 'literal', value });
 const read = (domain, key) => ({ kind: 'read', ref: { domain, key } });
@@ -171,14 +173,14 @@ function loadItemRecords() {
   const records = [];
   for (let id = 0; id < ITEM_COUNT; id++) {
     const offset = ITEM_TABLE_OFFSET + id * ITEM_RECORD_SIZE;
-    // CanEquip thresholds (kys_type.pas TItem, Community Implementation): NeedMPType@138,
-    // NeedMP@140, NeedAttack@142, NeedSpeed@144, NeedAptitude@162. Only these map to role
-    // attributes present in the decision state; the other Need* (UsePoi/Medcine/...) are not
-    // modeled (their role attributes are not in state).
+    // CanEquip thresholds (kys_type.pas TItem, Community Implementation): all 12 Need* fields.
     records.push({ id, name: text(offset + 2, 20), name2: text(offset + 22, 20),
       description: text(offset + 42, 30), type: i16(offset + 82), equipType: i16(offset + 78),
       needMPType: i16(offset + 138), needMP: i16(offset + 140), needAttack: i16(offset + 142),
-      needSpeed: i16(offset + 144), needAptitude: i16(offset + 162) });
+      needSpeed: i16(offset + 144), needUsePoi: i16(offset + 146), needMedcine: i16(offset + 148),
+      needMedPoi: i16(offset + 150), needFist: i16(offset + 152), needSword: i16(offset + 154),
+      needKnife: i16(offset + 156), needUnusual: i16(offset + 158), needHidWeapon: i16(offset + 160),
+      needAptitude: i16(offset + 162) });
   }
   return { records, sha256: createHash('sha256').update(buf).digest('hex') };
 }
@@ -303,6 +305,14 @@ function buildItemDefinitions(records, iconPresent) {
       if (record.needSpeed !== 0) canEquip.speed = record.needSpeed;
       if (record.needAptitude !== 0) canEquip.aptitude = record.needAptitude;
       if (record.needMPType !== 0) canEquip.mpType = record.needMPType;
+      if (record.needUsePoi !== 0) canEquip.usePoi = record.needUsePoi;
+      if (record.needMedcine !== 0) canEquip.medicine = record.needMedcine;
+      if (record.needMedPoi !== 0) canEquip.medPoi = record.needMedPoi;
+      if (record.needFist !== 0) canEquip.fist = record.needFist;
+      if (record.needSword !== 0) canEquip.sword = record.needSword;
+      if (record.needKnife !== 0) canEquip.knife = record.needKnife;
+      if (record.needUnusual !== 0) canEquip.unusual = record.needUnusual;
+      if (record.needHidWeapon !== 0) canEquip.hidWeapon = record.needHidWeapon;
       if (Object.keys(canEquip).length) definition.canEquip = canEquip;
     }
     items[`${PACKAGE_ID}:item/${record.id}`] = definition;
@@ -763,14 +773,22 @@ export function buildOriginalEventsContent() {
       slots: { domain: 'original.jy:equip', key: 'original.jy:equip/{role}/{slot}' },
       practice: { domain: 'original.jy:practice', key: 'original.jy:practice/{role}' },
       itemUser: { domain: 'original.jy:item-user', key: 'original.jy:item-user/{item}' },
-      // CanEquip role attributes (kys_main.pas CanEquip reads Rrole[r].CurrentMP/Attack/
-      // Speed/Aptitude/MPType). Key is the per-role record; the engine substitutes {role}.
+      // CanEquip role attributes (kys_main.pas CanEquip reads Rrole[r] attributes).
+      // Key is the per-role record; the engine substitutes {role}.
       roleAttributes: {
         mp: { domain: 'original.jy:role/current-mp', key: 'original.jy:role/{role}' },
         attack: { domain: 'original.jy:role/attack', key: 'original.jy:role/{role}' },
         speed: { domain: 'original.jy:role/speed', key: 'original.jy:role/{role}' },
         aptitude: { domain: 'original.jy:role/aptitude', key: 'original.jy:role/{role}' },
         mpType: { domain: 'original.jy:role/mp-type', key: 'original.jy:role/{role}' },
+        usePoi: { domain: 'original.jy:role/use-poi', key: 'original.jy:role/{role}' },
+        medicine: { domain: 'original.jy:role/medicine', key: 'original.jy:role/{role}' },
+        medPoi: { domain: 'original.jy:role/med-poi', key: 'original.jy:role/{role}' },
+        fist: { domain: 'original.jy:role/fist', key: 'original.jy:role/{role}' },
+        sword: { domain: 'original.jy:role/sword', key: 'original.jy:role/{role}' },
+        knife: { domain: 'original.jy:role/knife', key: 'original.jy:role/{role}' },
+        unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
+        hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
       },
     },
     // Scene transition: writes the current scene ID when a transition command resolves.

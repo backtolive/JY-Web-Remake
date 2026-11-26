@@ -34,6 +34,10 @@ export function OriginalEventsPreview({ content, onClose }:
       typeof value === 'number' ? `${label} ${value > 0 ? `≥${value}` : `≤${-value}`}` : '';
     const parts = [signed('內力', canEquip.mp), signed('攻擊', canEquip.attack),
       signed('速度', canEquip.speed), signed('資質', canEquip.aptitude),
+      signed('用毒', canEquip.usePoi), signed('醫術', canEquip.medicine),
+      signed('醫毒', canEquip.medPoi), signed('拳法', canEquip.fist),
+      signed('劍法', canEquip.sword), signed('刀法', canEquip.knife),
+      signed('奇門', canEquip.unusual), signed('暗器', canEquip.hidWeapon),
       typeof canEquip.mpType === 'number' ? `內力性質=${canEquip.mpType}` : ''].filter(Boolean);
     return parts.join('、');
   };

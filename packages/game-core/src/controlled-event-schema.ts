@@ -26,6 +26,15 @@ const canEquip = {
     speed: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
     aptitude: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
     mpType: { type: 'integer', minimum: 0, maximum: 1_000_000 },
+    // Skill/knowledge attributes (kys_type.pas TItem Need* fields).
+    usePoi: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    medicine: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    medPoi: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    fist: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    sword: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    knife: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    unusual: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
+    hidWeapon: { type: 'integer', minimum: -1_000_000, maximum: 1_000_000 },
   },
   additionalProperties: false,
 };
@@ -38,7 +47,10 @@ const equipmentDecl = object({
   roleAttributes: {
     type: 'object',
     properties: { mp: equipmentBinding, attack: equipmentBinding, speed: equipmentBinding,
-      aptitude: equipmentBinding, mpType: equipmentBinding },
+      aptitude: equipmentBinding, mpType: equipmentBinding,
+      usePoi: equipmentBinding, medicine: equipmentBinding, medPoi: equipmentBinding,
+      fist: equipmentBinding, sword: equipmentBinding, knife: equipmentBinding,
+      unusual: equipmentBinding, hidWeapon: equipmentBinding },
     additionalProperties: false,
   },
 }, ['slots', 'practice', 'itemUser']);

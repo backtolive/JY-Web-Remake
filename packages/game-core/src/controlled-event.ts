@@ -30,7 +30,9 @@ export interface ItemDefinition {
    * requires the role attribute >= value; a negative value caps it at -value. `mpType` is the
    * MP-nature rule (both < 2 must match). The engine reads the role attribute via the
    * equipment declaration's roleAttributes binding; it keeps no naming of its own. */
-  canEquip?: { mp?: number; attack?: number; speed?: number; aptitude?: number; mpType?: number };
+  canEquip?: { mp?: number; attack?: number; speed?: number; aptitude?: number; mpType?: number;
+    usePoi?: number; medicine?: number; medPoi?: number; fist?: number; sword?: number;
+    knife?: number; unusual?: number; hidWeapon?: number };
   stackable: boolean; maxStack?: number;
   useDialogueRef?: string; useConditions?: DecisionCondition[]; useEffects?: DecisionEffect[]; useCommand?: string;
 }
@@ -50,7 +52,10 @@ export interface EquipmentDeclaration {
   /** Where each CanEquip role attribute lives (template uses {role}). Required only when an
    * item declares canEquip thresholds; the engine stays naming-free. */
   roleAttributes?: { mp?: EquipmentBinding; attack?: EquipmentBinding; speed?: EquipmentBinding;
-    aptitude?: EquipmentBinding; mpType?: EquipmentBinding };
+    aptitude?: EquipmentBinding; mpType?: EquipmentBinding;
+    usePoi?: EquipmentBinding; medicine?: EquipmentBinding; medPoi?: EquipmentBinding;
+    fist?: EquipmentBinding; sword?: EquipmentBinding; knife?: EquipmentBinding;
+    unusual?: EquipmentBinding; hidWeapon?: EquipmentBinding };
 }
 export interface ControlledEventContent {
   schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
@@ -117,13 +122,14 @@ function canEquipGate(schema: DecisionSchema, state: DecisionState, declaration:
   if (!canEquip) return;
   const attrs = declaration.roleAttributes;
   if (!attrs) fail('EQUIP_NO_ATTRIBUTES');
-  const readAttr = (attr: 'mp' | 'attack' | 'speed' | 'aptitude' | 'mpType'): number => {
-    const binding = attrs[attr];
+  const readAttr = (attr: string): number => {
+    const binding = attrs[attr as keyof typeof attrs];
     if (!binding) return 0;
     const key = substituteKey(binding.key, { role }, `roleAttributes.${attr}`, schema.domains, binding.domain);
     return readDecisionValue(schema, state, { domain: binding.domain, key }) as number;
   };
-  for (const attr of ['mp', 'attack', 'speed', 'aptitude'] as const) {
+  for (const attr of ['mp', 'attack', 'speed', 'aptitude', 'usePoi', 'medicine', 'medPoi',
+    'fist', 'sword', 'knife', 'unusual', 'hidWeapon'] as const) {
     const need = canEquip[attr];
     if (typeof need !== 'number') continue;
     const value = readAttr(attr);

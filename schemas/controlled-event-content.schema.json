@@ -373,6 +373,46 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 1000000
+              },
+              "usePoi": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "medicine": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "medPoi": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "fist": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "sword": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "knife": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "unusual": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "hidWeapon": {
+                "type": "integer",
+                "minimum": -1000000,
+                "maximum": 1000000
               }
             },
             "additionalProperties": false
@@ -568,6 +608,166 @@
               "additionalProperties": false
             },
             "mpType": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "usePoi": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "medicine": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "medPoi": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "fist": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "sword": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "knife": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "unusual": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+                  "maxLength": 160
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                }
+              },
+              "required": [
+                "domain",
+                "key"
+              ],
+              "additionalProperties": false
+            },
+            "hidWeapon": {
               "type": "object",
               "properties": {
                 "domain": {
