@@ -58,7 +58,7 @@ def load_world(root):
     }
 
 def load_scene(root, scene_id):
-    """Load a single scene's ground + building layers and tile images."""
+    """Load a single scene's ground + building layers, tile images, and NPC slots from ALLDEF."""
     sha = lambda b: hashlib.sha256(b).hexdigest()
     sdx_name = f'SDX{scene_id:03d}'
     smp_name = f'SMP{scene_id:03d}'
@@ -66,6 +66,7 @@ def load_scene(root, scene_id):
     smp = (root / smp_name).read_bytes()
     palette = (root / 'MMAP.COL').read_bytes()
     allsin = (root / 'ALLSIN.GRP').read_bytes()
+    alldef = (root / 'ALLDEF.GRP').read_bytes()
     ranger_idx = (root / 'RANGER.IDX').read_bytes()
     ranger_grp = (root / 'RANGER.GRP').read_bytes()
 
@@ -109,10 +110,27 @@ def load_scene(root, scene_id):
             'dataUri': 'data:image/png;base64,' + base64.b64encode(image).decode(),
         })
     blocked = [y * 64 + x for y in range(64) for x in range(64) if building[y * 64 + x] != 0]
+    # NPC positions from ALLDEF scene slots (200 slots × 11 int16 fields)
+    # Slot position in 64x64 grid: x = slot % 64, y = slot // 64
+    # Only slots with non-zero event ID (field 0) are NPC triggers
+    alldef_view = struct.unpack('<' + str(len(alldef) // 2) + 'h', alldef)
+    npcs = []
+    scene_alldef_offset = scene_id * 2200  # 200 slots * 11 fields
+    for slot in range(200):
+        field_offset = scene_alldef_offset + slot * 11
+        if field_offset + 11 > len(alldef_view):
+            break
+        event_id = alldef_view[field_offset]
+        if event_id > 0:
+            nx = slot % 64
+            ny = slot // 64
+            # Skip if blocked
+            if building[ny * 64 + nx] == 0:
+                npcs.append({'id': f'npc-{scene_id}-{slot}', 'x': nx, 'y': ny})
     return {
         'ground': ground, 'building': building, 'images': images,
         'blocked': blocked, 'entry': (ex, ey), 'name': name,
-        'sha': sha, 'sdx': sdx, 'smp': smp,
+        'npcs': npcs, 'sha': sha, 'sdx': sdx, 'smp': smp,
     }
 
 def main():
@@ -149,7 +167,8 @@ def main():
         maps.append({
             'id': mid, 'name': f'場景 {sid}：{scenes[sid]["name"]}',
             'width': 64, 'height': 64,
-            'blocked': scenes[sid]['blocked'], 'npcs': [],
+            'blocked': scenes[sid]['blocked'],
+            'npcs': scenes[sid]['npcs'],
             'portals': [],
         })
 
