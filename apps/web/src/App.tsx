@@ -159,6 +159,13 @@ export default function App(){
     }
     const npc=id?map.npcs.find(n=>n.id===id):map.npcs.find(n=>Math.abs(n.x-current.state.x)+Math.abs(n.y-current.state.y)===1);
     if(!npc){announce('走到引路人相鄰的一格，再按 E 或「互動」。');return;}
+    // If the NPC is an original scene-slot NPC (id pattern {pkg}:npc-{scene}-{slot} from ALLDEF),
+    // trigger the bound original event instead of a Mock dialogue.
+    const npcSlot=npc.id.match(/:npc-(\d+)-(\d+)$/);
+    if(originalEvents&&npcSlot){
+      triggerSceneSlotEvent(Number(npcSlot[1]),Number(npcSlot[2]));
+      return;
+    }
     send({type:'INTERACT',npcId:npc.id});
   },[send]);
   useEffect(()=>{

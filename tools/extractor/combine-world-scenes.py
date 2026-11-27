@@ -48,13 +48,27 @@ def load_world(root):
     blocked = [y * 480 + x for y in range(480) for x in range(480)
                if x < 10 or y < 10 or x > 470 or y > 470
                or layers['BUILDX.002'][y * 480 + x] != 0 or layers['BUILDY.002'][y * 480 + x] != 0]
-    # Scene 1 entrance (world coordinates)
+    # Scene 1 entrance (world coordinates); nudge to a free cell if the raw
+    # entrance is on a blocked tile so the player spawns walkable.
     ends = struct.unpack('<6I', data['RANGER.IDX'])
     scene1_offset = ends[2] + 52
     ex, ey = struct.unpack_from('<2h', data['RANGER.GRP'], scene1_offset + 20)
+    blocked_set = set(blocked)
+    entry = (ex, ey)
+    if not (0 <= ex < 480 and 0 <= ey < 480) or ey * 480 + ex in blocked_set:
+        for radius in range(0, 16):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    cx, cy = ex + dx, ey + dy
+                    if 0 <= cx < 480 and 0 <= cy < 480 and cy * 480 + cx not in blocked_set:
+                        entry = (cx, cy)
+                        break
+                else:
+                    continue
+                break
     return {
         'layers': layers, 'images': images, 'blocked': blocked,
-        'entry': (ex, ey), 'sha': sha, 'data': data,
+        'entry': entry, 'sha': sha, 'data': data,
     }
 
 def load_scene(root, scene_id):
@@ -126,10 +140,26 @@ def load_scene(root, scene_id):
             ny = slot // 64
             # Skip if blocked
             if building[ny * 64 + nx] == 0:
-                npcs.append({'id': f'npc-{scene_id}-{slot}', 'x': nx, 'y': ny})
+                npcs.append({'slot': slot, 'x': nx, 'y': ny, 'event': event_id})
+    # Entry: nudge the RANGER entrance to a free, non-NPC cell so portals/destinations are walkable.
+    blocked_set = set(blocked)
+    npc_cells = {n['y'] * 64 + n['x'] for n in npcs}
+    entry = (ex, ey)
+    if not (0 <= ex < 64 and 0 <= ey < 64) or ey * 64 + ex in blocked_set or ey * 64 + ex in npc_cells:
+        for radius in range(0, 16):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    cx, cy = ex + dx, ey + dy
+                    if 0 <= cx < 64 and 0 <= cy < 64 and cy * 64 + cx not in blocked_set \
+                       and cy * 64 + cx not in npc_cells:
+                        entry = (cx, cy)
+                        break
+                else:
+                    continue
+                break
     return {
         'ground': ground, 'building': building, 'images': images,
-        'blocked': blocked, 'entry': (ex, ey), 'name': name,
+        'blocked': blocked, 'entry': entry, 'name': name,
         'npcs': npcs, 'sha': sha, 'sdx': sdx, 'smp': smp,
     }
 
@@ -160,40 +190,65 @@ def main():
         'blocked': world['blocked'], 'npcs': [],
         'portals': [],
     }]
+    # Shared placeholder event so NPC markers pass content validation; the real
+    # original event is triggered at runtime via the scene-slot lookup (NPC id encodes slot).
+    placeholder_event_id = pid + ':event/npc-placeholder'
+    placeholder_dialogue_id = pid + ':dialogue/npc-placeholder'
     scene_map_ids = {}
     for sid in scene_ids:
         mid = f'{pid}:map/scene{sid}'
         scene_map_ids[sid] = mid
+        npcs = [
+            {'id': f'{pid}:npc-{sid}-{n["slot"]}', 'x': n['x'], 'y': n['y'],
+             'eventId': placeholder_event_id}
+            for n in scenes[sid]['npcs']
+        ]
         maps.append({
             'id': mid, 'name': f'場景 {sid}：{scenes[sid]["name"]}',
             'width': 64, 'height': 64,
             'blocked': scenes[sid]['blocked'],
-            'npcs': scenes[sid]['npcs'],
+            'npcs': npcs,
             'portals': [],
         })
 
-    # Add portals: world → scene at scene entrance positions (offset to avoid overlap)
+    # Anchor portals at the world entry (a walkable cell) so sources/destinations
+    # are never in the world's blocked border. Each scene gets an offset slot.
+    world_entry = world['entry']
+    world_blocked = set(world['blocked'])
+    def find_free(anchor, blocked_cells, width, height, exclude=frozenset()):
+        ax, ay = anchor
+        for radius in range(0, 12):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    cx, cy = ax + dx, ay + dy
+                    if (cx, cy) in exclude:
+                        continue
+                    if 0 <= cx < width and 0 <= cy < height and cy * width + cx not in blocked_cells:
+                        return (cx, cy)
+        return anchor
     for i, sid in enumerate(scene_ids):
-        wx, wy = scenes[sid]['entry']
-        # Offset portals to avoid overlap when multiple scenes share the same entrance
-        px, py = wx + i, wy + i
-        if 0 <= px < 480 and 0 <= py < 480:
-            maps[0]['portals'].append({
-                'x': px, 'y': py,
-                'mapId': scene_map_ids[sid],
-                'toX': 1, 'toY': 1,
-            })
-            print(f'  Portal: world({px},{py}) -> scene{sid}')
-
-    # Add portals: scene → world (at scene corner, back to world entrance)
-    for sid in scene_ids:
-        wx, wy = scenes[sid]['entry']
-        if 0 <= wx < 480 and 0 <= wy < 480:
-            maps[scene_ids.index(sid) + 1]['portals'].append({
-                'x': 0, 'y': 0,
-                'mapId': world_map_id,
-                'toX': wx, 'toY': wy,
-            })
+        scene_entry = scenes[sid]['entry']
+        scene_blocked = set(scenes[sid]['blocked'])
+        # NPC cells are also non-walkable for portal placement (runtime isBlocked includes them).
+        scene_npc_cells = {n['y'] * 64 + n['x'] for n in scenes[sid]['npcs']}
+        scene_occupied = scene_blocked | scene_npc_cells
+        # World -> scene: source is a free world cell near the entry (not the entry itself);
+        # dest is the scene entry.
+        wsrc = find_free((world_entry[0] + i * 4, world_entry[1] + i * 4), world_blocked,
+                         480, 480, exclude={world_entry})
+        maps[0]['portals'].append({
+            'x': wsrc[0], 'y': wsrc[1], 'mapId': scene_map_ids[sid],
+            'toX': scene_entry[0], 'toY': scene_entry[1],
+        })
+        # Scene -> world: source is a free scene cell near the entry (not the entry itself,
+        # not an NPC cell); dest is the world entry so the player returns to the world entrance.
+        ssrc = find_free(scene_entry, scene_occupied, 64, 64, exclude={scene_entry})
+        maps[scene_ids.index(sid) + 1]['portals'].append({
+            'x': ssrc[0], 'y': ssrc[1], 'mapId': world_map_id,
+            'toX': world_entry[0], 'toY': world_entry[1],
+        })
+        print(f'  Portal: world({wsrc[0]},{wsrc[1]}) -> scene{sid}({scene_entry[0]},{scene_entry[1]}); '
+              f'scene{sid}({ssrc[0]},{ssrc[1]}) -> world({world_entry[0]},{world_entry[1]})')
 
     # Per-map projected maps: each map gets its own projected map with proper images
     projected_maps = []
@@ -244,7 +299,12 @@ def main():
             'ruleset': 'community-combined-world-v1', 'priority': 0, 'dependencies': [],
         },
         'entry': {'mapId': world_map_id, 'x': world['entry'][0], 'y': world['entry'][1]},
-        'maps': maps, 'events': [], 'dialogues': [], 'items': [], 'patches': [],
+        'maps': maps,
+        'events': [{'id': placeholder_event_id,
+                    'steps': [{'op': 'say', 'dialogueId': placeholder_dialogue_id}, {'op': 'end'}]}],
+        'dialogues': [{'id': placeholder_dialogue_id,
+                       'text': '（此處為原版場景 NPC；互動將觸發對應的原版事件。）', 'speaker': '引路人'}],
+        'items': [], 'patches': [],
     }
 
     bundle = {
