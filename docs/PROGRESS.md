@@ -1,6 +1,16 @@
 # 進度 — 2026-11-28
 
-## 2026-11-28：多 MOD 堆疊 UI（priority 排序＋衝突診斷）（最新）
+## 2026-11-28：行囊清單接入 carried-item 決策欄位（MVP 展示層）（最新）
+
+Phase: Phase 7 apps/web 可操作切片＋Phase 6 內容種子。Status: **RANGER.GRP 角色隨身物品（TakingItem/TakingItemAmount）入內容包；`OriginalEventsPreview` 新增隨身物品面板（seed＋事件即時狀態），行囊從唯讀目錄改為顯示實際持有量**
+- Completed Tasks: `loadRoleCarriedItems()` 讀取 RANGER.GRP 角色表（182B×320，TakingItem@168、TakingItemAmount@176；第 4 槽數量超出 182-byte 記錄預設 0）；`roleCarriedItems` 欄位入內容包（schema＋runtime＋converter）；`OriginalEventsPreview` start() 自動 seed carried-item 決策狀態（僅有 opcode 41 域的 role 36/49/58）；新增 `HeldItemsPanel`（seed＋事件即時狀態，always-visible）；converter 測試釘選 role 0 items [2,10,21,3] amounts [3,3,3,0]。
+- Files Changed: `convert_original_events_generic.mjs`、`controlled-event.ts`、`controlled-event-schema.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`tests/unit/original-events-generic-converter.test.mjs`、docs。
+- Tests Executed: 單元 157/157（concurrency=2）；root＋web typecheck；schema:check；web build。
+- Test Results: 全通過。內容包 digest `1190c7ce552c1409`（320 角色隨身物品；role 0 [2,10,21,3]×[3,3,3,0]；role 3 空槽 -1/0）。
+- Known Limitations: 隨身物品為社群 TRole 偏移種子（候選非驗證）；僅有 opcode 41 域的 role（36/49/58）可 seed，其他 role 無欄位；第 4 槽數量超出 182-byte 記錄預設 0；事件寫入後以即時狀態顯示。
+- Next Recommended Tasks: 戰鬥公式（事件中的戰鬥接入）；MOD 生成器支援產出多個 MOD 包；行囊清單顯示所有角色（非僅 hostRole）。
+
+## 2026-11-28：多 MOD 堆疊 UI（priority 排序＋衝突診斷）
 
 Phase: Phase 6 內容基礎契約＋Phase 7 apps/web 可操作切片。Status: **Web 端支援多 MOD 堆疊載入；`resolveContent` 已有確定優先權排序與衝突診斷，本輪補 UI（堆疊清單＋priority 顯示＋衝突診斷＋移除 MOD）**
 - Completed Tasks: `App.tsx` 將單一 `activeModId` 改為 `modPackagesRef`（ContentPackage[]）＋`activeModIds`（string[]）＋`modDiagnostics`（string[]）；`importMod` 加入堆疊並 `resolveContent([base,...mods])` 重新解析，`ContentError` 時顯示衝突診斷並退回；新增 `removeMod(id)` 移除 MOD 並重新解析；侧欄顯示 MOD 堆疊清單（依 `content.identities` 的 priority 排序）＋priority 徽章＋移除按鈕＋衝突診斷區塊；3 個新單元測試（雙 MOD 非衝突排序、同目標 PATCH_CONFLICT、重複 ID DUPLICATE_PACKAGE）。

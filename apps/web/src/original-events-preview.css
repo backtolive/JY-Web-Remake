@@ -41,6 +41,13 @@
 .oe-preview .oe-role-attrs-table tbody th{color:#59695d;font-weight:500}
 .oe-preview .oe-role-attrs-table .oe-attr-changed{color:#8a6d3b}
 .oe-preview .oe-item-catalog{margin:10px 0;padding:8px 10px;border:1px solid #d7dccd;border-radius:4px;background:#f7f8f4;font-size:12px}
+.oe-preview .oe-held-items{margin:8px 0;padding:8px 10px;border:1px solid #d7dccd;border-radius:4px;background:#f7f8f4;font-size:12px}
+.oe-preview .oe-held-items summary{cursor:pointer;font-weight:600;color:#3d4a3f;margin-bottom:6px}
+.oe-preview .oe-held-items-table{width:100%;border-collapse:collapse}
+.oe-preview .oe-held-items-table th,.oe-preview .oe-held-items-table td{text-align:left;padding:2px 8px 2px 0;font-size:12px}
+.oe-preview .oe-held-items-table thead th{color:#59695d;font-weight:600;border-bottom:1px solid #d7dccd}
+.oe-preview .oe-held-items-table tbody th{color:#59695d;font-weight:500}
+.oe-preview .oe-muted{color:#7a887d}
 .oe-preview .oe-item-catalog summary{cursor:pointer;font-weight:600;color:#3d4a3f;margin-bottom:8px}
 .oe-preview .oe-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px;max-height:280px;overflow:auto}
 .oe-preview .oe-catalog-cell{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #d7dccd;border-radius:4px;background:#fffdf7;cursor:pointer;text-align:left}

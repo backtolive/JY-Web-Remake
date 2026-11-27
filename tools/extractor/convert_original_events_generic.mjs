@@ -266,6 +266,28 @@ function loadRoleAttributes() {
   return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
+// RANGER.GRP role table carried-item (TakingItem) offsets. The 182-byte record ends at 181,
+// so only 4 item IDs (168-175) and 3 amounts (176-181) fit; the 4th amount is out of bounds
+// and defaults to 0. Community TRole layout (kys_type.pas TakingItem[0..3]); the original
+// 182-byte record is 2 bytes shorter than the community 208-byte candidate.
+const CARRIED_ITEM_OFFSET = 168;
+const CARRIED_AMOUNT_OFFSET = 176;
+/** Extract per-role carried items (TakingItem/TakingItemAmount) from RANGER.GRP.
+ * Only roles with at least one non-empty slot are included. Returns a map of role ID →
+ * { items: number[4], amounts: number[4] } (item -1 = empty, 4th amount defaults to 0). */
+function loadRoleCarriedItems() {
+  const buf = readFileSync(RANGER_FILE);
+  const result = {};
+  for (let role = 0; role < ROLE_COUNT_TOTAL; role++) {
+    const base = ROLE_TABLE_OFFSET + role * ROLE_RECORD_SIZE;
+    const items = Array.from({ length: 4 }, (_, slot) => buf.readInt16LE(base + CARRIED_ITEM_OFFSET + slot * 2));
+    const amounts = Array.from({ length: 4 }, (_, slot) =>
+      slot < 3 ? buf.readInt16LE(base + CARRIED_AMOUNT_OFFSET + slot * 2) : 0);
+    if (items.some(id => id >= 0)) result[role] = { items, amounts };
+  }
+  return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
+}
+
 /** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
  * only when its IDX range is exactly ICON_SIZE bytes and the header is 40x40; otherwise
  * null (empty slot). RLE per piccache.c: [w][h][xoff][yoff] then per row a length byte, and
@@ -827,6 +849,7 @@ export function buildOriginalEventsContent() {
   const sceneSlotData = loadSceneSlots();
   const roleMagicData = loadRoleMagicArrays();
   const roleAttrData = loadRoleAttributes();
+  const roleCarriedData = loadRoleCarriedItems();
   const iconAtlas = loadItemIconAtlas();
   const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
   const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
@@ -899,6 +922,9 @@ export function buildOriginalEventsContent() {
     roleMagic: roleMagicData.roles,
     // Per-role base attributes from RANGER.GRP (community TRole offsets; seed candidates).
     roleAttributes: roleAttrData.roles,
+    // Per-role carried items (TakingItem/TakingItemAmount) from RANGER.GRP. Read-only seed
+    // for the inventory panel. 4 item IDs + 3 amounts (4th out of bounds, defaults to 0).
+    roleCarriedItems: roleCarriedData.roles,
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);

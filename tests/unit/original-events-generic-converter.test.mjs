@@ -325,6 +325,16 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(roleAttributes['0'].maxMp, 25);
     assert.equal(roleAttributes['0'].currentHp, roleAttributes['0'].maxHp);
     assert.equal(roleAttributes['0'].currentMp, roleAttributes['0'].maxMp);
+    // Per-role carried items from RANGER.GRP (TakingItem/TakingItemAmount; seed candidates).
+    const roleCarried = content.roleCarriedItems ?? {};
+    assert.ok(Object.keys(roleCarried).length > 0, 'roleCarriedItems should have entries');
+    assert.ok(roleCarried['0'], 'role 0 should have carried item data');
+    // Role 0 carried items (evidence: RANGER.GRP byte inspection, offsets 168-181).
+    assert.deepEqual(roleCarried['0'].items, [2, 10, 21, 3]);
+    assert.deepEqual(roleCarried['0'].amounts, [3, 3, 3, 0]); // 4th amount out of bounds, defaults to 0
+    // Role 3 has an empty slot (-1) with amount 0.
+    assert.equal(roleCarried['3'].items[2], -1);
+    assert.equal(roleCarried['3'].amounts[2], 0);
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

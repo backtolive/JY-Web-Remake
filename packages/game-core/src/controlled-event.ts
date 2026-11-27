@@ -88,6 +88,9 @@ export interface ControlledEventContent {
    * character attribute panel. Keys are role ID strings. */
   roleAttributes?: Record<string, { level: number; currentHp: number; maxHp: number;
     currentMp: number; maxMp: number; attack: number; speed: number; aptitude: number }>;
+  /** Per-role carried items (RANGER.GRP TakingItem/TakingItemAmount). Read-only seed for the
+   * inventory panel. 4 item IDs + 4 amounts (4th defaults to 0). Keys are role ID strings. */
+  roleCarriedItems?: Record<string, { items: number[]; amounts: number[] }>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;

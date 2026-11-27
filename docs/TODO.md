@@ -33,8 +33,9 @@
 - [x] MOD 基礎（原版包＋MOD patch 載入順序、版本、優先權與衝突診斷）：引擎核心 `resolveContent` 已具相依／版本／優先權／衝突／確定順序解析；本輪補 `prepare-mod-preview.mjs`（產出 `kind:mod` 包：相依基礎＋patch＋新增物品／對話）與 `App.tsx` `importMod(file)`（`resolveContent([base,mod])` 重新解析＋存檔保存雙身份與雜湊＋`restoreSave` 內容不符即 `SAVE_CONTENT_MISMATCH`）。
 - [x] 角色屬性面板（HP/MP/Level）與完整行囊 UI（原版 200 物品互動式介面）：`loadRoleAttributes()` 讀 RANGER.GRP 角色表（社群 TRole 偏移）入內容包 `roleAttributes`（320 角色）；`OriginalEventsPreview` 新增 `RoleAttributePanel`（種子值＋事件即時狀態）與 `ItemCatalog`（200 項 icon＋名稱＋分類）。
 - [x] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）：`App.tsx` 改為 `modPackagesRef`（堆疊）＋`activeModIds`＋`modDiagnostics`；`importMod` 加入堆疊並重新解析，`ContentError` 顯示衝突診斷；新增 `removeMod(id)`；侧欄 MOD 堆疊清單（priority 徽章＋移除）＋衝突診斷區塊；3 個新測試（雙 MOD 排序／PATCH_CONFLICT／DUPLICATE_PACKAGE）。
+- [x] 行囊清單接入 carried-item 決策欄位（顯示實際持有量，非唯讀目錄）：`loadRoleCarriedItems()` 讀 RANGER.GRP 角色表（TakingItem@168、TakingItemAmount@176）入內容包 `roleCarriedItems`（320 角色）；`OriginalEventsPreview` start() 自動 seed carried-item 決策狀態；新增 `HeldItemsPanel`（seed＋事件即時狀態）。
 - [ ] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）。
-- [ ] 行囊清單接入 carried-item 決策欄位（顯示實際持有量，非唯讀目錄）。
+- [ ] MOD 生成器支援產出多個 MOD 包。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

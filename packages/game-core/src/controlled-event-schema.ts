@@ -150,7 +150,14 @@ export const controlledEventContentSchema = {
         speed: { type: 'integer', minimum: -1, maximum: 1_000_000 },
         aptitude: { type: 'integer', minimum: -1, maximum: 1_000_000 },
       }, ['level', 'currentHp', 'maxHp', 'currentMp', 'maxMp', 'attack', 'speed', 'aptitude']),
-      maxProperties: 400 } },
+      maxProperties: 400 },
+    // Optional: per-role carried items (RANGER.GRP TakingItem/TakingItemAmount). Read-only
+    // seed for the inventory panel. 4 item IDs + 4 amounts (4th defaults to 0). Keys are role ID strings.
+    roleCarriedItems: { type: 'object', propertyNames: { type: 'string', pattern: '^\\d+$' },
+      additionalProperties: object({
+        items: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 4) },
+        amounts: { ...array({ type: 'integer', minimum: 0, maximum: 1_000_000 }, 4) },
+      }, ['items', 'amounts']), maxProperties: 400 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },
