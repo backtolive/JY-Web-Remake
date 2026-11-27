@@ -55,7 +55,23 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
     if (!id) return;
     try {
       // A no-cursor state (e.g. after a USE_ITEM selection) is kept so the event sees it.
-      const base = state && !state.cursor ? state : createControlledEventState(content);
+      let base = state && !state.cursor ? state : createControlledEventState(content);
+      // Seed magic arrays from RANGER.GRP role data (CanEquip magic level rule).
+      const roleMagic = content.data.roleMagic;
+      if (roleMagic && !base.decision.values['original.jy:role/magic-ids']) {
+        for (const [roleId, data] of Object.entries(roleMagic)) {
+          const ids: Record<string, number> = {};
+          const levels: Record<string, number> = {};
+          for (let i = 0; i < 10; i++) {
+            ids[`original.jy:role/magic-${roleId}-${i}`] = data.magicIds[i] ?? 0;
+            levels[`original.jy:role/mag-level-${roleId}-${i}`] = data.magicLevels[i] ?? 0;
+          }
+          base = { ...base, decision: { ...base.decision,
+            values: { ...base.decision.values,
+              'original.jy:role/magic-ids': { ...(base.decision.values['original.jy:role/magic-ids'] ?? {}), ...ids },
+              'original.jy:role/magic-levels': { ...(base.decision.values['original.jy:role/magic-levels'] ?? {}), ...levels } } } };
+        }
+      }
       const result = dispatchControlledEvent(content, base, { type: 'START', eventId: id });
       setState(result.state); setChanges(result.notices.flatMap(n => n.changes ?? []));
       setError(''); setMessage(`事件 ${id.split('/').pop()} 已開始。`);

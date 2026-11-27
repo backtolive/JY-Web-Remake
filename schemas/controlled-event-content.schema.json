@@ -883,6 +883,42 @@
         "maximum": 10000
       },
       "maxProperties": 20000
+    },
+    "roleMagic": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^\\d+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "magicIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1000000
+            },
+            "maxItems": 10
+          },
+          "magicLevels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 1000000
+            },
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "magicIds",
+          "magicLevels"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 400
     }
   },
   "required": [

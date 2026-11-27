@@ -23,6 +23,7 @@
 - [x] CanEquip 武功等級規則（Pascal line 4729-4734）：角色已有同一武功且等級 < 900 時覆蓋為 True；`roleAttributes` 新增 `magicIds`／`magicLevels`（10 槽陣列）；`canEquipGate` 重構為「記錄失敗＋末尾覆蓋」模式；4 案 runtime 測試通過。
 - [x] NPC 互動觸發接入主遊戲（MVP）：主遊戲 HUD 新增「NPC」按鈕→場景槽輸入面板（scene/slot→event ID）；`original-controlled.ts` bind 原版事件到 host；`OriginalEventsPreview` 支援 `targetEventId` auto-start；事件從主遊戲觸發並在預覽面板運行（含存讀）。
 - [x] 合併存檔（MVP 安全存讀檔）：`CombinedSave` v5 格式（game＋event）；`saveCombined`／`loadCombined`；主遊戲存檔自動包含事件狀態；讀檔恢復事件進度；備份保留。
+- [x] 武功陣列種子資料：RANGER.GRP 角色表（182B×320）提取 Magic[0..9]＋MagLevel[0..9]（317 角色）；`roleMagic` 入內容包；preview 自動 seed 武功狀態；CanEquip 武功等級規則現有實際數據。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

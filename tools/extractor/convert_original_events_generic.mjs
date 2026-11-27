@@ -25,6 +25,14 @@ const ALLDEF_FILE = 'original/dos/ALLDEF.GRP';
 const ALLDEF_SLOTS_PER_SCENE = 200;
 const ALLDEF_FIELDS_PER_SLOT = 11;
 const ALLDEF_BYTES_PER_SLOT = ALLDEF_FIELDS_PER_SLOT * 2;
+// RANGER.GRP role table: 182-byte records x 320 records, section offset 836.
+// Magic[0..9] at byte offset 128, MagLevel[0..9] at byte offset 148 (evidence: event 581
+// role 49 offset 128 = magic ID, community TRole layout adjusted to DOS 182B record).
+const ROLE_TABLE_OFFSET = 836;
+const ROLE_RECORD_SIZE = 182;
+const ROLE_COUNT_TOTAL = 320;
+const MAGIC_OFFSET = 128;
+const MAG_LEVEL_OFFSET = 148;
 // RANGER.GRP item table: 190-byte records x 200 records (source-index byte span 38,000;
 // community Thing_S layout in references/jinyong-legend/script/jyconst.lua).
 const ITEM_TABLE_OFFSET = 59076;
@@ -210,6 +218,21 @@ function loadSceneSlots() {
     }
   }
   return { slots, sceneCount, sha256: createHash('sha256').update(buf).digest('hex') };
+}
+
+/** Extract per-role magic ID and level arrays from RANGER.GRP role table (182B records).
+ * Only roles with at least one non-zero magic ID are included. Returns a map of
+ * role ID → { magicIds: number[10], magicLevels: number[10] }. */
+function loadRoleMagicArrays() {
+  const buf = readFileSync(RANGER_FILE);
+  const result = {};
+  for (let role = 0; role < ROLE_COUNT_TOTAL; role++) {
+    const base = ROLE_TABLE_OFFSET + role * ROLE_RECORD_SIZE;
+    const magicIds = Array.from({ length: 10 }, (_, i) => buf.readInt16LE(base + MAGIC_OFFSET + i * 2));
+    const magicLevels = Array.from({ length: 10 }, (_, i) => buf.readInt16LE(base + MAG_LEVEL_OFFSET + i * 2));
+    if (magicIds.some(id => id > 0)) result[role] = { magicIds, magicLevels };
+  }
+  return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
 /** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
@@ -771,6 +794,7 @@ export function buildOriginalEventsContent() {
   const bundle = loadCorpus();
   const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
   const sceneSlotData = loadSceneSlots();
+  const roleMagicData = loadRoleMagicArrays();
   const iconAtlas = loadItemIconAtlas();
   const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
   const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
@@ -839,6 +863,8 @@ export function buildOriginalEventsContent() {
     // Scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference for the
     // preview to simulate NPC interactions: "scene/slot" → eventId.
     sceneSlots: sceneSlotData.slots,
+    // Per-role magic arrays from RANGER.GRP (CanEquip magic level rule seed data).
+    roleMagic: roleMagicData.roles,
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);

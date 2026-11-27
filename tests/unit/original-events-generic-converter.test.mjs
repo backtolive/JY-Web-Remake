@@ -306,6 +306,14 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(content.items['original.jy.events:item/60'].canEquip?.onlyPracRole, 38); // 太玄經
     assert.equal(content.items['original.jy.events:item/60'].canEquip?.magic, 23);
     assert.equal(diagnostics.summary.canEquipCount, 77);
+    // Role magic arrays from RANGER.GRP (CanEquip magic level rule seed data).
+    const roleMagic = content.roleMagic ?? {};
+    assert.ok(Object.keys(roleMagic).length > 0, 'roleMagic should have entries');
+    assert.ok(roleMagic['5'], 'role 5 should have magic data');
+    assert.equal(roleMagic['5'].magicIds.length, 10);
+    assert.equal(roleMagic['5'].magicLevels.length, 10);
+    // Role 5 has magic 58 at level 900 (evidence: RANGER.GRP byte inspection).
+    assert.ok(roleMagic['5'].magicIds.includes(58));
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

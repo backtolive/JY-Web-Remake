@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：合併存檔（主遊戲＋事件狀態）（MVP 安全存讀檔）（最新）
+## 2026-11-27：武功陣列種子資料（RANGER.GRP 角色記錄）（最新）
+
+Phase: Phase 6 內容效果層。Status: **317 角色武功陣列（Magic[0..9]＋MagLevel[0..9]）從 RANGER.GRP 提取入內容包；CanEquip 武功等級規則現有實際數據**
+- Completed Tasks: `loadRoleMagicArrays()` 讀取 RANGER.GRP 角色表（182B×320，Magic@128，MagLevel@148）；`roleMagic` 欄位入內容包（schema＋runtime＋converter）；`OriginalEventsPreview` start() 自動 seed 武功狀態；converter 測試釘選 role 5 magic 58。
+- Files Changed: `controlled-event.ts`、`controlled-event-schema.ts`、`schemas/*`（重新匯出）、`convert_original_events_generic.mjs`、`original-events-preview.tsx`、`original-events-generic-converter.test.mjs`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過；內容包 digest `0d8372d4f8451e82`（317 角色武功陣列）。
+- Known Limitations: 武功陣列為唯讀種子資料（事件可修改但無事件寫武功 opcode 的完整轉接）；-1 等級代表未學會。
+- Next Recommended Tasks: NPC 碰撞偵測；切圖（場景過渡）接入正式 Runtime。
+
+## 2026-11-27：合併存檔（主遊戲＋事件狀態）（MVP 安全存讀檔）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **單一存檔含主遊戲狀態＋原版事件狀態；存檔/讀檔原子操作，備份保留**
 - Completed Tasks: `storage.ts` 新增 `CombinedSave`（v5）＋`saveCombined`／`loadCombined`／`combinedSaveKey`；`App.tsx` save/load 改用 combined 格式（事件包載入時自動包含事件狀態）；`OriginalEventsPreview` 新增 `initialState`／`onStateChange` props（狀態同步到父組件）。

@@ -81,6 +81,9 @@ export interface ControlledEventContent {
   /** Scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference for the
    * preview to simulate NPC interactions. Keys are "scene/slot" strings. */
   sceneSlots?: Record<string, number>;
+  /** Per-role magic ID and level arrays (RANGER.GRP). Read-only reference for seeding
+   * the CanEquip magic level rule. Keys are role ID strings. */
+  roleMagic?: Record<string, { magicIds: number[]; magicLevels: number[] }>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;

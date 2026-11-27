@@ -129,7 +129,14 @@ export const controlledEventContentSchema = {
     // Optional: scene slot → event ID mapping (ALLDEF.GRP field 0). Read-only reference
     // for simulating NPC interactions in the preview. Keys are "scene/slot" strings.
     sceneSlots: { type: 'object', propertyNames: { type: 'string', pattern: '^\\d+/\\d+$' },
-      additionalProperties: { type: 'integer', minimum: 0, maximum: 10000 }, maxProperties: 20000 } },
+      additionalProperties: { type: 'integer', minimum: 0, maximum: 10000 }, maxProperties: 20000 },
+    // Optional: per-role magic ID and level arrays (RANGER.GRP role table). Read-only
+    // reference for seeding the CanEquip magic level rule. Keys are role ID strings.
+    roleMagic: { type: 'object', propertyNames: { type: 'string', pattern: '^\\d+$' },
+      additionalProperties: object({
+        magicIds: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 10) },
+        magicLevels: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 10) },
+      }, ['magicIds', 'magicLevels']), maxProperties: 400 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },
