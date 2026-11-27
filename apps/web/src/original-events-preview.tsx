@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createControlledEventState, dispatchControlledEvent,
   restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
 import type { ControlledEventAction, ControlledEventState, ControlledResult, DecisionChange,
@@ -8,8 +8,8 @@ import './original-events-preview.css';
 /** Local read-only browser for the generated original.jy.events controlled-event package.
  * It runs the standalone controlled-event runtime in an isolated state, so it never touches
  * the main game session. Battles resolve to a chosen mock outcome; there is no battle math yet. */
-export function OriginalEventsPreview({ content, onClose }:
-  { content: ResolvedControlledEventContent; onClose: () => void }) {
+export function OriginalEventsPreview({ content, targetEventId, onClose }:
+  { content: ResolvedControlledEventContent; targetEventId?: string; onClose: () => void }) {
   const events = useMemo(() => Object.keys(content.data.events).sort((a, b) =>
     (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
   const [filter, setFilter] = useState('');
@@ -60,6 +60,11 @@ export function OriginalEventsPreview({ content, onClose }:
       setError(''); setMessage(`事件 ${id.split('/').pop()} 已開始。`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : '無法啟動事件。'); }
   }
+  // Auto-start when a target event ID is provided (from the main game's scene slot trigger).
+  useEffect(() => {
+    if (targetEventId) { setEventId(targetEventId); start(targetEventId); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetEventId]);
   function useItem() {
     if (!useItemId) return;
     try {

@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：武功等級規則（CanEquip Magic Level Override）（最新）
+## 2026-11-27：NPC 互動觸發接入主遊戲（MVP 切片）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **原版事件可從主遊戲 HUD「NPC」按鈕觸發（場景槽→事件），事件在預覽面板運行並可存讀**
+- Completed Tasks: `original-controlled.ts`（bind 原版事件到 host）；`App.tsx` 新增「NPC」HUD 按鈕＋場景槽輸入面板（scene/slot→event ID 查表）；`OriginalEventsPreview` 新增 `targetEventId` prop（auto-start）；`triggerSceneSlotEvent` 從主遊戲觸發事件。
+- Files Changed: `apps/web/src/original-controlled.ts`（新）、`apps/web/src/App.tsx`、`apps/web/src/original-events-preview.tsx`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過。
+- Known Limitations: 事件狀態與主遊戲狀態分開存檔（未合併為單一 unified save）；場景槽觸發為手動輸入（無 NPC 碰撞偵測）。
+- Next Recommended Tasks: 合併事件狀態到 unified session save；NPC 碰撞偵測（自動觸發）；武功陣列種子資料。
+
+## 2026-11-27：武功等級規則（CanEquip Magic Level Override）
 
 Phase: Phase 6 內容效果層。Status: **CanEquip 武功等級規則完成（Pascal line 4729-4734）：角色已有同一武功且等級 < 900 時覆蓋為 True**
 - Completed Tasks: `canEquipGate` 重構為「記錄首個失敗＋末尾武功等級覆蓋」模式（Pascal `Result` 語義）；`roleAttributes` 新增 `magicIds`／`magicLevels` 綁定（10 槽陣列，key 模板 `{role}`＋`{i}`）；`buildDomains` 新增 `original.jy:role/magic-ids`／`magic-levels` 域（每角色 10 key）；validation 允許 `magicIds`／`magicLevels` 使用 `{i}` 佔位符；runtime 測試 4 案（fresh 拒／level<900 覆蓋／level>=900 不覆蓋／不同武功不匹配／slot 7 匹配）。

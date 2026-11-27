@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createGame, dispatch, dispatchUnifiedWorld, migrateLegacySave, resolveContent,
   resolveControlledEventContent, restoreSave, restoreUnifiedSession, serializeSave,
-  serializeUnifiedSession, validatePackageSchema } from '@jy/game-core';
+  serializeUnifiedSession, validatePackageSchema, createUnifiedSession, enterUnifiedControlled } from '@jy/game-core';
 import type { Command, ContentPackage, GameState, ResolvedContent, ResolvedControlledEventContent,
-  UnifiedSessionContent, UnifiedSessionState } from '@jy/game-core';
+  BoundControlledEventContent, UnifiedSessionContent, UnifiedSessionState } from '@jy/game-core';
 import mock from '../../../tests/fixtures/mock-wuxia-package.json';
 import greetingMod from '../../../tests/fixtures/mock-greeting-mod.json';
 import { MiniMap, SceneView } from './SceneView';
@@ -19,6 +19,7 @@ import type {ProjectedMap} from '../../../packages/game-data/src/projected-map';
 import { ControlledDemo } from './ControlledDemo';
 import { OriginalEventsPreview } from './original-events-preview';
 import { resolveMockControlledForHost } from './mock-controlled';
+import { resolveOriginalEventsForHost } from './original-controlled';
 import { bindObserved673, dispatchObserved673, observed673Aptitude, observed673SaveKey,
   observed673Slot, restoreObserved673, serializeObserved673 } from './original-673-web';
 import type { Observed673Runtime } from './original-673-web';
@@ -43,12 +44,14 @@ export default function App(){
   const [cameraView,setCameraView]=useState<CameraView>(VIEW_CAMERA),cameraViewRef=useRef<CameraView>(VIEW_CAMERA);
   const updateCameraView=useCallback((view:CameraView)=>{cameraViewRef.current=view;setCameraView(view);},[]);
   const [cutaway,setCutaway]=useState(false);
-  const [gamePanel,setGamePanel]=useState<'map'|'inventory'|'save'|null>(null);
+  const [gamePanel,setGamePanel]=useState<'map'|'inventory'|'save'|'sceneSlot'|null>(null);
   const [controlledDemo,setControlledDemo]=useState(false);
   const controlledDemoRef=useRef(false);
   const [controlledLocation,setControlledLocation]=useState<{mapId:string;x:number;y:number}|null>(null);
   useEffect(()=>{controlledDemoRef.current=controlledDemo;},[controlledDemo]);
   const [originalEvents,setOriginalEvents]=useState<ResolvedControlledEventContent|null>(null);
+  const [originalEventsBound,setOriginalEventsBound]=useState<BoundControlledEventContent|null>(null);
+  const originalEventsTargetRef=useRef<string|null>(null);
   const [showOriginalEvents,setShowOriginalEvents]=useState(false);
   const [selectedItem,setSelectedItem]=useState('');
   const [log,setLog]=useState<string[]>([]);
@@ -175,8 +178,28 @@ export default function App(){
       if(parsed?.schemaVersion!==3||parsed?.id!=='original.jy.events'||parsed?.classification!=='original-derived')throw new Error('請選擇有效的 original.jy.events 受控事件包（由 convert_original_events_generic 產生）。');
       const content=await resolveControlledEventContent(parsed);
       setOriginalEvents(content);setShowOriginalEvents(true);
+      // Bind to host for unified session integration (MVP: events become part of game save).
+      if(sessionRef.current){
+        const bound=await resolveOriginalEventsForHost(sessionRef.current.content, parsed);
+        setOriginalEventsBound(bound);
+      }
       announce(`已載入原版事件包：${Object.keys(content.data.events).length} 筆事件、${Object.keys(content.data.dialogues).length} 段對話。`);
     }catch(cause){problem(cause);}finally{loading(false);if(originalEventsInput.current)originalEventsInput.current.value='';}
+  }
+  /** Trigger an original event from a scene slot, opening the preview with the event started (MVP). */
+  function triggerSceneSlotEvent(sceneId: number, slotId: number) {
+    const bound = originalEvents;
+    if (!bound) return;
+    const key = `${sceneId}/${slotId}`;
+    const eventId = bound.data.sceneSlots?.[key];
+    if (!eventId) { setError(`場景 ${sceneId} 槽 ${slotId} 沒有事件。`); return; }
+    // Open the preview panel with the event pre-selected via the ref.
+    setShowOriginalEvents(true);
+    setGamePanel(null);
+    setError('');
+    announce(`已定位事件 ${eventId}（場景 ${sceneId} 槽 ${slotId}）。在測試面板中啟動。`);
+    // Store the target event ID so the preview can auto-start it.
+    originalEventsTargetRef.current = `${bound.data.id}:event/${eventId}`;
   }
   async function importRegionPreview(file?:File){
     if(!file)return;loading(true);setError('');
@@ -309,11 +332,12 @@ export default function App(){
               onClose={(next,bound)=>{const current=sessionRef.current;if(current){const pair={host:current.content,controlled:bound};availableUnifiedRef.current=pair;applyUnified({content:pair,state:next});apply({...current,state:next.game});}
                 controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);}}
               onLocation={setControlledLocation}/>}
-            {showOriginalEvents&&originalEvents&&<OriginalEventsPreview content={originalEvents} onClose={()=>setShowOriginalEvents(false)}/>}
-            <div className="game-hud"><button aria-pressed={gamePanel==='map'} onClick={()=>setGamePanel(gamePanel==='map'?null:'map')}>地圖</button><button aria-pressed={gamePanel==='inventory'} disabled={controlledDemo} onClick={()=>setGamePanel(gamePanel==='inventory'?null:'inventory')}>行囊 {carriedItems?.length?`· ${carriedItems.length}`:''}</button><button aria-pressed={gamePanel==='save'} onClick={()=>setGamePanel(gamePanel==='save'?null:'save')}>存檔</button>{originalEvents&&<button aria-pressed={showOriginalEvents} onClick={()=>{setGamePanel(null);setShowOriginalEvents(!showOriginalEvents);}}>測試</button>}</div>
+            {showOriginalEvents&&originalEvents&&<OriginalEventsPreview content={originalEvents} targetEventId={originalEventsTargetRef.current??undefined} onClose={()=>{originalEventsTargetRef.current=null;setShowOriginalEvents(false);}}/>}
+            <div className="game-hud"><button aria-pressed={gamePanel==='map'} onClick={()=>setGamePanel(gamePanel==='map'?null:'map')}>地圖</button><button aria-pressed={gamePanel==='inventory'} disabled={controlledDemo} onClick={()=>setGamePanel(gamePanel==='inventory'?null:'inventory')}>行囊 {carriedItems?.length?`· ${carriedItems.length}`:''}</button><button aria-pressed={gamePanel==='save'} onClick={()=>setGamePanel(gamePanel==='save'?null:'save')}>存檔</button>{originalEvents&&<button aria-pressed={showOriginalEvents} onClick={()=>{setGamePanel(null);setShowOriginalEvents(!showOriginalEvents);}}>測試</button>}{originalEventsBound&&!controlledDemo&&<button aria-pressed={gamePanel==='sceneSlot'} onClick={()=>setGamePanel(gamePanel==='sceneSlot'?null:'sceneSlot')}>NPC</button>}</div>
             {gamePanel==='map'&&map&&displayState&&<section className="game-overlay map-overlay" aria-label="行跡地圖"><h3>行跡</h3><MiniMap map={map} state={displayState} view={cameraView}/><p>X {displayState.x} · Y {displayState.y}</p></section>}
             {gamePanel==='inventory'&&<section className="game-overlay inventory-overlay" aria-label="行囊"><h3>行囊</h3>{carriedItems?.length?<><ul className="game-inventory-list">{carriedItems.map(([id,count])=><li key={id}><button aria-pressed={activeItemId===id} onClick={()=>setSelectedItem(id)}>{content?.items[id]?.name.replace(/^Mock /,'')}<b>× {count}</b></button></li>)}</ul><article className="item-description"><h4>{content?.items[activeItemId]?.name.replace(/^Mock /,'')??'選擇一件道具'}</h4><p>{content?.items[activeItemId]?.description??'此道具尚無說明。'}</p></article></>:<p className="muted">行囊目前是空的。</p>}{originalEvents&&<button className="wide" onClick={()=>{setGamePanel(null);setShowOriginalEvents(true);}}>開啟測試面板</button>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
             {gamePanel==='save'&&<section className="game-overlay save-overlay" aria-label="存檔操作"><h3>留存江湖</h3>{controlledDemo?<p className="fine-print">受控事件的獨立存讀請使用測試面板。</p>:<><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session}>上一份備份</button></div></>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
+            {gamePanel==='sceneSlot'&&originalEventsBound&&!controlledDemo&&<section className="game-overlay save-overlay" aria-label="場景槽觸發"><h3>NPC 互動</h3><p className="fine-print">輸入場景 ID 與槽號，觸發該位置的事件（ALLDEF.GRP 映射）。</p><div className="text-actions"><label>場景 <input type="number" min={0} max={99} placeholder="0" id="ss-scene"/></label><label>槽 <input type="number" min={0} max={199} placeholder="0" id="ss-slot"/></label><button className="primary" onClick={()=>{const s=Number((document.getElementById('ss-scene') as HTMLInputElement|null)?.value??'');const sl=Number((document.getElementById('ss-slot') as HTMLInputElement|null)?.value??'');setGamePanel(null);triggerSceneSlotEvent(s,sl);}}>觸發事件</button></div><button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
           </div>
           <div className="control-bar"><div className="direction-pad screen-directions" aria-label="依畫面方向移動">{SCREEN_BUTTONS.map(button=><button key={button.name} style={{gridArea:button.name}} aria-label={button.label} disabled={busy||!!cursor||!!observedCursor||controlledDemo||unified?.state.mode==='controlled'} onClick={()=>{const direction=screenToGridDirection(button.x,button.y,cameraViewRef.current.alpha,cameraViewRef.current.gridYSign??1);if(direction)send({type:'MOVE',direction});}}>{button.arrow}</button>)}<span className="pad-center" aria-hidden="true">◇</span></div><div className="keyboard-hint"><b>方向鍵 / WASD</b><span>依畫面方向移動 · 組合兩鍵斜走</span></div><button className="primary interact-button" disabled={controlledDemo||unified?.state.mode==='controlled'||busy||(!adjacent&&!cursor&&!observedCursor)||step?.op==='choice'} onClick={()=>interact()}>{cursor||observedCursor?'繼續對話':'與鄰近人物互動'}<kbd>E</kbd></button></div>
           <div className="feedback" role="status" aria-live="polite"><span className="feedback-mark">◇</span>{notice}</div>
