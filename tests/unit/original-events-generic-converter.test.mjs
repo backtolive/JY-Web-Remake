@@ -314,6 +314,17 @@ test('Generic converter emits static item definitions from the RANGER item table
     assert.equal(roleMagic['5'].magicLevels.length, 10);
     // Role 5 has magic 58 at level 900 (evidence: RANGER.GRP byte inspection).
     assert.ok(roleMagic['5'].magicIds.includes(58));
+    // Per-role base attributes from RANGER.GRP (community TRole offsets; seed candidates).
+    const roleAttributes = content.roleAttributes ?? {};
+    assert.ok(Object.keys(roleAttributes).length > 0, 'roleAttributes should have entries');
+    assert.ok(roleAttributes['0'], 'role 0 should have attribute data');
+    // Role 0 base attributes (evidence: RANGER.GRP byte inspection, community TRole offsets).
+    assert.equal(roleAttributes['0'].aptitude, 50); // DOS-confirmed (opcode 34 sampling)
+    assert.equal(roleAttributes['0'].level, 1);
+    assert.equal(roleAttributes['0'].maxHp, 32);
+    assert.equal(roleAttributes['0'].maxMp, 25);
+    assert.equal(roleAttributes['0'].currentHp, roleAttributes['0'].maxHp);
+    assert.equal(roleAttributes['0'].currentMp, roleAttributes['0'].maxMp);
     // Every inventory key referenced by event effects has a matching item definition, so
     // the host can resolve original.jy:item/{id} keys to display metadata.
     const inventoryKeys = content.decision.domains['original.jy:inventory'].allowedKeys;

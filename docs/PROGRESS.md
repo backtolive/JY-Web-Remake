@@ -1,6 +1,16 @@
-# 進度 — 2026-11-27
+# 進度 — 2026-11-28
 
-## 2026-11-27：MOD 基礎（生成器＋Web 載入＋存檔身份）（最新）
+## 2026-11-28：角色屬性面板＋完整行囊 UI（MVP 展示層）（最新）
+
+Phase: Phase 7 apps/web 可操作切片＋Phase 6 內容種子。Status: **RANGER.GRP 角色基礎屬性（level/HP/MP/attack/speed/aptitude）入內容包；`OriginalEventsPreview` 新增角色屬性面板（種子值＋事件即時狀態）與完整物品清單（200 項）**
+- Completed Tasks: `loadRoleAttributes()` 讀取 RANGER.GRP 角色表（182B×320，社群 TRole 偏移：level@30、HP@34/36、MP@82/84、attack@86、speed@88、aptitude@120）；`roleAttributes` 欄位入內容包（schema＋runtime＋converter）；`OriginalEventsPreview` 新增 `RoleAttributePanel`（種子值 vs 事件即時狀態，變更以金色標出；always-visible）與 `ItemCatalog`（200 項 icon＋名稱＋分類，點擊選取為使用物品）；converter 測試釘選 role 0 aptitude 50（DOS 已證）。
+- Files Changed: `convert_original_events_generic.mjs`、`controlled-event.ts`、`controlled-event-schema.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`tests/unit/original-events-generic-converter.test.mjs`、docs。
+- Tests Executed: 單元 154/154（concurrency=2）；root＋web typecheck；schema:check；web build。
+- Test Results: 全通過。內容包 digest `304de0e28424f53a`（320 角色屬性；role 0 level 1／HP 32／MP 25／aptitude 50）。
+- Known Limitations: 角色屬性為社群 TRole 偏移種子（候選非驗證；aptitude@120 為 DOS 已證）；「目前狀態」只在事件寫入該欄位後顯示；等級無對應決策欄位僅顯示種子；行囊清單為唯讀目錄（不寫入 carried-item 決策欄位）；物品圖示需手動載入 atlas PNG。
+- Next Recommended Tasks: 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）；戰鬥公式（事件中的戰鬥接入）；行囊清單接入 carried-item 決策欄位（顯示實際持有量）。
+
+## 2026-11-27：MOD 基礎（生成器＋Web 載入＋存檔身份）
 
 Phase: Phase 6 內容基礎契約＋Phase 7 apps/web 可操作切片。Status: **引擎核心 MOD 解析（相依／版本／優先權／衝突／確定順序）與存檔身份保存本已完整；本輪補齊 MOD 生成器與 Web 端 MOD 檔載入**
 - Completed Tasks: `tools/extractor/prepare-mod-preview.mjs`（讀基礎包→產出 `kind:mod` 包：相依基礎、priority 10、patch 一對話（前置鎖定）＋新增 1 物品＋1 對話）；`App.tsx` 新增 `importMod(file)`＋「匯入 MOD 包」按鈕＋`basePackageRef` 追蹤當前基礎包＋`activeModId` 狀態顯示；載入 MOD 時 `resolveContent([base,mod])` 重新解析並從入口重開。

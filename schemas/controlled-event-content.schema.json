@@ -919,6 +919,70 @@
         "additionalProperties": false
       },
       "maxProperties": 400
+    },
+    "roleAttributes": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^\\d+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "currentHp": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "maxHp": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "currentMp": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "maxMp": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "attack": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "speed": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          },
+          "aptitude": {
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "level",
+          "currentHp",
+          "maxHp",
+          "currentMp",
+          "maxMp",
+          "attack",
+          "speed",
+          "aptitude"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 400
     }
   },
   "required": [

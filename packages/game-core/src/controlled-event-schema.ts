@@ -136,7 +136,21 @@ export const controlledEventContentSchema = {
       additionalProperties: object({
         magicIds: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 10) },
         magicLevels: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 10) },
-      }, ['magicIds', 'magicLevels']), maxProperties: 400 } },
+      }, ['magicIds', 'magicLevels']), maxProperties: 400 },
+    // Optional: per-role base attributes (RANGER.GRP community TRole offsets). Read-only
+    // seed for the character attribute panel. Keys are role ID strings.
+    roleAttributes: { type: 'object', propertyNames: { type: 'string', pattern: '^\\d+$' },
+      additionalProperties: object({
+        level: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        currentHp: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        maxHp: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        currentMp: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        maxMp: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        attack: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        speed: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+        aptitude: { type: 'integer', minimum: -1, maximum: 1_000_000 },
+      }, ['level', 'currentHp', 'maxHp', 'currentMp', 'maxMp', 'attack', 'speed', 'aptitude']),
+      maxProperties: 400 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

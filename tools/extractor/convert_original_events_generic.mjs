@@ -235,6 +235,37 @@ function loadRoleMagicArrays() {
   return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
+// Community TRole attribute offsets (kys_type.pas packed-field order). The original record is
+// 182 bytes; offsets below 126 are within bounds and aptitude@120 is DOS-confirmed (opcode 34).
+// These are seed candidates, not Verified Original field semantics.
+const ROLE_ATTR_OFFSETS = {
+  level: 30, currentHp: 34, maxHp: 36,
+  currentMp: 82, maxMp: 84, attack: 86, speed: 88, aptitude: 120,
+};
+/** Extract per-role base attributes (level/HP/MP/attack/speed/aptitude) from RANGER.GRP.
+ * Only roles with a non-zero max HP are included (avoids empty slots). Returns a map of
+ * role ID → { level, currentHp, maxHp, currentMp, maxMp, attack, speed, aptitude }. */
+function loadRoleAttributes() {
+  const buf = readFileSync(RANGER_FILE);
+  const result = {};
+  for (let role = 0; role < ROLE_COUNT_TOTAL; role++) {
+    const base = ROLE_TABLE_OFFSET + role * ROLE_RECORD_SIZE;
+    const read = offset => buf.readInt16LE(base + offset);
+    const row = {
+      level: read(ROLE_ATTR_OFFSETS.level),
+      currentHp: read(ROLE_ATTR_OFFSETS.currentHp),
+      maxHp: read(ROLE_ATTR_OFFSETS.maxHp),
+      currentMp: read(ROLE_ATTR_OFFSETS.currentMp),
+      maxMp: read(ROLE_ATTR_OFFSETS.maxMp),
+      attack: read(ROLE_ATTR_OFFSETS.attack),
+      speed: read(ROLE_ATTR_OFFSETS.speed),
+      aptitude: read(ROLE_ATTR_OFFSETS.aptitude),
+    };
+    if (row.maxHp > 0) result[role] = row;
+  }
+  return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
+}
+
 /** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
  * only when its IDX range is exactly ICON_SIZE bytes and the header is 40x40; otherwise
  * null (empty slot). RLE per piccache.c: [w][h][xoff][yoff] then per row a length byte, and
@@ -795,6 +826,7 @@ export function buildOriginalEventsContent() {
   const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
   const sceneSlotData = loadSceneSlots();
   const roleMagicData = loadRoleMagicArrays();
+  const roleAttrData = loadRoleAttributes();
   const iconAtlas = loadItemIconAtlas();
   const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
   const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
@@ -865,6 +897,8 @@ export function buildOriginalEventsContent() {
     sceneSlots: sceneSlotData.slots,
     // Per-role magic arrays from RANGER.GRP (CanEquip magic level rule seed data).
     roleMagic: roleMagicData.roles,
+    // Per-role base attributes from RANGER.GRP (community TRole offsets; seed candidates).
+    roleAttributes: roleAttrData.roles,
   };
   const serialized = JSON.stringify(content, null, 2) + '\n';
   const digest = createHash('sha256').update(serialized).digest('hex').slice(0, 16);

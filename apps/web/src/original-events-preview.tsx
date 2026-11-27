@@ -182,6 +182,7 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
     <header><strong>原版事件 · 本機唯讀預覽</strong><button onClick={onClose}>關閉</button></header>
     {error && <p role="alert" className="oe-error">{error}</p>}
     <p className="oe-status" role="status">{message}</p>
+    {content.data.roleAttributes && <RoleAttributePanel roleId={hostRole} content={content} state={state} />}
     {!cursor && <div className="oe-select">
       <label>選擇要預覽的事件<input type="search" placeholder="以編號過濾，例如 581" value={filter} onChange={e => setFilter(e.target.value)}/></label>
       <select value={eventId} onChange={e => setEventId(e.target.value)}>
@@ -236,6 +237,7 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
           })}
         </div>
       </div>}
+      <ItemCatalog content={content} iconUrls={iconUrls} selectedId={useItemId} onSelect={setUseItemId} />
     </div>}
     {state && <>
       <p className="oe-event">目前事件 <strong>{cursor ? cursor.eventId.split('/').pop() : '已結束'}</strong> · 步驟 {cursor ? cursor.pc : '—'}</p>
@@ -288,5 +290,76 @@ function ItemDetailPanel({ id, content, iconUrl }:
         {rows.map(([label, value]) => <tr key={label}><th>{label}</th><td>{value}</td></tr>)}
       </tbody>
     </table>
+  </details>;
+}
+
+/** Character attribute panel. Shows a role's base attributes seeded from RANGER.GRP
+ * (community TRole offsets) and any live decision-state overrides written by a running
+ * event. The seed values are candidates, not Verified Original field semantics. */
+function RoleAttributePanel({ roleId, content, state }:
+  { roleId: string; content: ResolvedControlledEventContent; state: ControlledEventState | null }) {
+  const base = content.data.roleAttributes?.[roleId];
+  if (!base) return <p className="oe-note">角色 {roleId} 沒有 RANGER.GRP 屬性種子。</p>;
+  // Map seed field names to the decision domains the converter declares (ROLE_FIELDS).
+  const FIELD_DOMAIN: Record<string, string> = {
+    currentHp: 'original.jy:role/current-hp', maxHp: 'original.jy:role/max-hp',
+    currentMp: 'original.jy:role/current-mp', maxMp: 'original.jy:role/max-mp',
+    attack: 'original.jy:role/attack', speed: 'original.jy:role/speed',
+    aptitude: 'original.jy:role/aptitude',
+  };
+  const live = (domain: string | undefined): number | null => {
+    if (!state || !domain) return null;
+    const value = state.decision.values[domain]?.[`original.jy:role/${roleId}`];
+    return typeof value === 'number' ? value : null;
+  };
+  const rows: Array<[string, number, string | undefined]> = [
+    ['等級', base.level, undefined],
+    ['生命', base.currentHp, FIELD_DOMAIN.currentHp],
+    ['生命上限', base.maxHp, FIELD_DOMAIN.maxHp],
+    ['內力', base.currentMp, FIELD_DOMAIN.currentMp],
+    ['內力上限', base.maxMp, FIELD_DOMAIN.maxMp],
+    ['攻擊', base.attack, FIELD_DOMAIN.attack],
+    ['速度', base.speed, FIELD_DOMAIN.speed],
+    ['資質', base.aptitude, FIELD_DOMAIN.aptitude],
+  ];
+  return <details className="oe-role-attrs">
+    <summary>角色屬性（角色 {roleId} · RANGER.GRP 種子）</summary>
+    <table className="oe-role-attrs-table">
+      <thead><tr><th>欄位</th><th>種子值</th><th>目前狀態</th></tr></thead>
+      <tbody>
+        {rows.map(([label, seed, domain]) => {
+          const value = live(domain);
+          return <tr key={label}>
+            <th>{label}</th><td>{seed}</td>
+            <td>{value !== null ? <strong className={value !== seed ? 'oe-attr-changed' : ''}>{value}</strong> : '—'}</td>
+          </tr>;
+        })}
+      </tbody>
+    </table>
+    <p className="oe-note">種子值來自 RANGER.GRP 角色表（社群 TRole 欄位偏移，候選非驗證）；「目前狀態」只在事件寫入該欄位後顯示，與種子不同時以金色標出。等級無對應決策欄位，僅顯示種子。</p>
+  </details>;
+}
+
+/** Full original item catalog. Lists every item in the content package (RANGER.GRP) with
+ * icon, ID, name, and category. Clicking a cell selects that item as the "use item". */
+function ItemCatalog({ content, iconUrls, selectedId, onSelect }:
+  { content: ResolvedControlledEventContent; iconUrls: Map<string, string> | null;
+    selectedId: string; onSelect: (id: string) => void }) {
+  const items = Object.entries(content.data.items ?? {})
+    .sort((a, b) => (Number(a[0].split('/').pop() ?? 0) || 0) - (Number(b[0].split('/').pop() ?? 0) || 0));
+  return <details className="oe-item-catalog">
+    <summary>完整物品清單（{items.length} 項 · 原版 RANGER.GRP）</summary>
+    <div className="oe-catalog-grid">
+      {items.map(([id, def]) => {
+        const itemId = id.split('/').pop() ?? '';
+        const icon = iconUrls?.get(id);
+        return <button key={id} className={`oe-catalog-cell${selectedId === itemId ? ' selected' : ''}`}
+          onClick={() => onSelect(itemId)} title={`${itemId} ${def.name}${def.category ? ` · ${def.category}` : ''}`}>
+          {icon ? <img src={icon} alt={def.name} /> : <span className="oe-catalog-noicon">{itemId}</span>}
+          <span className="oe-catalog-name">{def.name}</span>
+          <span className="oe-catalog-meta">{itemId}{def.category ? ` · ${def.category}` : ''}</span>
+        </button>;
+      })}
+    </div>
   </details>;
 }

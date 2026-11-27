@@ -84,6 +84,10 @@ export interface ControlledEventContent {
   /** Per-role magic ID and level arrays (RANGER.GRP). Read-only reference for seeding
    * the CanEquip magic level rule. Keys are role ID strings. */
   roleMagic?: Record<string, { magicIds: number[]; magicLevels: number[] }>;
+  /** Per-role base attributes (RANGER.GRP community TRole offsets). Read-only seed for the
+   * character attribute panel. Keys are role ID strings. */
+  roleAttributes?: Record<string, { level: number; currentHp: number; maxHp: number;
+    currentMp: number; maxMp: number; attack: number; speed: number; aptitude: number }>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;

@@ -33,5 +33,23 @@
  conic-gradient(#fff 0 25%,#ddd 0 50%,#fff 0 75%,#ddd 0) 0 0/8px 8px}
 .oe-preview .oe-icon-cell img{width:40px;height:40px;image-rendering:pixelated;display:block}
 .oe-preview .oe-icon-cell:hover{border-color:#b8954a}
+.oe-preview .oe-role-attrs{margin:8px 0;padding:8px 10px;border:1px solid #d7dccd;border-radius:4px;background:#f7f8f4;font-size:12px}
+.oe-preview .oe-role-attrs summary{cursor:pointer;font-weight:600;color:#3d4a3f;margin-bottom:6px}
+.oe-preview .oe-role-attrs-table{width:100%;border-collapse:collapse}
+.oe-preview .oe-role-attrs-table th,.oe-preview .oe-role-attrs-table td{text-align:left;padding:2px 8px 2px 0;font-size:12px}
+.oe-preview .oe-role-attrs-table thead th{color:#59695d;font-weight:600;border-bottom:1px solid #d7dccd}
+.oe-preview .oe-role-attrs-table tbody th{color:#59695d;font-weight:500}
+.oe-preview .oe-role-attrs-table .oe-attr-changed{color:#8a6d3b}
+.oe-preview .oe-item-catalog{margin:10px 0;padding:8px 10px;border:1px solid #d7dccd;border-radius:4px;background:#f7f8f4;font-size:12px}
+.oe-preview .oe-item-catalog summary{cursor:pointer;font-weight:600;color:#3d4a3f;margin-bottom:8px}
+.oe-preview .oe-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:5px;max-height:280px;overflow:auto}
+.oe-preview .oe-catalog-cell{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #d7dccd;border-radius:4px;background:#fffdf7;cursor:pointer;text-align:left}
+.oe-preview .oe-catalog-cell:hover{border-color:#b8954a}
+.oe-preview .oe-catalog-cell.selected{border-color:#b8954a;background:#f6f0dc}
+.oe-preview .oe-catalog-cell img{width:32px;height:32px;image-rendering:pixelated;flex:none;border:1px solid #c9d0bd}
+.oe-preview .oe-catalog-noicon{width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid #c9d0bd;background:#f0f1ec;font-size:10px;color:#7a887d}
+.oe-preview .oe-catalog-name{font-size:12px;color:#2d3a2f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oe-preview .oe-catalog-meta{font-size:10px;color:#7a887d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:720px){.oe-preview{left:2%;right:2%;bottom:2%;padding:12px;max-height:82%}
-.oe-preview .oe-icon-grid{grid-template-columns:repeat(10,40px)}}
+.oe-preview .oe-icon-grid{grid-template-columns:repeat(10,40px)}
+.oe-preview .oe-catalog-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}}
