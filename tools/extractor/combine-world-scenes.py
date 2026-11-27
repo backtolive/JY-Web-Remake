@@ -176,15 +176,12 @@ def main():
                 'toX': wx, 'toY': wy,
             })
 
-    # Combined projected map: world layers + scene layers
-    all_images = list(world['images'])
-    for sid in scene_ids:
-        all_images.extend(scenes[sid]['images'])
-
-    # World layers
+    # Per-map projected maps: each map gets its own projected map with proper images
+    projected_maps = []
+    # World projected map
+    world_layers = []
     sha = world['sha']
     data = world['data']
-    world_layers = []
     for n, lid, proj in [('EARTH.002', 'world-ground', 'ground'),
                           ('SURFACE.002', 'world-surface', 'billboard'),
                           ('BUILDING.002', 'world-building', 'billboard')]:
@@ -193,29 +190,32 @@ def main():
             'id': lid, 'projection': proj,
             'data': base64.b64encode(raw).decode(), 'sha256': sha(raw),
         })
-
-    # Scene layers
-    scene_layers = []
+    projected_maps.append({
+        'mapId': world_map_id,
+        'projectedMap': {
+            'version': 1, 'width': 480, 'height': 480,
+            'images': world['images'],
+            'layers': world_layers,
+        },
+    })
+    # Scene projected maps
     for sid in scene_ids:
         ground_raw = struct.pack('<4096h', *scenes[sid]['ground'])
         building_raw = struct.pack('<4096h', *scenes[sid]['building'])
-        scene_layers.append({
-            'id': f'scene{sid}-ground', 'projection': 'ground',
-            'data': base64.b64encode(ground_raw).decode(), 'sha256': sha(ground_raw),
+        projected_maps.append({
+            'mapId': scene_map_ids[sid],
+            'projectedMap': {
+                'version': 1, 'width': 64, 'height': 64,
+                'images': scenes[sid]['images'],
+                'layers': [
+                    {'id': f'scene{sid}-ground', 'projection': 'ground',
+                     'data': base64.b64encode(ground_raw).decode(), 'sha256': sha(ground_raw)},
+                    {'id': f'scene{sid}-building', 'projection': 'billboard',
+                     'data': base64.b64encode(building_raw).decode(), 'sha256': sha(building_raw)},
+                ],
+            },
         })
-        scene_layers.append({
-            'id': f'scene{sid}-building', 'projection': 'billboard',
-            'data': base64.b64encode(building_raw).decode(), 'sha256': sha(building_raw),
-        })
-
-    # The projected map only supports one grid size, so we use the world grid.
-    # Scene maps are accessed via the content package's maps array (portals handle transitions).
-    # For rendering, the web app uses the projected map for the world and mock visuals for scenes.
-    projected = {
-        'version': 1, 'width': 480, 'height': 480,
-        'images': all_images,
-        'layers': world_layers,
-    }
+        print(f'  Scene {sid} projected map: {len(scenes[sid]["images"])} images, 64x64')
 
     pkg = {
         'manifest': {
@@ -230,11 +230,11 @@ def main():
 
     bundle = {
         'package': pkg,
-        'projectedMap': projected,
+        'projectedMaps': projected_maps,
         'previewNotes': [
             f'結合世界地圖（480×480）＋{len(scene_ids)} 個場景（64×64）。',
             f'Portals：世界→場景（場景入口位置）＋場景→世界（角落返回）。',
-            '場景地圖以內容包 maps 陣列載入；portals 處理過渡。',
+            f'每張地圖有獨立 projected map（{len(projected_maps)} 個渲染層）。',
             '3D 模型暫擱；事件未接入。',
         ],
         'provenance': {

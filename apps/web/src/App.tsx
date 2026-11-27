@@ -49,6 +49,7 @@ export default function App(){
   const [modEnabled,setModEnabled]=useState(false),[originalPackage,setOriginalPackage]=useState<ContentPackage|null>(null);
   const [regionCells,setRegionCells]=useState<RegionVisualCell[]>([]);
   const [projectedMap,setProjectedMap]=useState<ProjectedMap>();
+  const [projectedMaps,setProjectedMaps]=useState<Record<string,ProjectedMap>>({});
   const [regionBaseline,setRegionBaseline]=useState<RegionVisualCell[]>([]),[modelId,setModelId]=useState(''),[replacementInfo,setReplacementInfo]=useState('');
   const [regionNotes,setRegionNotes]=useState<string[]>([]);
   const [cameraView,setCameraView]=useState<CameraView>(VIEW_CAMERA),cameraViewRef=useRef<CameraView>(VIEW_CAMERA);
@@ -83,7 +84,7 @@ export default function App(){
     const raw=cause instanceof Error?cause.message:'操作失敗，現有進度已保留。';setError(code&&friendly[code]?friendly[code]:raw);
   }
   async function start(pkg:unknown,withMod:boolean,original:boolean){
-    const ticket=++generation.current;loading(true);setError('');applyUnified(null);applyObserved673(null);observed673BundleRef.current=null;availableUnifiedRef.current=null;controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);setOriginalEvents(null);setShowOriginalEvents(false);setRegionCells([]);setProjectedMap(undefined);setRegionNotes([]);setCutaway(false);clearModelReplacement();
+    const ticket=++generation.current;loading(true);setError('');applyUnified(null);applyObserved673(null);observed673BundleRef.current=null;availableUnifiedRef.current=null;controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);setOriginalEvents(null);setShowOriginalEvents(false);setRegionCells([]);setProjectedMap(undefined);setProjectedMaps({});setRegionNotes([]);setCutaway(false);clearModelReplacement();
     try{
       if(!globalThis.crypto?.subtle)throw new Error('請使用 HTTPS 或 localhost 開啟網站，才能驗證內容包與存檔。');
       const content=await resolveContent(withMod?[pkg,greetingMod]:[pkg]);
@@ -201,7 +202,7 @@ export default function App(){
       const is673=pkg.manifest.id==='original.jy.observed673';
       const observed=is673?await bindObserved673(content,bundle.observedEvent673):null;
       applyObserved673(observed);observed673BundleRef.current=observed?bundle:null;
-      setRegionCells([]);setProjectedMap(undefined);setRegionNotes([]);setCutaway(false);clearModelReplacement();setOriginalPackage(pkg);setModEnabled(false);apply({content,state:observed?.state.game??createGame(content,42),original:true});
+      setRegionCells([]);setProjectedMap(undefined);setProjectedMaps({});setRegionNotes([]);setCutaway(false);clearModelReplacement();setOriginalPackage(pkg);setModEnabled(false);apply({content,state:observed?.state.game??createGame(content,42),original:true});
       announce(observed?'已載入事件 673 本機採樣切片。前置資質採 DOS 觀察值 72。':'原版預覽包已在本機載入。此切片僅含部分對話與占位場景。');
     }catch(cause){problem(cause);}finally{loading(false);if(originalInput.current)originalInput.current.value='';}
   }
@@ -245,7 +246,20 @@ export default function App(){
       const bundle=JSON.parse(await file.text());const pkg=bundle.package??bundle;
       if(!validatePackageSchema(pkg)||pkg.manifest.kind!=='base')throw new Error('請選擇有效的地圖區域預覽包。');
       const content=await resolveContent([pkg]);
+      // Support both single projectedMap (legacy) and projectedMaps array (multi-map)
       const projected=bundle.projectedMap?await decodeProjectedMap(bundle.projectedMap):undefined;
+      let maps:Record<string,ProjectedMap>={};
+      if(Array.isArray(bundle.projectedMaps)){
+        for(const entry of bundle.projectedMaps){
+          if(typeof entry.mapId!=='string'||!entry.mapId||!entry.projectedMap)throw new Error('PROJECTED_MAPS_FORMAT');
+          maps[entry.mapId]=await decodeProjectedMap(entry.projectedMap);
+        }
+        setProjectedMaps(maps);
+        // Set the entry map's projected map as the active one
+        if(maps[content.entry.mapId])setProjectedMap(maps[content.entry.mapId]);
+      }else{
+        setProjectedMaps({});
+      }
       if(projected&&(projected.width!==content.maps[content.entry.mapId]!.width||projected.height!==content.maps[content.entry.mapId]!.height))throw new Error('PROJECTED_MAP_SIZE');
       const cells:RegionVisualCell[]=Array.isArray(bundle?.assembled?.cells)?bundle.assembled.cells:[];
       if(projected&&cells.length)throw new Error('PROJECTED_AMBIGUOUS');
@@ -364,7 +378,7 @@ export default function App(){
           {observed673&&<p className="map-coordinate">測試前置：DOS 採樣資質 72（原始素材 50）；目前資質 <strong>{observed673Aptitude(observed673)}</strong> · 事件槽 <strong>{observed673Slot(observed673)}</strong> · X {state?.x} · Y {state?.y}。僅驗證此路徑，非原版存檔。</p>}
           {!controlledDemo&&unified?.state.mode==='controlled'&&<p className="map-coordinate">有待完成的 Mock 受控事件，請從「內容與測試設定」繼續。</p>}
           {projectedMap&&displayState&&<p className="map-coordinate">目前世界座標　<strong>X {displayState.x} · Y {displayState.y}</strong></p>}
-          <div className="stage">{map&&displayState?<SceneView map={map} state={displayState} onInteract={controlledDemo?()=>{}:interact} regionCells={regionCells} projectedMap={projectedMap} cutaway={cutaway} view={cameraView} onViewChange={updateCameraView}/>:<div className="initial-loading">正在準備江湖…</div>}
+          <div className="stage">{map&&displayState?<SceneView map={map} state={displayState} onInteract={controlledDemo?()=>{}:interact} regionCells={regionCells} projectedMap={projectedMaps[map.id]??projectedMap} cutaway={cutaway} view={cameraView} onViewChange={updateCameraView}/>:<div className="initial-loading">正在準備江湖…</div>}
             {!controlledDemo&&dialogue&&<section className="dialogue-panel" aria-label="對話"><div className="speaker-portrait" aria-hidden="true"><div className="portrait-head"/><div className="portrait-body"/></div><div className="dialogue-copy"><p className="speaker">{dialogue.speaker.startsWith('portrait:')?'對方':dialogue.speaker.replace(/^Mock /,'')}</p><p className="dialogue-text">{dialogue.text}</p><button className="continue-button" onClick={()=>send({type:'CONTINUE'})} disabled={busy}>繼續 <span>↵</span></button></div></section>}
             {observedDialogue&&<section className="dialogue-panel" aria-label="原版事件對話"><div className="speaker-portrait" aria-hidden="true"><div className="portrait-head"/><div className="portrait-body"/></div><div className="dialogue-copy"><p className="speaker">{observedDialogue.speaker.startsWith('portrait:')?'對方':observedDialogue.speaker}</p><p className="dialogue-text">{observedDialogue.text}</p><button className="continue-button" onClick={()=>send({type:'CONTINUE'})} disabled={busy}>繼續 <span>↵</span></button></div></section>}
             {!controlledDemo&&step?.op==='choice'&&<section className="dialogue-panel choices" aria-label="選擇回應"><p className="speaker">你的回應</p>{step.options.map((option,i)=><button key={i} onClick={()=>send({type:'CHOOSE',option:i})} disabled={busy}><span>0{i+1}</span>{option.text}<b>→</b></button>)}</section>}
