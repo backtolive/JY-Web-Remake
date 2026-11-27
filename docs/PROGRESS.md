@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：NPC 互動觸發接入主遊戲（MVP 切片）（最新）
+## 2026-11-27：合併存檔（主遊戲＋事件狀態）（MVP 安全存讀檔）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **單一存檔含主遊戲狀態＋原版事件狀態；存檔/讀檔原子操作，備份保留**
+- Completed Tasks: `storage.ts` 新增 `CombinedSave`（v5）＋`saveCombined`／`loadCombined`／`combinedSaveKey`；`App.tsx` save/load 改用 combined 格式（事件包載入時自動包含事件狀態）；`OriginalEventsPreview` 新增 `initialState`／`onStateChange` props（狀態同步到父組件）。
+- Files Changed: `apps/web/src/storage.ts`、`apps/web/src/App.tsx`、`apps/web/src/original-events-preview.tsx`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過。
+- Known Limitations: 事件狀態只在預覽面板開啟時同步；關閉面板後 ref 清空（需重新開啟才能看到恢復的狀態）。
+- Next Recommended Tasks: NPC 碰撞偵測（自動觸發）；武功陣列種子資料；事件狀態持久化（不依賴面板開啟）。
+
+## 2026-11-27：NPC 互動觸發接入主遊戲（MVP 切片）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **原版事件可從主遊戲 HUD「NPC」按鈕觸發（場景槽→事件），事件在預覽面板運行並可存讀**
 - Completed Tasks: `original-controlled.ts`（bind 原版事件到 host）；`App.tsx` 新增「NPC」HUD 按鈕＋場景槽輸入面板（scene/slot→event ID 查表）；`OriginalEventsPreview` 新增 `targetEventId` prop（auto-start）；`triggerSceneSlotEvent` 從主遊戲觸發事件。

@@ -8,8 +8,9 @@ import './original-events-preview.css';
 /** Local read-only browser for the generated original.jy.events controlled-event package.
  * It runs the standalone controlled-event runtime in an isolated state, so it never touches
  * the main game session. Battles resolve to a chosen mock outcome; there is no battle math yet. */
-export function OriginalEventsPreview({ content, targetEventId, onClose }:
-  { content: ResolvedControlledEventContent; targetEventId?: string; onClose: () => void }) {
+export function OriginalEventsPreview({ content, targetEventId, initialState, onStateChange, onClose }:
+  { content: ResolvedControlledEventContent; targetEventId?: string;
+    initialState?: ControlledEventState; onStateChange?: (state: ControlledEventState | null) => void; onClose: () => void }) {
   const events = useMemo(() => Object.keys(content.data.events).sort((a, b) =>
     (Number(a.split('/').pop() ?? 0) || 0) - (Number(b.split('/').pop() ?? 0) || 0)), [content]);
   const [filter, setFilter] = useState('');
@@ -19,7 +20,7 @@ export function OriginalEventsPreview({ content, targetEventId, onClose }:
   const [hostSlot, setHostSlot] = useState('0');
   const [sceneId, setSceneId] = useState('');
   const [slotId, setSlotId] = useState('');
-  const [state, setState] = useState<ControlledEventState | null>(null);
+  const [state, setState] = useState<ControlledEventState | null>(initialState ?? null);
   const [changes, setChanges] = useState<DecisionChange[]>([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -65,6 +66,10 @@ export function OriginalEventsPreview({ content, targetEventId, onClose }:
     if (targetEventId) { setEventId(targetEventId); start(targetEventId); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetEventId]);
+  // Report state changes to the parent (for combined save/load).
+  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
+  // Sync external state changes (e.g. from a load operation).
+  useEffect(() => { if (initialState) setState(initialState); }, [initialState]);
   function useItem() {
     if (!useItemId) return;
     try {

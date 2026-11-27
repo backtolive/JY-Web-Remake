@@ -111,3 +111,45 @@ export function migrateStoredLegacySave(storage: StorageLike, content: UnifiedSe
   // The v1 key is never changed by this operation.
   return { state, raw };
 }
+
+/** Combined v5 save: main game state + optional controlled-event state (MVP safe save/load).
+ * The event state is only included when the original events are active; a save without events
+ * is backward-compatible (no `event` field). */
+export interface CombinedSave {
+  version: 5;
+  game: string;
+  event?: string;
+}
+export function combinedSaveKey(content: ResolvedContent) {
+  return 'jy.web.combined.save.v5:' + content.identities.map(pkg => pkg.id).join('|');
+}
+export function saveCombined(storage: StorageLike, content: ResolvedContent, state: GameState,
+  eventContent?: ResolvedControlledEventContent, eventState?: ControlledEventState) {
+  const key = combinedSaveKey(content);
+  const rawGame = serializeSave(content, state);
+  restoreSave(content, rawGame);
+  let rawEvent: string | undefined;
+  if (eventContent && eventState) {
+    rawEvent = serializeControlledEventSave(eventContent, eventState);
+    restoreControlledEventSave(eventContent, rawEvent);
+  }
+  const combined: CombinedSave = { version: 5, game: rawGame, ...(rawEvent ? { event: rawEvent } : {}) };
+  const raw = JSON.stringify(combined);
+  const old = storage.getItem(key);
+  if (old !== null) storage.setItem(key + ':backup', old);
+  storage.setItem(key, raw);
+  return raw;
+}
+export function loadCombined(storage: StorageLike, content: ResolvedContent,
+  eventContent?: ResolvedControlledEventContent, backup = false): { state: GameState; eventState?: ControlledEventState } {
+  const raw = storage.getItem(combinedSaveKey(content) + (backup ? ':backup' : ''));
+  if (raw === null) throw new Error(backup ? '還沒有備份存檔。' : '這個內容組合還沒有本機存檔。');
+  const combined = JSON.parse(raw) as CombinedSave;
+  if (combined.version !== 5) throw new Error('SAVE_VERSION');
+  const state = restoreSave(content, combined.game);
+  let eventState: ControlledEventState | undefined;
+  if (combined.event && eventContent) {
+    eventState = restoreControlledEventSave(eventContent, combined.event);
+  }
+  return { state, eventState };
+}

@@ -22,6 +22,7 @@
 - [x] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）：`ItemDetailPanel` 顯示名稱／別名／說明／分類／裝備槽／可堆疊／圖片引用／使用層欄位；與 CanEquip 門檻面板并列。
 - [x] CanEquip 武功等級規則（Pascal line 4729-4734）：角色已有同一武功且等級 < 900 時覆蓋為 True；`roleAttributes` 新增 `magicIds`／`magicLevels`（10 槽陣列）；`canEquipGate` 重構為「記錄失敗＋末尾覆蓋」模式；4 案 runtime 測試通過。
 - [x] NPC 互動觸發接入主遊戲（MVP）：主遊戲 HUD 新增「NPC」按鈕→場景槽輸入面板（scene/slot→event ID）；`original-controlled.ts` bind 原版事件到 host；`OriginalEventsPreview` 支援 `targetEventId` auto-start；事件從主遊戲觸發並在預覽面板運行（含存讀）。
+- [x] 合併存檔（MVP 安全存讀檔）：`CombinedSave` v5 格式（game＋event）；`saveCombined`／`loadCombined`；主遊戲存檔自動包含事件狀態；讀檔恢復事件進度；備份保留。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 
