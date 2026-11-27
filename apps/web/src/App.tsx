@@ -25,6 +25,15 @@ import { bindObserved673, dispatchObserved673, observed673Aptitude, observed673S
   observed673Slot, restoreObserved673, serializeObserved673 } from './original-673-web';
 import type { Observed673Runtime } from './original-673-web';
 
+/** MVP NPC collision: world positions that trigger original events via scene slots.
+ * Key: "mapId/x/y" → Value: "scene/slot" (ALLDEF.GRP mapping).
+ * These are test positions in the Mock world that correspond to known scene slots. */
+const SCENE_SLOT_POSITIONS: Record<string, string> = {
+  'mock.wuxia:map/room/5/5': '0/0',    // Event 1 (scene 0, slot 0)
+  'mock.wuxia:map/room/10/10': '32/0',  // Event 1 (scene 32, slot 0)
+  'mock.wuxia:map/room/15/15': '53/0',  // Event 533 (scene 53, slot 0 - 擂鼓山)
+};
+
 type Session={content:ResolvedContent;state:GameState;original:boolean};
 type UnifiedRuntime={content:UnifiedSessionContent;state:UnifiedSessionState};
 const messages:Record<string,string>={MOVE_BLOCKED:'前方無法通行。',PLAYER_MOVED:'',MAP_CHANGED:'已進入新場景。',EVENT_STARTED:'對話開始。',DIALOGUE:'對話進行中。',CHOICE:'請選擇回應。',EVENT_ENDED:'對話結束。'};
@@ -131,6 +140,21 @@ export default function App(){
     if(unifiedRef.current?.state.mode==='controlled'){announce('請先繼續受控事件。');return;}
     if(current.state.cursor){if(current.state.cursor.waiting==='dialogue')send({type:'CONTINUE'});return;}
     const map=current.content.maps[current.state.mapId]!;
+    // Scene slot position check (MVP NPC collision): if the player is at a position
+    // mapped to a scene slot, trigger that event instead of a Mock NPC interaction.
+    if(originalEvents) {
+      const posKey = `${current.state.mapId}/${current.state.x}/${current.state.y}`;
+      const slotKey = SCENE_SLOT_POSITIONS[posKey];
+      if (slotKey) {
+        const parts = slotKey.split('/');
+        const sceneId = Number(parts[0]);
+        const slotId = Number(parts[1]);
+        if (Number.isInteger(sceneId) && Number.isInteger(slotId)) {
+          triggerSceneSlotEvent(sceneId, slotId);
+          return;
+        }
+      }
+    }
     const npc=id?map.npcs.find(n=>n.id===id):map.npcs.find(n=>Math.abs(n.x-current.state.x)+Math.abs(n.y-current.state.y)===1);
     if(!npc){announce('走到引路人相鄰的一格，再按 E 或「互動」。');return;}
     send({type:'INTERACT',npcId:npc.id});
@@ -318,6 +342,7 @@ export default function App(){
   const observedStep=observedCursor&&observed673.context.content.data.events[observedCursor.eventId]?.steps[observedCursor.pc];
   const observedDialogue=observedStep?.op==='say'?observed673?.context.content.data.dialogues[observedStep.dialogueId]:null;
   const adjacent=map&&state&&!controlledDemo?map.npcs.find(n=>Math.abs(n.x-state.x)+Math.abs(n.y-state.y)===1):undefined;
+  const atSceneSlot=originalEvents&&session?SCENE_SLOT_POSITIONS[`${session.state.mapId}/${session.state.x}/${session.state.y}`]??null:null;
   const carriedItems=state&&content?Object.entries(state.inventory).filter(([id,count])=>count>0&&content.items[id]):[];
   const activeItemId=carriedItems?.some(([id])=>id===selectedItem)?selectedItem:carriedItems?.[0]?.[0]??'';
   return <div className="app-shell">
@@ -345,7 +370,7 @@ export default function App(){
             {gamePanel==='save'&&<section className="game-overlay save-overlay" aria-label="存檔操作"><h3>留存江湖</h3>{controlledDemo?<p className="fine-print">受控事件的獨立存讀請使用測試面板。</p>:<><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session}>上一份備份</button></div></>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
             {gamePanel==='sceneSlot'&&originalEventsBound&&!controlledDemo&&<section className="game-overlay save-overlay" aria-label="場景槽觸發"><h3>NPC 互動</h3><p className="fine-print">輸入場景 ID 與槽號，觸發該位置的事件（ALLDEF.GRP 映射）。</p><div className="text-actions"><label>場景 <input type="number" min={0} max={99} placeholder="0" id="ss-scene"/></label><label>槽 <input type="number" min={0} max={199} placeholder="0" id="ss-slot"/></label><button className="primary" onClick={()=>{const s=Number((document.getElementById('ss-scene') as HTMLInputElement|null)?.value??'');const sl=Number((document.getElementById('ss-slot') as HTMLInputElement|null)?.value??'');setGamePanel(null);triggerSceneSlotEvent(s,sl);}}>觸發事件</button></div><button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
           </div>
-          <div className="control-bar"><div className="direction-pad screen-directions" aria-label="依畫面方向移動">{SCREEN_BUTTONS.map(button=><button key={button.name} style={{gridArea:button.name}} aria-label={button.label} disabled={busy||!!cursor||!!observedCursor||controlledDemo||unified?.state.mode==='controlled'} onClick={()=>{const direction=screenToGridDirection(button.x,button.y,cameraViewRef.current.alpha,cameraViewRef.current.gridYSign??1);if(direction)send({type:'MOVE',direction});}}>{button.arrow}</button>)}<span className="pad-center" aria-hidden="true">◇</span></div><div className="keyboard-hint"><b>方向鍵 / WASD</b><span>依畫面方向移動 · 組合兩鍵斜走</span></div><button className="primary interact-button" disabled={controlledDemo||unified?.state.mode==='controlled'||busy||(!adjacent&&!cursor&&!observedCursor)||step?.op==='choice'} onClick={()=>interact()}>{cursor||observedCursor?'繼續對話':'與鄰近人物互動'}<kbd>E</kbd></button></div>
+          <div className="control-bar"><div className="direction-pad screen-directions" aria-label="依畫面方向移動">{SCREEN_BUTTONS.map(button=><button key={button.name} style={{gridArea:button.name}} aria-label={button.label} disabled={busy||!!cursor||!!observedCursor||controlledDemo||unified?.state.mode==='controlled'} onClick={()=>{const direction=screenToGridDirection(button.x,button.y,cameraViewRef.current.alpha,cameraViewRef.current.gridYSign??1);if(direction)send({type:'MOVE',direction});}}>{button.arrow}</button>)}<span className="pad-center" aria-hidden="true">◇</span></div><div className="keyboard-hint"><b>方向鍵 / WASD</b><span>依畫面方向移動 · 組合兩鍵斜走</span></div><button className="primary interact-button" disabled={controlledDemo||unified?.state.mode==='controlled'||busy||(!adjacent&&!cursor&&!observedCursor&&!atSceneSlot)||step?.op==='choice'} onClick={()=>interact()}>{cursor||observedCursor?'繼續對話':atSceneSlot?'觸發場景事件':'與鄰近人物互動'}<kbd>E</kbd></button></div>
           <div className="feedback" role="status" aria-live="polite"><span className="feedback-mark">◇</span>{notice}</div>
           {regionNotes.length>0&&<section aria-label="預覽說明">{regionNotes.map((note,i)=><p className="fine-print" key={i}>{note}</p>)}</section>}
           {regionCells.some(c=>c.assets.some(v=>v.asset.cutaway))&&<label className="fine-print"><input type="checkbox" checked={cutaway} onChange={e=>setCutaway(e.target.checked)}/>隱藏屋頂與遮擋牆面（僅改顯示）</label>}

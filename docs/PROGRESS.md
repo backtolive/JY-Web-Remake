@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：武功陣列種子資料（RANGER.GRP 角色記錄）（最新）
+## 2026-11-27：NPC 碰撞偵測（場景槽位置自動觸發）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **玩家走到場景槽位置時互動按鈕自動顯示「觸發場景事件」，按 E 觸發對應事件**
+- Completed Tasks: `SCENE_SLOT_POSITIONS` 映射（3 個測試位置：room/5/5→0/0, room/10/10→32/0, room/15/15→53/0）；`interact()` 檢查位置→場景槽；互動按鈕文字動態切換（「觸發場景事件」vs「與鄰近人物互動」）；按鈕 enabled 狀態包含場景槽位置。
+- Files Changed: `apps/web/src/App.tsx`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過。
+- Known Limitations: 位置映射為硬編碼（Mock 世界測試位置）；尚未接入原版場景佈局（需原版場景座標數據）。
+- Next Recommended Tasks: 切圖（場景過渡）；將位置映射移入內容包；原版場景座標提取。
+
+## 2026-11-27：武功陣列種子資料（RANGER.GRP 角色記錄）
 
 Phase: Phase 6 內容效果層。Status: **317 角色武功陣列（Magic[0..9]＋MagLevel[0..9]）從 RANGER.GRP 提取入內容包；CanEquip 武功等級規則現有實際數據**
 - Completed Tasks: `loadRoleMagicArrays()` 讀取 RANGER.GRP 角色表（182B×320，Magic@128，MagLevel@148）；`roleMagic` 欄位入內容包（schema＋runtime＋converter）；`OriginalEventsPreview` start() 自動 seed 武功狀態；converter 測試釘選 role 5 magic 58。
