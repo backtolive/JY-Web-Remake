@@ -64,6 +64,7 @@ export default function App(){
   const originalEventsTargetRef=useRef<string|null>(null);
   const originalEventStateRef=useRef<ControlledEventState|null>(null);
   const [showOriginalEvents,setShowOriginalEvents]=useState(false);
+  const [currentOriginalScene,setCurrentOriginalScene]=useState<number|null>(null);
   const [selectedItem,setSelectedItem]=useState('');
   const [log,setLog]=useState<string[]>([]);
   const originalInput=useRef<HTMLInputElement>(null),regionInput=useRef<HTMLInputElement>(null),saveInput=useRef<HTMLInputElement>(null);
@@ -180,6 +181,14 @@ export default function App(){
     return()=>{movement.clear();window.removeEventListener('keydown',handler);window.removeEventListener('keyup',release);
       window.removeEventListener('blur',stop);document.removeEventListener('visibilitychange',visibility);};
   },[send,interact]);
+  // Announce scene changes from controlled events (MVP scene transition tracking).
+  const prevSceneRef=useRef<number|null>(null);
+  useEffect(()=>{
+    if(currentOriginalScene!==null&&currentOriginalScene!==prevSceneRef.current){
+      if(prevSceneRef.current!==null)announce(`已切換到場景 ${currentOriginalScene}。`);
+      prevSceneRef.current=currentOriginalScene;
+    }
+  },[currentOriginalScene]);
 
   async function importOriginal(file?:File, suppliedBundle?:unknown){
     if(!file&&!suppliedBundle)return;loading(true);setError('');
@@ -306,7 +315,7 @@ export default function App(){
       if(raw===null)throw new Error('尚無這份採樣切片存檔。');const next=restoreObserved673(observed,raw);
       applyObserved673(next);apply({...current,state:next.state.game});setError('');announce(backup?'已還原採樣切片備份。':'已讀取採樣切片進度。');return;}
     if(originalEvents){const {state,eventState}=loadCombined(localStorage,current.content,originalEvents,backup);
-      apply({...current,state});if(eventState)originalEventStateRef.current=eventState;setShowOriginalEvents(true);}
+      apply({...current,state});if(eventState){originalEventStateRef.current=eventState;const scene=eventState.decision.values['original.jy:scene/current'];if(typeof scene==='number')setCurrentOriginalScene(scene);}setShowOriginalEvents(true);}
     else if(runtime){const state=loadUnifiedSession(localStorage,runtime.content,backup);applyUnified({...runtime,state});apply({...current,state:state.game});}
     else if(availableUnifiedRef.current){const pair=availableUnifiedRef.current;const state=loadUnifiedSession(localStorage,pair,backup);
       applyUnified({content:pair,state});apply({...current,state:state.game});}
@@ -363,8 +372,8 @@ export default function App(){
               onClose={(next,bound)=>{const current=sessionRef.current;if(current){const pair={host:current.content,controlled:bound};availableUnifiedRef.current=pair;applyUnified({content:pair,state:next});apply({...current,state:next.game});}
                 controlledDemoRef.current=false;setControlledDemo(false);setControlledLocation(null);}}
               onLocation={setControlledLocation}/>}
-            {showOriginalEvents&&originalEvents&&<OriginalEventsPreview content={originalEvents} targetEventId={originalEventsTargetRef.current??undefined} initialState={originalEventStateRef.current??undefined} onStateChange={s=>{originalEventStateRef.current=s;}} onClose={()=>{originalEventsTargetRef.current=null;originalEventStateRef.current=null;setShowOriginalEvents(false);}}/>}
-            <div className="game-hud"><button aria-pressed={gamePanel==='map'} onClick={()=>setGamePanel(gamePanel==='map'?null:'map')}>地圖</button><button aria-pressed={gamePanel==='inventory'} disabled={controlledDemo} onClick={()=>setGamePanel(gamePanel==='inventory'?null:'inventory')}>行囊 {carriedItems?.length?`· ${carriedItems.length}`:''}</button><button aria-pressed={gamePanel==='save'} onClick={()=>setGamePanel(gamePanel==='save'?null:'save')}>存檔</button>{originalEvents&&<button aria-pressed={showOriginalEvents} onClick={()=>{setGamePanel(null);setShowOriginalEvents(!showOriginalEvents);}}>測試</button>}{originalEventsBound&&!controlledDemo&&<button aria-pressed={gamePanel==='sceneSlot'} onClick={()=>setGamePanel(gamePanel==='sceneSlot'?null:'sceneSlot')}>NPC</button>}</div>
+            {showOriginalEvents&&originalEvents&&<OriginalEventsPreview content={originalEvents} targetEventId={originalEventsTargetRef.current??undefined} initialState={originalEventStateRef.current??undefined} onStateChange={s=>{originalEventStateRef.current=s;if(s){const scene=s.decision.values['original.jy:scene/current'];if(typeof scene==='number')setCurrentOriginalScene(scene);}}} onClose={()=>{originalEventsTargetRef.current=null;originalEventStateRef.current=null;setShowOriginalEvents(false);}}/>}
+            <div className="game-hud"><button aria-pressed={gamePanel==='map'} onClick={()=>setGamePanel(gamePanel==='map'?null:'map')}>地圖</button><button aria-pressed={gamePanel==='inventory'} disabled={controlledDemo} onClick={()=>setGamePanel(gamePanel==='inventory'?null:'inventory')}>行囊 {carriedItems?.length?`· ${carriedItems.length}`:''}</button><button aria-pressed={gamePanel==='save'} onClick={()=>setGamePanel(gamePanel==='save'?null:'save')}>存檔</button>{originalEvents&&<button aria-pressed={showOriginalEvents} onClick={()=>{setGamePanel(null);setShowOriginalEvents(!showOriginalEvents);}}>測試</button>}{originalEventsBound&&!controlledDemo&&<button aria-pressed={gamePanel==='sceneSlot'} onClick={()=>setGamePanel(gamePanel==='sceneSlot'?null:'sceneSlot')}>NPC</button>}{currentOriginalScene!==null&&<span className="scene-indicator" aria-label="目前原版場景">場景 {currentOriginalScene}</span>}</div>
             {gamePanel==='map'&&map&&displayState&&<section className="game-overlay map-overlay" aria-label="行跡地圖"><h3>行跡</h3><MiniMap map={map} state={displayState} view={cameraView}/><p>X {displayState.x} · Y {displayState.y}</p></section>}
             {gamePanel==='inventory'&&<section className="game-overlay inventory-overlay" aria-label="行囊"><h3>行囊</h3>{carriedItems?.length?<><ul className="game-inventory-list">{carriedItems.map(([id,count])=><li key={id}><button aria-pressed={activeItemId===id} onClick={()=>setSelectedItem(id)}>{content?.items[id]?.name.replace(/^Mock /,'')}<b>× {count}</b></button></li>)}</ul><article className="item-description"><h4>{content?.items[activeItemId]?.name.replace(/^Mock /,'')??'選擇一件道具'}</h4><p>{content?.items[activeItemId]?.description??'此道具尚無說明。'}</p></article></>:<p className="muted">行囊目前是空的。</p>}{originalEvents&&<button className="wide" onClick={()=>{setGamePanel(null);setShowOriginalEvents(true);}}>開啟測試面板</button>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}
             {gamePanel==='save'&&<section className="game-overlay save-overlay" aria-label="存檔操作"><h3>留存江湖</h3>{controlledDemo?<p className="fine-print">受控事件的獨立存讀請使用測試面板。</p>:<><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session}>上一份備份</button></div></>}<button className="overlay-close" onClick={()=>setGamePanel(null)}>收起</button></section>}

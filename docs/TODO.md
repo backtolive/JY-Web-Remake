@@ -25,6 +25,7 @@
 - [x] 合併存檔（MVP 安全存讀檔）：`CombinedSave` v5 格式（game＋event）；`saveCombined`／`loadCombined`；主遊戲存檔自動包含事件狀態；讀檔恢復事件進度；備份保留。
 - [x] 武功陣列種子資料：RANGER.GRP 角色表（182B×320）提取 Magic[0..9]＋MagLevel[0..9]（317 角色）；`roleMagic` 入內容包；preview 自動 seed 武功狀態；CanEquip 武功等級規則現有實際數據。
 - [x] NPC 碰撞偵測（MVP）：`SCENE_SLOT_POSITIONS` 位置映射（3 測試點）；`interact()` 自動偵測場景槽位置；互動按鈕動態文字「觸發場景事件」；按 E 觸發對應事件。
+- [x] 場景過渡追蹤（MVP 切圖）：`currentOriginalScene` 從事件 decision state 提取；HUD「場景 N」指示器；場景變更公告；讀檔恢復場景；combined save 自動保存。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：NPC 碰撞偵測（場景槽位置自動觸發）（最新）
+## 2026-11-27：場景過渡追蹤（MVP 切圖）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **原版事件場景過渡自動追蹤並顯示；HUD「場景 N」指示器；場景變更公告；存檔恢復場景**
+- Completed Tasks: `currentOriginalScene` 狀態（從事件 decision state `original.jy:scene/current` 提取）；HUD 場景指示器（`.scene-indicator`）；場景變更 `useEffect` 公告；讀檔恢復場景；`onStateChange` 自動追蹤。
+- Files Changed: `apps/web/src/App.tsx`、`apps/web/src/styles.css`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過。
+- Known Limitations: 場景過渡為追蹤＋顯示（Mock 世界無原版場景圖）；實際切圖需原版場景地圖數據；場景 ID 只在事件運行時更新。
+- Next Recommended Tasks: 原版場景地圖提取；將位置映射移入內容包；MOD 基礎。
+
+## 2026-11-27：NPC 碰撞偵測（場景槽位置自動觸發）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **玩家走到場景槽位置時互動按鈕自動顯示「觸發場景事件」，按 E 觸發對應事件**
 - Completed Tasks: `SCENE_SLOT_POSITIONS` 映射（3 個測試位置：room/5/5→0/0, room/10/10→32/0, room/15/15→53/0）；`interact()` 檢查位置→場景槽；互動按鈕文字動態切換（「觸發場景事件」vs「與鄰近人物互動」）；按鈕 enabled 狀態包含場景槽位置。
