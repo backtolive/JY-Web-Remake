@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：場景過渡追蹤（MVP 切圖）（最新）
+## 2026-11-27：原版世界地圖匯入（MVP 切圖完成）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **480×480 原版世界地圖（地表＋表面＋建築）可匯入 Web 端探索；`prepare-world-preview.py` 產出 git-ignored 內容包**
+- Completed Tasks: 執行 `prepare-world-preview.py`（EARTH.002 地表 ground 投影、SURFACE.002 billboard、BUILDING.002 billboard＋visibility）；958 張獨立圖示從 MMAP.GRP 解碼；33,496 格阻擋（BUILDX/BUILDY＋邊界）；入口 (358, 229) 從 RANGER 場景 1 提取；Web「匯入完整世界地圖」按鈕已就緒。
+- Files Changed: `assets/generated/world-preview/`（git-ignored）、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check。
+- Test Results: 全通過。
+- Known Limitations: 建築／山體為 billboard 原圖投影（3D 模型暫擱）；水上可移動但無船隻外觀；場景入口與事件未接入世界地圖；MMAP 圖集為 8-bit palette（MMAP.COL 256 色）。
+- Next Recommended Tasks: 場景地圖匯入（SMP/SDX 逐場景）；世界地圖→場景地圖過渡；MOD 基礎。
+
+## 2026-11-27：場景過渡追蹤（MVP 切圖）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **原版事件場景過渡自動追蹤並顯示；HUD「場景 N」指示器；場景變更公告；存檔恢復場景**
 - Completed Tasks: `currentOriginalScene` 狀態（從事件 decision state `original.jy:scene/current` 提取）；HUD 場景指示器（`.scene-indicator`）；場景變更 `useEffect` 公告；讀檔恢復場景；`onStateChange` 自動追蹤。
