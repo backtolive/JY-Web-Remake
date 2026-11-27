@@ -30,7 +30,8 @@
 - [x] 場景地圖匯入（MVP 切圖）：`prepare-scene-preview.py` 提取單場景 64×64 地表＋建築層與 SMP/SDX tile images（RLE→PNG）；場景 1（179 圖）／場景 53（117 圖）驗證。
 - [x] 世界→場景過渡（MVP 切圖）：`combine-world-scenes.py` 結合世界（480×480）＋N 場景（64×64）為單一內容包；每張地圖獨立 projected map（per-map 渲染層）；portals 世界↔場景（錨定可行走入口、避開阻擋＋NPC 格）；`App.tsx` 支援 `projectedMaps` 格式，portal 切換自動換用對應場景渲染層。
 - [x] NPC→原版事件觸發（MVP 核心循環）：結合包 NPC id 命名空間化（`{pid}:npc-{scene}-{slot}`）＋共享 placeholder 事件通過 `resolveContent` 內容驗證；`interact()` 從 NPC id 解析場景＋槽號，經 `triggerSceneSlotEvent` 觸發綁定原版事件；portal 過渡 `dispatch` MOVE 模擬驗證世界↔場景可走通。
-- [ ] MOD 基礎：原版包＋MOD patch 載入順序、版本、優先權與衝突診斷。
+- [x] MOD 基礎（原版包＋MOD patch 載入順序、版本、優先權與衝突診斷）：引擎核心 `resolveContent` 已具相依／版本／優先權／衝突／確定順序解析；本輪補 `prepare-mod-preview.mjs`（產出 `kind:mod` 包：相依基礎＋patch＋新增物品／對話）與 `App.tsx` `importMod(file)`（`resolveContent([base,mod])` 重新解析＋存檔保存雙身份與雜湊＋`restoreSave` 內容不符即 `SAVE_CONTENT_MISMATCH`）。
+- [ ] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）。
 - [ ] 角色屬性面板（HP/MP/Level）與完整行囊 UI（原版 200 物品互動式介面）。
 - [ ] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）。
 

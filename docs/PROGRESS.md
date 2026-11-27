@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：場景地圖原圖渲染＋NPC→原版事件觸發（MVP 核心循環）（最新）
+## 2026-11-27：MOD 基礎（生成器＋Web 載入＋存檔身份）（最新）
+
+Phase: Phase 6 內容基礎契約＋Phase 7 apps/web 可操作切片。Status: **引擎核心 MOD 解析（相依／版本／優先權／衝突／確定順序）與存檔身份保存本已完整；本輪補齊 MOD 生成器與 Web 端 MOD 檔載入**
+- Completed Tasks: `tools/extractor/prepare-mod-preview.mjs`（讀基礎包→產出 `kind:mod` 包：相依基礎、priority 10、patch 一對話（前置鎖定）＋新增 1 物品＋1 對話）；`App.tsx` 新增 `importMod(file)`＋「匯入 MOD 包」按鈕＋`basePackageRef` 追蹤當前基礎包＋`activeModId` 狀態顯示；載入 MOD 時 `resolveContent([base,mod])` 重新解析並從入口重開。
+- Files Changed: `tools/extractor/prepare-mod-preview.mjs`、`tests/unit/mod-preview-generator.test.mjs`、`apps/web/src/App.tsx`、docs。
+- Tests Executed: 單元 154/154（新增 4 個 MOD 生成器測試）；root＋web typecheck；schema:check；web build。
+- Test Results: 全通過。MOD 生成器產出通過 `validatePackageSchema`；`resolveContent` 套用 patch＋加入 MOD 內容；存檔保存雙身份（base＋mod）＋雜湊；`restoreSave` 對 base-only 解析回傳 `SAVE_CONTENT_MISMATCH`。
+- Known Limitations: MOD 載入從入口重開（不保留當前進度）；MOD 生成器目前只產出 patch＋物品＋對話（未生成新 map／event）；Web 端 MOD 為單檔載入（未支援多 MOD 堆疊與優先權排序的 UI）。
+- Next Recommended Tasks: 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）；角色屬性面板（HP/MP/Level）；完整行囊 UI（原版 200 物品）；戰鬥公式。
+
+## 2026-11-27：場景地圖原圖渲染＋NPC→原版事件觸發（MVP 核心循環）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **結合包（世界 480×480＋場景 64×64）通過 `resolveContent` 內容驗證；每張地圖獨立 projected map 渲染原版 tile；NPC 互動觸發綁定原版事件；portal 過渡世界↔場景可走通**
 - Completed Tasks: `combine-world-scenes.py` NPC id 命名空間化（`{pid}:npc-{scene}-{slot}`）＋共享 placeholder 事件使 eventId 引用可解析；portal 錨定於可行走世界入口（避開阻擋邊界）且來源／目的地避開阻擋＋NPC 格；場景入口 nudge 至非阻擋非 NPC 格。`App.tsx` `interact()` 從命名空間 NPC id 解析場景＋槽號，經 `triggerSceneSlotEvent` 觸發綁定原版事件（Mock 對話保留為 fallback）。`prepare-scene-preview.py`（單場景 64×64 提取）與 `combine-world-scenes.py`（多圖結合＋per-map projected map）完成。
