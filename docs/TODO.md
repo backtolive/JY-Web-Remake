@@ -32,7 +32,7 @@
 - [x] NPC→原版事件觸發（MVP 核心循環）：結合包 NPC id 命名空間化（`{pid}:npc-{scene}-{slot}`）＋共享 placeholder 事件通過 `resolveContent` 內容驗證；`interact()` 從 NPC id 解析場景＋槽號，經 `triggerSceneSlotEvent` 觸發綁定原版事件；portal 過渡 `dispatch` MOVE 模擬驗證世界↔場景可走通。
 - [x] MOD 基礎（原版包＋MOD patch 載入順序、版本、優先權與衝突診斷）：引擎核心 `resolveContent` 已具相依／版本／優先權／衝突／確定順序解析；本輪補 `prepare-mod-preview.mjs`（產出 `kind:mod` 包：相依基礎＋patch＋新增物品／對話）與 `App.tsx` `importMod(file)`（`resolveContent([base,mod])` 重新解析＋存檔保存雙身份與雜湊＋`restoreSave` 內容不符即 `SAVE_CONTENT_MISMATCH`）。
 - [x] 角色屬性面板（HP/MP/Level）與完整行囊 UI（原版 200 物品互動式介面）：`loadRoleAttributes()` 讀 RANGER.GRP 角色表（社群 TRole 偏移）入內容包 `roleAttributes`（320 角色）；`OriginalEventsPreview` 新增 `RoleAttributePanel`（種子值＋事件即時狀態）與 `ItemCatalog`（200 項 icon＋名稱＋分類）。
-- [ ] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）。
+- [x] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）：`App.tsx` 改為 `modPackagesRef`（堆疊）＋`activeModIds`＋`modDiagnostics`；`importMod` 加入堆疊並重新解析，`ContentError` 顯示衝突診斷；新增 `removeMod(id)`；侧欄 MOD 堆疊清單（priority 徽章＋移除）＋衝突診斷區塊；3 個新測試（雙 MOD 排序／PATCH_CONFLICT／DUPLICATE_PACKAGE）。
 - [ ] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）。
 - [ ] 行囊清單接入 carried-item 決策欄位（顯示實際持有量，非唯讀目錄）。
 

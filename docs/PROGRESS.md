@@ -1,6 +1,16 @@
 # 進度 — 2026-11-28
 
-## 2026-11-28：角色屬性面板＋完整行囊 UI（MVP 展示層）（最新）
+## 2026-11-28：多 MOD 堆疊 UI（priority 排序＋衝突診斷）（最新）
+
+Phase: Phase 6 內容基礎契約＋Phase 7 apps/web 可操作切片。Status: **Web 端支援多 MOD 堆疊載入；`resolveContent` 已有確定優先權排序與衝突診斷，本輪補 UI（堆疊清單＋priority 顯示＋衝突診斷＋移除 MOD）**
+- Completed Tasks: `App.tsx` 將單一 `activeModId` 改為 `modPackagesRef`（ContentPackage[]）＋`activeModIds`（string[]）＋`modDiagnostics`（string[]）；`importMod` 加入堆疊並 `resolveContent([base,...mods])` 重新解析，`ContentError` 時顯示衝突診斷並退回；新增 `removeMod(id)` 移除 MOD 並重新解析；侧欄顯示 MOD 堆疊清單（依 `content.identities` 的 priority 排序）＋priority 徽章＋移除按鈕＋衝突診斷區塊；3 個新單元測試（雙 MOD 非衝突排序、同目標 PATCH_CONFLICT、重複 ID DUPLICATE_PACKAGE）。
+- Files Changed: `apps/web/src/App.tsx`、`apps/web/src/styles.css`、`tests/unit/mod-preview-generator.test.mjs`、docs。
+- Tests Executed: 單元 157/157（concurrency=2）；root＋web typecheck；web build。
+- Test Results: 全通過。雙 MOD 依 priority 0/10/20 排序；同目標 patch 回傳 `PATCH_CONFLICT`；重複 ID 回傳 `DUPLICATE_PACKAGE`。
+- Known Limitations: MOD 堆疊從入口重開（不保留當前進度）；衝突診斷為 resolveContent 的 diagnostics（結構性，無版本相容性建議）；MOD 生成器目前只產出單一包（多 MOD 需手動改 id/priority）；移除 MOD 後重新解析（不逐層回退）。
+- Next Recommended Tasks: 戰鬥公式（事件中的戰鬥接入）；行囊清單接入 carried-item 決策欄位（顯示實際持有量）；MOD 生成器支援產出多個 MOD 包。
+
+## 2026-11-28：角色屬性面板＋完整行囊 UI（MVP 展示層）
 
 Phase: Phase 7 apps/web 可操作切片＋Phase 6 內容種子。Status: **RANGER.GRP 角色基礎屬性（level/HP/MP/attack/speed/aptitude）入內容包；`OriginalEventsPreview` 新增角色屬性面板（種子值＋事件即時狀態）與完整物品清單（200 項）**
 - Completed Tasks: `loadRoleAttributes()` 讀取 RANGER.GRP 角色表（182B×320，社群 TRole 偏移：level@30、HP@34/36、MP@82/84、attack@86、speed@88、aptitude@120）；`roleAttributes` 欄位入內容包（schema＋runtime＋converter）；`OriginalEventsPreview` 新增 `RoleAttributePanel`（種子值 vs 事件即時狀態，變更以金色標出；always-visible）與 `ItemCatalog`（200 項 icon＋名稱＋分類，點擊選取為使用物品）；converter 測試釘選 role 0 aptitude 50（DOS 已證）。
