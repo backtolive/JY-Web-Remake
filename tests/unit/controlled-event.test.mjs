@@ -264,6 +264,59 @@ test('EQUIP/PRACTICE apply the CanEquip gate and mutual unbinding', async () => 
     { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }), /EQUIP_NO_ATTRIBUTES/);
 });
 
+test('CanEquip magic level rule: same magic at level < 900 overrides to pass', async () => {
+  const source = structuredClone(contentSource);
+  // MP domain for the threshold gate.
+  source.decision.domains['mock:role/mp'] = { kind: 'integer', default: 0, min: -1000, max: 1000,
+    allowedKeys: ['mock:role/0', 'mock:role/1'] };
+  // Magic ID and level array domains (10 slots per role).
+  const magicIdKeys = Array.from({ length: 10 }, (_, i) => `mock:role/magic-0-${i}`);
+  const magicLevelKeys = Array.from({ length: 10 }, (_, i) => `mock:role/mag-level-0-${i}`);
+  source.decision.domains['mock:role/magic-ids'] = { kind: 'integer', default: 0, min: 0, max: 10000,
+    allowedKeys: magicIdKeys };
+  source.decision.domains['mock:role/magic-levels'] = { kind: 'integer', default: 0, min: 0, max: 10000,
+    allowedKeys: magicLevelKeys };
+  source.equipment.roleAttributes = {
+    mp: { domain: 'mock:role/mp', key: 'mock:role/{role}' },
+    magicIds: { domain: 'mock:role/magic-ids', key: 'mock:role/magic-{role}-{i}' },
+    magicLevels: { domain: 'mock:role/magic-levels', key: 'mock:role/mag-level-{role}-{i}' },
+  };
+  // Item 7 needs mp 10 AND teaches magic 5. Without the level override, mp 0 fails.
+  source.items = {
+    'mock:item/7': { name: 'Sword', stackable: true, canEquip: { mp: 10, magic: 5 } },
+  };
+  const content = await resolveControlledEventContent(source);
+  const equipRef = (role, slot) => ({ domain: 'mock:equip', key: `mock:equip/${role}/${slot}` });
+  const fresh = createControlledEventState(content);
+  // Fresh state: mp 0, no magics -> mp gate fails, no level override -> rejected.
+  assert.throws(() => dispatchControlledEvent(content, fresh, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }),
+    /EQUIP_CONDITION/);
+  // Role has magic 5 at level 500 (< 900) -> override to pass despite mp 0.
+  const seeded = structuredClone(fresh);
+  seeded.decision.values['mock:role/magic-ids'] = { 'mock:role/magic-0-0': 5 };
+  seeded.decision.values['mock:role/magic-levels'] = { 'mock:role/mag-level-0-0': 500 };
+  const r1 = dispatchControlledEvent(content, seeded, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 });
+  assert.equal(readDecisionValue(content.data.decision, r1.state.decision, equipRef(0, 0)), 7);
+  // Role has magic 5 at level 900 (>= 900) -> no override; mp gate still applies.
+  const seeded900 = structuredClone(fresh);
+  seeded900.decision.values['mock:role/magic-ids'] = { 'mock:role/magic-0-0': 5 };
+  seeded900.decision.values['mock:role/magic-levels'] = { 'mock:role/mag-level-0-0': 900 };
+  assert.throws(() => dispatchControlledEvent(content, seeded900, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }),
+    /EQUIP_CONDITION/);
+  // Role has a different magic (3) at level 500 -> no match; mp gate still applies.
+  const seededOther = structuredClone(fresh);
+  seededOther.decision.values['mock:role/magic-ids'] = { 'mock:role/magic-0-0': 3 };
+  seededOther.decision.values['mock:role/magic-levels'] = { 'mock:role/mag-level-0-0': 500 };
+  assert.throws(() => dispatchControlledEvent(content, seededOther, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 }),
+    /EQUIP_CONDITION/);
+  // Magic in slot 7 (not slot 0) at level 100 -> still matches (scans all 10 slots).
+  const seededSlot7 = structuredClone(fresh);
+  seededSlot7.decision.values['mock:role/magic-ids'] = { 'mock:role/magic-0-7': 5 };
+  seededSlot7.decision.values['mock:role/magic-levels'] = { 'mock:role/mag-level-0-7': 100 };
+  const r2 = dispatchControlledEvent(content, seededSlot7, { type: 'EQUIP', itemId: 7, role: 0, slot: 0 });
+  assert.equal(readDecisionValue(content.data.decision, r2.state.decision, equipRef(0, 0)), 7);
+});
+
 test('Versioned command/result/content/save schemas are exported; unknown outcomes are rejected', async () => {
   for (const [name, schema] of [
     ['controlled-command.schema.json', controlledCommandSchema],

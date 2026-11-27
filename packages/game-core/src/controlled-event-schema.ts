@@ -55,7 +55,10 @@ const equipmentDecl = object({
       aptitude: equipmentBinding, mpType: equipmentBinding,
       usePoi: equipmentBinding, medicine: equipmentBinding, medPoi: equipmentBinding,
       fist: equipmentBinding, sword: equipmentBinding, knife: equipmentBinding,
-      unusual: equipmentBinding, hidWeapon: equipmentBinding, magicCount: equipmentBinding },
+      unusual: equipmentBinding, hidWeapon: equipmentBinding, magicCount: equipmentBinding,
+      // Magic level rule (kys_main.pas:4729-4734): per-role magic ID array (10 slots) and
+      // per-role magic level array (10 slots). Key template uses {role} and {i} (0..9).
+      magicIds: equipmentBinding, magicLevels: equipmentBinding },
     additionalProperties: false,
   },
 }, ['slots', 'practice', 'itemUser']);

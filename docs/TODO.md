@@ -20,6 +20,7 @@
 - [x] 裝備／修煉宿主命令（EQUIP／PRACTICE）：內容宣告 `equipment`（slots/practice/itemUser 三個「域＋key 模板」綁定）、runtime 動作（無游標時雙寫入、key 代入驗證）、轉換器三域＋`equipSlot` 欄（EquipType clamp 0..1）、Web 預覽裝備／修煉控制；E2E 與 Pascal 寫入一致。見 [ADR 0067](decisions/0067-equip-practice-host-commands.md)。
 - [x] 裝備／修煉的互斥解綁與 `CanEquip` 屬性門檻（內容效果層）：互斥解綁為結構性不變量（宿主命令讀當前綁定、與兩個寫入同一 transaction 原子）；`CanEquip` 以物品定義 `canEquip`（RANGER `Need*`）＋裝備宣告 `roleAttributes` 表之，sign 雙向＋內力性質；5 個有角色屬性域欄的 `Need*`（mp/attack/speed/aptitude/mpType）建模，其餘 8 個與 OnlyPracRole／武功數未建模。見 [ADR 0069](decisions/0069-equip-can-equip-and-unbinding.md)。
 - [x] Web 預覽加入物品定義顯示（由 `original.jy.events:item/{id}` 取名稱／說明／分類）：`ItemDetailPanel` 顯示名稱／別名／說明／分類／裝備槽／可堆疊／圖片引用／使用層欄位；與 CanEquip 門檻面板并列。
+- [x] CanEquip 武功等級規則（Pascal line 4729-4734）：角色已有同一武功且等級 < 900 時覆蓋為 True；`roleAttributes` 新增 `magicIds`／`magicLevels`（10 槽陣列）；`canEquipGate` 重構為「記錄失敗＋末尾覆蓋」模式；4 案 runtime 測試通過。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

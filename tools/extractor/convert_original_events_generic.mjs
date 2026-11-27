@@ -471,6 +471,15 @@ function buildDomains(keys) {
       allowedKeys: keys.roles.length ? keys.roles.map(role => roleKey(field, role))
         : Array.from({ length: ROLE_COUNT }, (_, role) => roleKey(field, role)) };
   }
+  // Magic ID and level arrays (kys_type.pas Rrole.Magic[0..9], MagLevel[0..9]).
+  // Used by the CanEquip magic level rule (kys_main.pas:4729-4734).
+  const magicRoles = keys.roles.length ? keys.roles : Array.from({ length: ROLE_COUNT }, (_, r) => r);
+  const magicIdKeys = magicRoles.flatMap(role =>
+    Array.from({ length: 10 }, (_, i) => `original.jy:role/magic-${role}-${i}`));
+  const magicLevelKeys = magicRoles.flatMap(role =>
+    Array.from({ length: 10 }, (_, i) => `original.jy:role/mag-level-${role}-${i}`));
+  domains['original.jy:role/magic-ids'] = { kind: 'integer', default: 0, min: 0, max: 1_000_000, allowedKeys: magicIdKeys };
+  domains['original.jy:role/magic-levels'] = { kind: 'integer', default: 0, min: 0, max: 1_000_000, allowedKeys: magicLevelKeys };
   if (keys.skillRoles.length) {
     const skillKeys = keys.skillRoles.flatMap(role =>
       Array.from({ length: SKILL_SLOTS }, (_, slot) => skillKey(role, slot)));
@@ -820,6 +829,8 @@ export function buildOriginalEventsContent() {
         unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
         hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
         magicCount: { domain: 'original.jy:role/magic-count', key: 'original.jy:role/{role}' },
+        magicIds: { domain: 'original.jy:role/magic-ids', key: 'original.jy:role/magic-{role}-{i}' },
+        magicLevels: { domain: 'original.jy:role/magic-levels', key: 'original.jy:role/mag-level-{role}-{i}' },
       },
     },
     // Scene transition: writes the current scene ID when a transition command resolves.

@@ -1,6 +1,16 @@
-# 進度 — 2026-11-26
+# 進度 — 2026-11-27
 
-## 2026-11-26：CanEquip 擴充至全 12 個 Need* 欄位（最新）
+## 2026-11-27：武功等級規則（CanEquip Magic Level Override）（最新）
+
+Phase: Phase 6 內容效果層。Status: **CanEquip 武功等級規則完成（Pascal line 4729-4734）：角色已有同一武功且等級 < 900 時覆蓋為 True**
+- Completed Tasks: `canEquipGate` 重構為「記錄首個失敗＋末尾武功等級覆蓋」模式（Pascal `Result` 語義）；`roleAttributes` 新增 `magicIds`／`magicLevels` 綁定（10 槽陣列，key 模板 `{role}`＋`{i}`）；`buildDomains` 新增 `original.jy:role/magic-ids`／`magic-levels` 域（每角色 10 key）；validation 允許 `magicIds`／`magicLevels` 使用 `{i}` 佔位符；runtime 測試 4 案（fresh 拒／level<900 覆蓋／level>=900 不覆蓋／不同武功不匹配／slot 7 匹配）。
+- Files Changed: `controlled-event.ts`、`controlled-event-schema.ts`、`schemas/*`（重新匯出）、`convert_original_events_generic.mjs`、`controlled-event.test.mjs`、`original-events-generic-converter.test.mjs`、docs。
+- Tests Executed: 單元 150/150；root＋web typecheck；schema:check；全量 fresh-state 驅動（背景）。
+- Test Results: 全通過；內容包 digest `051b056ae108aecd`。
+- Known Limitations: 武功陣列目前為空（無種子資料）；實際遊戲需由存檔或事件腳本寫入角色武功。
+- Next Recommended Tasks: 將武功陣列接入存檔系統；NPC 互動觸發事件接入主遊戲。
+
+## 2026-11-26：CanEquip 擴充至全 12 個 Need* 欄位
 
 Phase: Phase 6 內容效果層。Status: **CanEquip 門檻從 5 個欄位擴充至全 12 個（mp/attack/speed/aptitude/mpType/usePoi/medicine/medPoi/fist/sword/knife/unusual/hidWeapon）**
 - Completed Tasks: `ROLE_FIELDS` 新增 8 個技能／知識屬性域（use-poi/medicine/med-poi/fist/sword/knife/unusual/hid-weapon）；`canEquip` schema＋runtime＋converter 全支援 12 欄；`roleAttributes` 宣告 13 個綁定；Web 預覽 `canEquipText` 顯示新欄位。

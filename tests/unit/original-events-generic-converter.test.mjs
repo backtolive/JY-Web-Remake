@@ -274,6 +274,8 @@ test('Generic converter emits static item definitions from the RANGER item table
         unusual: { domain: 'original.jy:role/unusual', key: 'original.jy:role/{role}' },
         hidWeapon: { domain: 'original.jy:role/hid-weapon', key: 'original.jy:role/{role}' },
         magicCount: { domain: 'original.jy:role/magic-count', key: 'original.jy:role/{role}' },
+        magicIds: { domain: 'original.jy:role/magic-ids', key: 'original.jy:role/magic-{role}-{i}' },
+        magicLevels: { domain: 'original.jy:role/magic-levels', key: 'original.jy:role/mag-level-{role}-{i}' },
       },
     });
     // Equipment domains cover exactly the party role set: 2 slots per role
@@ -286,6 +288,11 @@ test('Generic converter emits static item definitions from the RANGER item table
       .includes(`original.jy:equip/${content.decision.domains['original.jy:party'].allowedValues[0]}/1`));
     assert.equal(content.decision.domains['original.jy:practice'].allowedKeys.length, partyRoles);
     assert.equal(content.decision.domains['original.jy:item-user'].allowedKeys.length, 200);
+    // Magic ID and level arrays: 10 slots per role (kys_type.pas Rrole.Magic[0..9]).
+    assert.equal(content.decision.domains['original.jy:role/magic-ids'].allowedKeys.length, partyRoles * 10);
+    assert.ok(content.decision.domains['original.jy:role/magic-ids'].allowedKeys
+      .includes(`original.jy:role/magic-${content.decision.domains['original.jy:party'].allowedValues[0]}-9`));
+    assert.equal(content.decision.domains['original.jy:role/magic-levels'].allowedKeys.length, partyRoles * 10);
     // Equipment items carry the clamped EquipType slot (kys_main.pas clamps to 0..1);
     // non-equipment items have no slot.
     assert.equal(content.items['original.jy.events:item/110'].equipSlot, '0');

@@ -59,7 +59,13 @@ export interface EquipmentDeclaration {
     aptitude?: EquipmentBinding; mpType?: EquipmentBinding;
     usePoi?: EquipmentBinding; medicine?: EquipmentBinding; medPoi?: EquipmentBinding;
     fist?: EquipmentBinding; sword?: EquipmentBinding; knife?: EquipmentBinding;
-    unusual?: EquipmentBinding; hidWeapon?: EquipmentBinding; magicCount?: EquipmentBinding };
+    unusual?: EquipmentBinding; hidWeapon?: EquipmentBinding; magicCount?: EquipmentBinding;
+    /** Per-role magic ID array (10 slots, kys_type.pas Rrole.Magic[0..9]).
+     * Key template uses {role} and {i} (0..9). */
+    magicIds?: EquipmentBinding;
+    /** Per-role magic level array (10 slots, kys_type.pas Rrole.MagLevel[0..9]).
+     * Key template uses {role} and {i} (0..9). */
+    magicLevels?: EquipmentBinding };
 }
 export interface ControlledEventContent {
   schemaVersion: 3; id: string; version: string; classification: 'mock' | 'original-derived';
@@ -135,32 +141,56 @@ function canEquipGate(schema: DecisionSchema, state: DecisionState, declaration:
     const key = substituteKey(binding.key, { role }, `roleAttributes.${attr}`, schema.domains, binding.domain);
     return readDecisionValue(schema, state, { domain: binding.domain, key }) as number;
   };
+  // Pascal CanEquip sets Result := False on threshold failures but does not exit; the
+  // magic level rule (last check) can override to True. We track the first failure and
+  // only throw if no override applies.
+  let failedAttr: string | null = null;
+  const reject = (attr: string) => { if (!failedAttr) failedAttr = attr; };
   for (const attr of ['mp', 'attack', 'speed', 'aptitude', 'usePoi', 'medicine', 'medPoi',
     'fist', 'sword', 'knife', 'unusual', 'hidWeapon'] as const) {
     const need = canEquip[attr];
     if (typeof need !== 'number') continue;
     const value = readAttr(attr);
-    if (need >= 0 ? value < need : value > -need) fail('EQUIP_CONDITION', attr);
+    if (need >= 0 ? value < need : value > -need) reject(attr);
   }
   const mpType = canEquip.mpType;
   if (typeof mpType === 'number') {
     const value = readAttr('mpType');
-    if (value < 2 && mpType < 2 && value !== mpType) fail('EQUIP_CONDITION', 'mpType');
+    if (value < 2 && mpType < 2 && value !== mpType) reject('mpType');
   }
   // OnlyPracRole (kys_main.pas:4714-4718): if >= 0, overrides all previous checks.
   // The role must match; a match forces pass, a mismatch forces fail.
   const onlyPracRole = canEquip.onlyPracRole;
   if (typeof onlyPracRole === 'number' && onlyPracRole >= 0) {
-    if (role !== onlyPracRole) fail('EQUIP_CONDITION', 'onlyPracRole');
-    return; // Match: all previous checks are void, pass.
+    if (role !== onlyPracRole) { failedAttr = 'onlyPracRole'; }
+    else { return; } // Match: all previous checks are void, pass.
   }
   // Magic count (kys_main.pas:4720-4726): if the item teaches a magic (Magic > 0)
   // and the role already has >= 10 magics, reject.
   const magic = canEquip.magic;
   if (typeof magic === 'number' && magic > 0) {
     const count = readAttr('magicCount');
-    if (count >= 10) fail('EQUIP_CONDITION', 'magicCount');
+    if (count >= 10) reject('magicCount');
   }
+  // Magic level rule (kys_main.pas:4729-4734): if the role already has the same magic
+  // at level < 900, override to True (pass). This is the last check in CanEquip and
+  // overrides all previous failures. Reads the per-role magic ID and level arrays.
+  if (typeof magic === 'number' && magic > 0) {
+    const ids = attrs.magicIds;
+    const levels = attrs.magicLevels;
+    if (ids && levels) {
+      for (let i = 0; i < 10; i++) {
+        const idKey = substituteKey(ids.key, { role, i }, 'roleAttributes.magicIds', schema.domains, ids.domain);
+        const id = readDecisionValue(schema, state, { domain: ids.domain, key: idKey }) as number;
+        if (id === magic) {
+          const lvlKey = substituteKey(levels.key, { role, i }, 'roleAttributes.magicLevels', schema.domains, levels.domain);
+          const level = readDecisionValue(schema, state, { domain: levels.domain, key: lvlKey }) as number;
+          if (level < 900) return; // Override: all previous failures are void, pass.
+        }
+      }
+    }
+  }
+  if (failedAttr) fail('EQUIP_CONDITION', failedAttr);
 }
 /** Mutual unbinding (Community Implementation, kys_main.pas UseItem type 1/2): before the new
  * binding, clear the target slot of the item's previous user and clear the user of the slot's
@@ -254,8 +284,11 @@ export async function resolveControlledEventContent(input: unknown): Promise<Res
     checkBinding('slots', data.equipment.slots, ['role', 'slot']);
     checkBinding('practice', data.equipment.practice, ['role']);
     checkBinding('itemUser', data.equipment.itemUser, ['item']);
-    for (const [attr, row] of Object.entries(data.equipment.roleAttributes ?? {}))
-      checkBinding(`roleAttributes.${attr}`, row, ['role']);
+    for (const [attr, row] of Object.entries(data.equipment.roleAttributes ?? {})) {
+      // magicIds/magicLevels use {role} and {i} (0..9) for the 10-slot arrays.
+      const allowed = attr === 'magicIds' || attr === 'magicLevels' ? ['role', 'i'] : ['role'];
+      checkBinding(`roleAttributes.${attr}`, row, allowed);
+    }
   }
   const identity = { id: data.id, version: data.version, sha256: await contentHash(data) };
   return freeze({ identity, data });
