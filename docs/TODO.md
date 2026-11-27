@@ -27,6 +27,12 @@
 - [x] NPC 碰撞偵測（MVP）：`SCENE_SLOT_POSITIONS` 位置映射（3 測試點）；`interact()` 自動偵測場景槽位置；互動按鈕動態文字「觸發場景事件」；按 E 觸發對應事件。
 - [x] 場景過渡追蹤（MVP 切圖）：`currentOriginalScene` 從事件 decision state 提取；HUD「場景 N」指示器；場景變更公告；讀檔恢復場景；combined save 自動保存。
 - [x] 原版世界地圖匯入（MVP 切圖完成）：`prepare-world-preview.py` 產出 480×480 世界地圖（EARTH.002 地表 ground 投影＋SURFACE.002 billboard＋BUILDING.002 billboard）；958 張獨立圖示；Web「匯入完整世界地圖」按鈕載入；建築 3D 模型暫擱。
+- [x] 場景地圖匯入（MVP 切圖）：`prepare-scene-preview.py` 提取單場景 64×64 地表＋建築層與 SMP/SDX tile images（RLE→PNG）；場景 1（179 圖）／場景 53（117 圖）驗證。
+- [x] 世界→場景過渡（MVP 切圖）：`combine-world-scenes.py` 結合世界（480×480）＋N 場景（64×64）為單一內容包；每張地圖獨立 projected map（per-map 渲染層）；portals 世界↔場景（錨定可行走入口、避開阻擋＋NPC 格）；`App.tsx` 支援 `projectedMaps` 格式，portal 切換自動換用對應場景渲染層。
+- [x] NPC→原版事件觸發（MVP 核心循環）：結合包 NPC id 命名空間化（`{pid}:npc-{scene}-{slot}`）＋共享 placeholder 事件通過 `resolveContent` 內容驗證；`interact()` 從 NPC id 解析場景＋槽號，經 `triggerSceneSlotEvent` 觸發綁定原版事件；portal 過渡 `dispatch` MOVE 模擬驗證世界↔場景可走通。
+- [ ] MOD 基礎：原版包＋MOD patch 載入順序、版本、優先權與衝突診斷。
+- [ ] 角色屬性面板（HP/MP/Level）與完整行囊 UI（原版 200 物品互動式介面）。
+- [ ] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
 

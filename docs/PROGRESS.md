@@ -1,6 +1,16 @@
 # 進度 — 2026-11-27
 
-## 2026-11-27：原版世界地圖匯入（MVP 切圖完成）（最新）
+## 2026-11-27：場景地圖原圖渲染＋NPC→原版事件觸發（MVP 核心循環）（最新）
+
+Phase: Phase 7 apps/web 可操作切片。Status: **結合包（世界 480×480＋場景 64×64）通過 `resolveContent` 內容驗證；每張地圖獨立 projected map 渲染原版 tile；NPC 互動觸發綁定原版事件；portal 過渡世界↔場景可走通**
+- Completed Tasks: `combine-world-scenes.py` NPC id 命名空間化（`{pid}:npc-{scene}-{slot}`）＋共享 placeholder 事件使 eventId 引用可解析；portal 錨定於可行走世界入口（避開阻擋邊界）且來源／目的地避開阻擋＋NPC 格；場景入口 nudge 至非阻擋非 NPC 格。`App.tsx` `interact()` 從命名空間 NPC id 解析場景＋槽號，經 `triggerSceneSlotEvent` 觸發綁定原版事件（Mock 對話保留為 fallback）。`prepare-scene-preview.py`（單場景 64×64 提取）與 `combine-world-scenes.py`（多圖結合＋per-map projected map）完成。
+- Files Changed: `tools/extractor/combine-world-scenes.py`、`tools/extractor/prepare-scene-preview.py`、`apps/web/src/App.tsx`、docs。
+- Tests Executed: 單元 150/150（concurrency=2）；root＋web typecheck；`resolveContent` 結合包驗證（3 maps、14 NPC、2+2 portals）；portal 過渡 `dispatch` MOVE 模擬（世界→場景 1→世界）。
+- Test Results: 全通過。結合包 `combined-844dd8dbda842137.local.json`（3.5 MB，1254 圖）。
+- Known Limitations: NPC 位置以 ALLDEF slot index 映射 64×64 格（社群實作，未 DOS 驗證）；placeholder 事件僅供內容驗證，實際對話由原版事件包提供；場景入口／portal 位置為近似（可行走格 nudge）；建築 3D 模型暫擱；事件狀態與主遊戲存檔為合併存檔（v5）。
+- Next Recommended Tasks: MOD 基礎（原版包＋MOD patch 載入順序）；角色屬性面板（HP/MP/Level）；完整行囊 UI（原版 200 物品）；戰鬥公式。
+
+## 2026-11-27：原版世界地圖匯入（MVP 切圖完成）
 
 Phase: Phase 7 apps/web 可操作切片。Status: **480×480 原版世界地圖（地表＋表面＋建築）可匯入 Web 端探索；`prepare-world-preview.py` 產出 git-ignored 內容包**
 - Completed Tasks: 執行 `prepare-world-preview.py`（EARTH.002 地表 ground 投影、SURFACE.002 billboard、BUILDING.002 billboard＋visibility）；958 張獨立圖示從 MMAP.GRP 解碼；33,496 格阻擋（BUILDX/BUILDY＋邊界）；入口 (358, 229) 從 RANGER 場景 1 提取；Web「匯入完整世界地圖」按鈕已就緒。
