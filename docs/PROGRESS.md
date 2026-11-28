@@ -1,6 +1,16 @@
 # 進度 — 2026-11-28
 
-## 2026-11-28：MOD 衝突 UX 優化＋多包生成＋Web 多包載入＋戰鬥回合展示＋戰鬥公式＋行囊全角色（最新）
+## 2026-11-28：RANGER.GRP 武功表提取（戰鬥子系統原版數據）（最新）
+
+Phase: Phase 3 受控事件＋Phase 6 內容種子。Status: **RANGER.GRP Section 5 武功表（136B×93）提取完成；含名稱/類型/傷害(10級)/攻擊範圍(10級)；戰鬥子系統現有原版數據基礎**
+- Completed Tasks: RANGER.GRP 完整結構探測（Header 836B / RoleTable 58,240B / ItemTable 38,000B / LocationNames 4,368B / **MartialArtsTable 12,648B** / Section6 150B）；武功表記錄結構解析（ID/Name/Type/Damage[10]/Range[10]/Extra）；`extract-martial-arts.mjs` 提取器（93 筆，43 種類型，傷害+範圍數據）；RANGER.GRP SHA256 驗證（07b99e3c...8ab 吻合）。
+- Files Changed: `tools/extractor/extract-martial-arts.mjs`（新增）、docs。
+- Tests Executed: 提取器執行驗證（93/93 筆）。
+- Test Results: 全通過。武功表含：普通攻擊/野球拳/武當長拳/羅漢拳/七傷拳/混元掌/寒冰綿掌/鷹爪功/太極/黯然銷魂掌/百花神掌等 93 種武功；傷害值 0-900；攻擊範圍 1-6（推論：1=單體/2=相鄰/3=直線/4=十字/5=區域/6=大區域）。
+- Known Limitations: 攻擊範圍值 1-6 的語意為推論（未與原版引擎比對）；類型欄位（43 種）的語意未確認；Section 6（150B）未解析；敵人表/戰鬥配置表仍未找到（可能在其他 GRP 檔或 DOS 二進位內）。
+- Next Recommended Tasks: ① 武功表接入內容包（schema＋converter）；② 探索其他 GRP 檔找敵人表/戰鬥配置；③ 攻擊範圍語意驗證（DOS 實測或 Pascal 源码）；④ 格子制戰鬥引擎實現。
+
+## 2026-11-28：MOD 衝突 UX 優化＋多包生成＋Web 多包載入＋戰鬥回合展示＋戰鬥公式＋行囊全角色
 
 Phase: Phase 6 內容基礎契約＋Phase 3 受控事件＋Phase 7 apps/web。Status: **MOD 衝突時自動載入非衝突子集＋跳過清單顯示；多包生成；Web 多檔匯入；`resolveBattleDetail` 回合明細；`HeldItemsPanel` 全角色**
 - Completed Tasks: `resolveBattle`＋`resolveBattleDetail`（回合明細）；`battles` 欄位；`collectBattles()`；戰鬥 UI 回合表格；5 個 battle 測試；`HeldItemsPanel` 全角色；MOD 生成器 3 包；`loadBase` bundle 格式；Web `importMod` 多檔匯入；**MOD 衝突 UX：自動載入非衝突子集（priority ascending 逐個試載）＋`skippedModIds` 狀態＋跳過清單 UI（金色標出）＋成功/移除/換基礎時清除**；7 個 MOD 測試。

@@ -38,7 +38,8 @@
 - [x] 行囊清單顯示所有角色（非僅 hostRole）：`HeldItemsPanel` 改為從 domain allowedKeys 提取所有 role IDs（36/49/58），單一表格顯示全部角色隨身物品。
 - [x] Web 端 MOD 多包載入 UI（選檔載入 3 個 MOD 包）：`importMod` 改為多檔匯入（FileList＋multiple）；一次選取多個 MOD 同時堆疊。
 - [x] 戰鬥回合展示 UI（逐步 HP 變化）：`resolveBattleDetail()` 回傳回合明細；戰鬥 UI 顯示回合表格（玩家/敵人傷害、HP 變化）；死亡 HP 紅色標出。
-- [ ] 戰鬥子系統完整實現（待原版證據）：原版戰鬥為獨立子系統（切換戰鬥場景地圖、敵人初始化配置、敵我回合制、回合內玩家自由決定行動順序）。KDEF opcode 6 只觸發（encounter ID + 3 未知參數），不描述戰鬥過程。需要：① RANGER.GRP 完整結構探測（敵人表/武功表/戰鬥配置表）；② 其他 GRP 檔探測（戰鬥專用資料）；③ 社群 Pascal 源码（battle.pas 回合邏輯/攻擊形狀/方向判定）；④ 攻擊形狀（直線/十字/區域/單體）+ 方向 + 移動規則。目前 `resolveBattle` 為 Community Implementation 佔位，非原版還原。
+- [x] RANGER.GRP 武功表提取（136B×93）：名稱/類型/傷害(10級)/攻擊範圍(10級)；43 種類型；傷害 0-900；範圍 1-6。
+- [ ] 戰鬥子系統完整實現（原版數據基礎已建立）：① 武功表接入內容包；② 探索其他 GRP 檔找敵人表/戰鬥配置；③ 攻擊範圍語意驗證；④ 格子制戰鬥引擎（回合制＋移動＋形狀判定＋方向）。KDEF opcode 6 只觸發（encounter ID + 3 未知參數），戰鬥細節在 RANGER.GRP 武功表＋原版引擎。
 - [x] MOD 生成器支援產出多個 MOD 包：`prepare-mod-preview.mjs` 產出 3 包（Alpha p10 / Beta p20 / Gamma p5），含衝突演示（Alpha+Beta 同目標 PATCH_CONFLICT）；`loadBase` 支援 bundle 格式。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
