@@ -206,7 +206,7 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
     {error && <p role="alert" className="oe-error">{error}</p>}
     <p className="oe-status" role="status">{message}</p>
     {content.data.roleAttributes && <RoleAttributePanel roleId={hostRole} content={content} state={state} />}
-    <HeldItemsPanel roleId={hostRole} content={content} state={state} />
+    <HeldItemsPanel content={content} state={state} />
     {!cursor && <div className="oe-select">
       <label>選擇要預覽的事件<input type="search" placeholder="以編號過濾，例如 581" value={filter} onChange={e => setFilter(e.target.value)}/></label>
       <select value={eventId} onChange={e => setEventId(e.target.value)}>
@@ -387,39 +387,46 @@ function RoleAttributePanel({ roleId, content, state }:
   </details>;
 }
 
-/** Held items panel. Shows the items a role currently carries (from the carried-item
- * decision state). Only roles with a carried-item domain (used by opcode 41 events) have
- * slots; others show a note. Seeded from RANGER.GRP TakingItem data at event start. */
-function HeldItemsPanel({ roleId, content, state }:
-  { roleId: string; content: ResolvedControlledEventContent; state: ControlledEventState | null }) {
+/** Held items panel. Shows the items all roles currently carry (from the carried-item
+ * decision state). Lists every role that has a carried-item domain (used by opcode 41
+ * events). Seeded from RANGER.GRP TakingItem data at event start. */
+function HeldItemsPanel({ content, state }:
+  { content: ResolvedControlledEventContent; state: ControlledEventState | null }) {
   const carriedDomain = content.data.decision.domains['original.jy:carried-item'];
-  if (!carriedDomain) return <p className="oe-note">角色 {roleId} 沒有隨身物品欄位（無 opcode 41 事件用到）。</p>;
-  const slots = [0, 1, 2, 3].map(slot => {
-    const key = `original.jy:carried/${roleId}/${slot}`;
-    if (!carriedDomain.allowedKeys.includes(key)) return null;
-    const rawId = state?.decision.values['original.jy:carried-item']?.[key] ?? -1;
-    const rawAmount = state?.decision.values['original.jy:carried-item-amount']?.[key] ?? 0;
-    const itemId = typeof rawId === 'number' ? rawId : -1;
-    const amount = typeof rawAmount === 'number' ? rawAmount : 0;
-    if (itemId < 0) return { slot, empty: true, itemId, amount };
-    const itemKey = `${content.identity.id}:item/${itemId}`;
-    const name = content.data.items?.[itemKey]?.name ?? '';
-    return { slot, empty: false, itemId, amount, name };
-  }).filter(Boolean) as Array<{ slot: number; empty: boolean; itemId: number; amount: number; name?: string }>;
-  if (!slots.length) return <p className="oe-note">角色 {roleId} 沒有隨身物品槽。</p>;
-  return <details className="oe-held-items">
-    <summary>隨身物品（角色 {roleId} · carried-item 決策欄位）</summary>
+  if (!carriedDomain) return <p className="oe-note">沒有隨身物品欄位（無 opcode 41 事件用到）。</p>;
+  // Extract all unique role IDs from the domain's allowedKeys.
+  const roleIds = [...new Set(carriedDomain.allowedKeys.map(k => k.split('/')[1]))]
+    .sort((a, b) => Number(a) - Number(b));
+  if (!roleIds.length) return <p className="oe-note">沒有隨身物品槽。</p>;
+  const rows = roleIds.flatMap(roleId =>
+    [0, 1, 2, 3].map(slot => {
+      const key = `original.jy:carried/${roleId}/${slot}`;
+      if (!carriedDomain.allowedKeys.includes(key)) return null;
+      const rawId = state?.decision.values['original.jy:carried-item']?.[key] ?? -1;
+      const rawAmount = state?.decision.values['original.jy:carried-item-amount']?.[key] ?? 0;
+      const itemId = typeof rawId === 'number' ? rawId : -1;
+      const amount = typeof rawAmount === 'number' ? rawAmount : 0;
+      if (itemId < 0) return { roleId, slot, empty: true, itemId, amount };
+      const itemKey = `${content.identity.id}:item/${itemId}`;
+      const name = content.data.items?.[itemKey]?.name ?? '';
+      return { roleId, slot, empty: false, itemId, amount, name };
+    }).filter(Boolean)
+  ) as Array<{ roleId: string; slot: number; empty: boolean; itemId: number; amount: number; name?: string }>;
+  if (!rows.length) return <p className="oe-note">沒有隨身物品槽。</p>;
+  return <details className="oe-held-items" open>
+    <summary>隨身物品（全部角色 · carried-item 決策欄位）</summary>
     <table className="oe-held-items-table">
-      <thead><tr><th>槽</th><th>物品</th><th>數量</th></tr></thead>
+      <thead><tr><th>角色</th><th>槽</th><th>物品</th><th>數量</th></tr></thead>
       <tbody>
-        {slots.map(row => <tr key={row.slot}>
+        {rows.map(row => <tr key={`${row.roleId}-${row.slot}`}>
+          <th>{row.roleId}</th>
           <th>{row.slot}</th>
           <td>{row.empty ? <span className="oe-muted">（空）</span> : `${row.itemId} ${row.name ?? ''}`}</td>
           <td>{row.empty ? '—' : row.amount}</td>
         </tr>)}
       </tbody>
     </table>
-    <p className="oe-note">種子值來自 RANGER.GRP TakingItem（社群 TRole 欄位，候選非驗證；第 4 槽數量超出 182-byte 記錄，預設 0）；事件寫入後以即時狀態顯示。</p>
+    <p className="oe-note">種子值來自 RANGER.GRP TakingItem（社群 TRole 欄位，候選非驗證；第 4 槽數量超出 182-byte 記錄，預設 0）；事件寫入後以即時狀態顯示。僅有 opcode 41 域的role（{roleIds.join('/')}）有槽位。</p>
   </details>;
 }
 
