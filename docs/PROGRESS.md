@@ -1,14 +1,14 @@
 # 進度 — 2026-11-28
 
-## 2026-11-28：MOD 生成器多包＋戰鬥公式＋行囊全角色（最新）
+## 2026-11-28：MOD 多包生成＋Web 多包載入＋戰鬥回合展示＋戰鬥公式＋行囊全角色（最新）
 
-Phase: Phase 6 內容基礎契約＋Phase 3 受控事件＋Phase 7 apps/web。Status: **MOD 生成器產出 3 包（priority 5/10/20，含衝突演示）；`resolveBattle` 公式入引擎核心；`HeldItemsPanel` 顯示所有角色**
-- Completed Tasks: `resolveBattle(player, enemy)` 回合制公式（玩家先攻；damage = max(1, atk - def)；HP 歸零即結算）；`ControlledEventContent` 新增 `battles` 欄位（enemyName/enemyHp/enemyAttack/enemyDefense）；schema 同步；converter `collectBattles()` 從事件步收集 encounterId 並產生確定佔位屬性（hash 派生）；內容包 digest 更新；`OriginalEventsPreview` 戰鬥 UI 改為：顯示敵我屬性 → 計算結果（勝利/失敗）→ 「執行戰鬥」按鈕（套用計算結果）＋「撤退」按鈕；5 個 `resolveBattle` 單元測試（勝/負/最低傷害/同時擊殺/等屬性）；`HeldItemsPanel` 改為顯示所有角色（從 domain allowedKeys 提取 role IDs，不再僅 hostRole）；MOD 生成器 `prepare-mod-preview.mjs` 改為產出 3 包（Alpha p10 patch+item / Beta p20 patch+event / Gamma p5 item），`loadBase` 支援 bundle 格式；7 個 MOD 測試（多包生成、priority 排序、PATCH_CONFLICT、DUPLICATE_PACKAGE、save/restore）。
+Phase: Phase 6 內容基礎契約＋Phase 3 受控事件＋Phase 7 apps/web。Status: **MOD 生成器產出 3 包；Web 端支援多檔同時匯入；`resolveBattleDetail` 回合明細 UI；`HeldItemsPanel` 顯示所有角色**
+- Completed Tasks: `resolveBattle(player, enemy)` 回合制公式（玩家先攻；damage = max(1, atk - def)；HP 歸零即結算）；`resolveBattleDetail()` 回傳回合明細（每回合傷害＋HP 變化）；`ControlledEventContent` 新增 `battles` 欄位；schema 同步；converter `collectBattles()`；`OriginalEventsPreview` 戰鬥 UI 顯示敵我屬性→計算結果→回合明細表格→「執行戰鬥」＋「撤退」；5 個 `resolveBattle` 單元測試；`HeldItemsPanel` 顯示所有角色；MOD 生成器產出 3 包（Alpha p10 / Beta p20 / Gamma p5）；`loadBase` 支援 bundle 格式；Web `importMod` 改為多檔匯入（FileList＋multiple）；7 個 MOD 測試。
 - Files Changed: `controlled-event.ts`、`controlled-event-schema.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`convert_original_events_generic.mjs`、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`tests/unit/controlled-event.test.mjs`、docs。
 - Tests Executed: 單元 162/162（concurrency=2）；root＋web typecheck；web build。
 - Test Results: 全通過。內容包 digest `b0b0e522efbce106`（106 戰鬥 encounters；確定佔位屬性）。
 - Known Limitations: 敵人屬性為確定佔位（hash 派生，非原版資料）；玩家防禦以 aptitude 代稱（RANGER.GRP 無獨立 defense 欄位）；撤退為手動選項（公式只計算勝利/失敗）；戰鬥無動畫或回合展示（單次結算）。
-- Next Recommended Tasks: 戰鬥子系統完整實現（待原版證據：RANGER.GRP 探測＋Pascal 源码）；Web 端 MOD 多包載入 UI（選檔載入 3 個 MOD 包）；戰鬥回合展示 UI（逐步 HP 變化）。
+- Next Recommended Tasks: 戰鬥子系統完整實現（待原版證據：RANGER.GRP 探測＋Pascal 源码）；Web 端 MOD 多包載入後自動重新解析並顯示衝突；戰鬥格子制回合戰鬥（待原版數據）。
 
 ## 2026-11-28：行囊清單接入 carried-item 決策欄位（MVP 展示層）
 
