@@ -76,6 +76,7 @@ export default function App(){
   const modPackagesRef=useRef<ContentPackage[]>([]);
   const [activeModIds,setActiveModIds]=useState<string[]>([]);
   const [modDiagnostics,setModDiagnostics]=useState<string[]>([]);
+  const [skippedModIds,setSkippedModIds]=useState<string[]>([]);
   function clearModelReplacement(){setRegionBaseline([]);setModelId('');setReplacementInfo('');}
   function apply(next:Session){sessionRef.current=next;setSession(next);}
   function applyUnified(next:UnifiedRuntime|null){unifiedRef.current=next;setUnified(next);}
@@ -101,7 +102,7 @@ export default function App(){
         if(localStorage.getItem(unifiedSaveKey(pair))!==null)existingUnified=pair;
       }
       if(ticket!==generation.current)return;
-      basePackageRef.current=pkg as ContentPackage;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);
+      basePackageRef.current=pkg as ContentPackage;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);setSkippedModIds([]);
       apply({content,state:createGame(content,42),original});availableUnifiedRef.current=existingUnified;setModEnabled(withMod);
       announce(original?'已載入本機原版預覽切片。':'已進入原創試玩場景。先和身旁的引路人聊聊吧。');
     }catch(cause){if(ticket===generation.current)problem(cause);}
@@ -216,7 +217,7 @@ export default function App(){
       const is673=pkg.manifest.id==='original.jy.observed673';
       const observed=is673?await bindObserved673(content,bundle.observedEvent673):null;
       applyObserved673(observed);observed673BundleRef.current=observed?bundle:null;
-      setRegionCells([]);setProjectedMap(undefined);setProjectedMaps({});setRegionNotes([]);setCutaway(false);clearModelReplacement();setOriginalPackage(pkg);setModEnabled(false);basePackageRef.current=pkg;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);apply({content,state:observed?.state.game??createGame(content,42),original:true});
+      setRegionCells([]);setProjectedMap(undefined);setProjectedMaps({});setRegionNotes([]);setCutaway(false);clearModelReplacement();setOriginalPackage(pkg);setModEnabled(false);basePackageRef.current=pkg;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);setSkippedModIds([]);apply({content,state:observed?.state.game??createGame(content,42),original:true});
       announce(observed?'已載入事件 673 本機採樣切片。前置資質採 DOS 觀察值 72。':'原版預覽包已在本機載入。此切片僅含部分對話與占位場景。');
     }catch(cause){problem(cause);}finally{loading(false);if(originalInput.current)originalInput.current.value='';}
   }
@@ -238,14 +239,53 @@ export default function App(){
       const candidates=[...modPackagesRef.current,...modsToLoad];
       const content=await resolveContent([base,...candidates]);
       modPackagesRef.current=candidates;setModEnabled(false);
-      setActiveModIds(candidates.map(existing=>existing.manifest.id));setModDiagnostics([]);
+      setActiveModIds(candidates.map(existing=>existing.manifest.id));setModDiagnostics([]);setSkippedModIds([]);
       apply({content,state:createGame(content,42),original:base.manifest.classification==='original-derived'});
       const ids=modsToLoad.map(mod=>mod.manifest.id).join('、');
       announce(`${modsToLoad.length} 個 MOD 已載入（${ids}）；目前共 ${candidates.length} 個 MOD。存檔會記錄全部版本與雜湊。`);
     }catch(cause){
       if(cause instanceof ContentError){
-        setModDiagnostics(cause.diagnostics.map(diagnostic=>`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`));
-        problem(new Error(`MOD 衝突，已退回：${cause.diagnostics.map(diagnostic=>diagnostic.code).join('、')}`));
+        // Identify which MODs are conflicting and try to load the non-conflicting subset.
+        const diagStr=cause.diagnostics.map(diagnostic=>`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`);
+        setModDiagnostics(diagStr);
+        // Try to find a non-conflicting subset by iteratively removing the highest-priority
+        // MOD from the new batch (least impactful first).
+        const base=basePackageRef.current!;
+        const existing=[...modPackagesRef.current];
+        let loaded=[...existing];
+        const skipped:ContentPackage[]=[];
+        // Sort new MODs by priority ascending (lowest first = least likely to conflict).
+        const sortedNew=[...modsToLoad].sort((a,b)=>a.manifest.priority-b.manifest.priority);
+        for(const mod of sortedNew){
+          const trial=[...loaded,mod];
+          try{
+            await resolveContent([base,...trial]);
+            loaded=trial;
+          }catch{
+            skipped.push(mod);
+          }
+        }
+        if(loaded.length>existing.length){
+          // At least one new MOD was loaded; apply the partial result.
+          modPackagesRef.current=loaded;
+          const content=await resolveContent([base,...loaded]);
+          setModEnabled(false);
+          setActiveModIds(loaded.map(existing=>existing.manifest.id));
+          apply({content,state:createGame(content,42),original:base.manifest.classification==='original-derived'});
+          const loadedIds=modsToLoad.filter(mod=>!skipped.includes(mod)).map(mod=>mod.manifest.id).join('、');
+          const skippedIds=skipped.map(mod=>mod.manifest.id).join('、');
+          const msg=skipped.length
+            ? `${skipped.length} 個 MOD 因衝突被跳過（${skippedIds}）；已載入：${loadedIds||'無'}。目前共 ${loaded.length} 個 MOD。`
+            : `全部 ${modsToLoad.length} 個 MOD 已載入。目前共 ${loaded.length} 個 MOD。`;
+          announce(msg);
+          if(skipped.length)
+            setModDiagnostics([...diagStr,`跳過：${skippedIds}（可先移除衝突來源後重新匯入）`]);
+          setSkippedModIds(skipped.map(mod=>mod.manifest.id));
+        }else{
+          // Nothing new could be loaded.
+          setSkippedModIds(modsToLoad.map(mod=>mod.manifest.id));
+          problem(new Error(`MOD 衝突，無法載入任何新 MOD：${cause.diagnostics.map(diagnostic=>diagnostic.code).join('、')}`));
+        }
       }else problem(cause);
     }finally{loading(false);if(modInput.current)modInput.current.value='';}
   }
@@ -256,7 +296,7 @@ export default function App(){
     const remaining=modPackagesRef.current.filter(existing=>existing.manifest.id!==id);
     modPackagesRef.current=remaining;
     void resolveContent([base,...remaining]).then(content=>{
-      setActiveModIds(remaining.map(existing=>existing.manifest.id));setModDiagnostics([]);
+      setActiveModIds(remaining.map(existing=>existing.manifest.id));setModDiagnostics([]);setSkippedModIds([]);
       apply({content,state:createGame(content,42),original:base.manifest.classification==='original-derived'});
       announce(`已移除 MOD ${id}；目前共 ${remaining.length} 個 MOD。`);
     }).catch(cause=>{if(cause instanceof ContentError)setModDiagnostics(cause.diagnostics.map(diagnostic=>`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`));problem(cause);})
@@ -341,7 +381,7 @@ export default function App(){
       const notes=bundle.previewNotes??[];
       if(!Array.isArray(notes)||notes.length>8||!notes.every((n:unknown)=>typeof n==='string'&&n.length<=200))throw new Error('REGION_NOTES');
       setRegionCells(cells);setProjectedMap(projected);setRegionBaseline(cells);setModelId('');setReplacementInfo('');setRegionNotes(notes);setCutaway(false);
-      setOriginalPackage(null);setModEnabled(false);basePackageRef.current=pkg as ContentPackage;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);apply({content,state:createGame(content,42),original:!!projected});
+      setOriginalPackage(null);setModEnabled(false);basePackageRef.current=pkg as ContentPackage;modPackagesRef.current=[];setActiveModIds([]);setModDiagnostics([]);setSkippedModIds([]);apply({content,state:createGame(content,42),original:!!projected});
       const omitted=Array.isArray(bundle.assembled?.unmapped)?bundle.assembled.unmapped.length:0;
       announce(projected?`完整地圖已載入：${projected.width}×${projected.height}，${projected.images.length} 個獨立圖片 ID；可用方向鍵持續探索。`:omitted?`本機地圖區域預覽已載入。${omitted} 種資源尚未呈現；碰撞仍依獨立地圖資料，空白處也可能無法通行。`:'本機地圖區域預覽已載入，使用明確定義的原創測試幾何。');
     }catch(cause){problem(cause);}finally{loading(false);if(regionInput.current)regionInput.current.value='';}
@@ -459,7 +499,7 @@ export default function App(){
           <section className="side-card"><div className="card-title"><h3>留存江湖</h3><span>SAVE</span></div><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session||controlledDemo}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session||controlledDemo}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session||controlledDemo}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session||controlledDemo}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session||controlledDemo}>上一份備份</button></div><p className="fine-print">{controlledDemo?'受控事件的獨立存讀請使用遊戲畫面中的按鈕。':'存檔留在此瀏覽器。換裝置前可先匯出備份。'}</p></section>
           <details className="side-card content-settings"><summary>內容與測試設定</summary><label className="mod-toggle"><input type="checkbox" checked={modEnabled} disabled={busy||session?.original} onChange={e=>void start(mock,e.target.checked,false)}/><span>啟用原創問候 MOD<small>切換後從入口重新開始。</small></span></label><button className="wide" disabled={busy||!!session?.original||!!session?.state.cursor||!session?.content.maps['mock.wuxia:map/room']||controlledDemo} onClick={()=>{controlledDemoRef.current=true;setGamePanel(null);setControlledLocation(session!.state);setControlledDemo(true);}}>試玩受控事件 · Mock</button><button className="wide" disabled={busy} onClick={()=>originalInput.current?.click()}>匯入本機原版預覽包</button>
 <button className="wide" disabled={busy} onClick={()=>originalEventsInput.current?.click()}>載入原版事件包（local）</button>
-<button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入本機地圖區域預覽</button><button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入完整世界地圖</button><button className="wide" disabled={busy||!basePackageRef.current} onClick={()=>modInput.current?.click()}>匯入 MOD 包（可多選；相依當前基礎包）</button>{activeModIds.length>0&&<section className="mod-stack" aria-label="MOD 堆疊"><p className="fine-print">已載入 MOD（依優先權排序；數字越大越後套用）：</p><ul className="mod-stack-list">{session?.content.identities.filter(identity=>identity.kind==='mod').map(identity=><li key={identity.id} className="mod-stack-item"><span className="mod-stack-priority">P{identity.priority}</span><strong>{identity.id}</strong><small>v{identity.version}</small><button className="mod-stack-remove" onClick={()=>removeMod(identity.id)} aria-label={`移除 ${identity.id}`}>✕</button></li>)}</ul><p className="fine-print">存檔記錄全部版本與雜湊；讀檔時內容須完全一致。</p></section>}{modDiagnostics.length>0&&<section className="mod-diagnostics" aria-label="MOD 衝突診斷"><p className="fine-print">MOD 衝突診斷（已退回，可移除衝突後重試）：</p><ul className="mod-diagnostics-list">{modDiagnostics.map((diagnostic,i)=><li key={i}>{diagnostic}</li>)}</ul></section>}<p className="fine-print">選取準備工具產生的 JSON。檔案只在裝置內讀取。</p>
+<button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入本機地圖區域預覽</button><button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入完整世界地圖</button><button className="wide" disabled={busy||!basePackageRef.current} onClick={()=>modInput.current?.click()}>匯入 MOD 包（可多選；相依當前基礎包）</button>{activeModIds.length>0&&<section className="mod-stack" aria-label="MOD 堆疊"><p className="fine-print">已載入 MOD（依優先權排序；數字越大越後套用）：</p><ul className="mod-stack-list">{session?.content.identities.filter(identity=>identity.kind==='mod').map(identity=><li key={identity.id} className="mod-stack-item"><span className="mod-stack-priority">P{identity.priority}</span><strong>{identity.id}</strong><small>v{identity.version}</small><button className="mod-stack-remove" onClick={()=>removeMod(identity.id)} aria-label={`移除 ${identity.id}`}>✕</button></li>)}</ul><p className="fine-print">存檔記錄全部版本與雜湊；讀檔時內容須完全一致。</p></section>}{modDiagnostics.length>0&&<section className="mod-diagnostics" aria-label="MOD 衝突診斷"><p className="fine-print">MOD 衝突診斷：</p><ul className="mod-diagnostics-list">{modDiagnostics.map((diagnostic,i)=><li key={i}>{diagnostic}</li>)}</ul>{skippedModIds.length>0&&<div className="mod-skipped"><p className="fine-print">跳過的 MOD（可移除衝突來源後重新匯入）：</p><ul className="mod-skipped-list">{skippedModIds.map(id=><li key={id} className="mod-skipped-item"><strong>{id}</strong></li>)}</ul></div>}</section>}<p className="fine-print">選取準備工具產生的 JSON。檔案只在裝置內讀取。</p>
 {modelOptions.length>0&&<section aria-label="本機模型替換"><label className="fine-print">替換的視覺資產<select aria-label="替換的視覺資產" value={selectedModel} disabled={busy} onChange={e=>setModelId(e.target.value)}>{modelOptions.map(id=><option key={id} value={id}>{id}</option>)}</select></label><button className="wide" disabled={busy} onClick={()=>modelInput.current?.click()}>匯入替換 GLB</button><button className="wide" disabled={busy||!replacementInfo} onClick={()=>{setRegionCells(regionBaseline);setReplacementInfo('');announce('已還原匯入時的模型，遊戲進度與碰撞未變。');}}>還原匯入時的模型</button><p className="fine-print">只替換目前預覽的相同資產；自動對齊原占位尺寸與底部。僅支援靜態、內嵌資源 GLB，最多 4 MB。</p>{replacementInfo&&<p className="fine-print">{replacementInfo}</p>}</section>}
 <div className="content-actions"><button disabled={busy} onClick={()=>void start(mock,modEnabled&&!session?.original,false)}>回到原創場景</button><button disabled={busy||!session} onClick={()=>observed673BundleRef.current?void importOriginal(undefined,observed673BundleRef.current):void start(session?.original?originalPackage:mock,modEnabled,!!session?.original)}>重新開始</button></div></details>
         </aside>
