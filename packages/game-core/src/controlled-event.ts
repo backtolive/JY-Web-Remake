@@ -465,15 +465,35 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
  * otherwise. Escape is not computed here (the host UI offers it as a manual option). */
 export function resolveBattle(player: { hp: number; attack: number; defense: number },
   enemy: { hp: number; attack: number; defense: number }): 'victory' | 'defeat' {
+  const detail = resolveBattleDetail(player, enemy);
+  return detail.outcome;
+}
+
+/** Detailed battle simulation (Community Implementation). Returns round-by-round
+ * damage and HP changes for UI display. */
+export function resolveBattleDetail(player: { hp: number; attack: number; defense: number },
+  enemy: { hp: number; attack: number; defense: number }): {
+  outcome: 'victory' | 'defeat';
+  rounds: Array<{ round: number; playerDamage: number; enemyDamage: number; playerHpAfter: number; enemyHpAfter: number }>;
+  totalRounds: number;
+} {
   let playerHp = player.hp, enemyHp = enemy.hp;
   const playerDamage = Math.max(1, player.attack - enemy.defense);
   const enemyDamage = Math.max(1, enemy.attack - player.defense);
+  const rounds: Array<{ round: number; playerDamage: number; enemyDamage: number; playerHpAfter: number; enemyHpAfter: number }> = [];
+  let round = 0;
   while (playerHp > 0 && enemyHp > 0) {
+    round++;
     enemyHp -= playerDamage;
-    if (enemyHp <= 0) break;
+    const enemyHpAfter = Math.max(0, enemyHp);
+    if (enemyHpAfter <= 0) {
+      rounds.push({ round, playerDamage, enemyDamage: 0, playerHpAfter: playerHp, enemyHpAfter: 0 });
+      break;
+    }
     playerHp -= enemyDamage;
+    rounds.push({ round, playerDamage, enemyDamage, playerHpAfter: Math.max(0, playerHp), enemyHpAfter });
   }
-  return enemyHp <= 0 ? 'victory' : 'defeat';
+  return { outcome: enemyHp <= 0 ? 'victory' : 'defeat', rounds, totalRounds: round };
 }
 export function serializeControlledEventSave(content: ResolvedControlledEventContent, state: ControlledEventState): string {
   validateControlledEventState(content, state);

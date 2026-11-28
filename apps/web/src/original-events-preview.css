@@ -15,6 +15,12 @@
 .oe-preview .oe-battle-result{font-size:13px;color:#3d5a48}
 .oe-preview .oe-battle-result strong{color:#b8954a}
 .oe-preview .oe-battle-actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.oe-preview .oe-battle-rounds{margin-top:8px}
+.oe-preview .oe-battle-rounds summary{font-size:12px;color:#5a4a22;cursor:pointer}
+.oe-preview .oe-battle-rounds-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.oe-preview .oe-battle-rounds-table th,.oe-preview .oe-battle-rounds-table td{padding:4px 8px;border:1px solid #d7dccd;text-align:center}
+.oe-preview .oe-battle-rounds-table thead th{background:#f0ece0;color:#5a4a22}
+.oe-preview .oe-battle-hp-dead{color:#a42f2f;font-weight:700}
 .oe-preview .oe-ended{font-size:13px;color:#3d5a48;font-weight:600}
 .oe-preview .oe-state{font-size:11px;color:#7a887d;line-height:1.5;word-break:break-all}
 .oe-preview .oe-actions{margin-top:12px;padding-top:9px;border-top:1px solid #d7dccd}

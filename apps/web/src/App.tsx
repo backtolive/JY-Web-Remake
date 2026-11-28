@@ -220,22 +220,28 @@ export default function App(){
       announce(observed?'已載入事件 673 本機採樣切片。前置資質採 DOS 觀察值 72。':'原版預覽包已在本機載入。此切片僅含部分對話與占位場景。');
     }catch(cause){problem(cause);}finally{loading(false);if(originalInput.current)originalInput.current.value='';}
   }
-  async function importMod(file?:File){
-    if(!file)return;loading(true);setError('');
+  async function importMod(files?:FileList|null){
+    if(!files||files.length===0)return;loading(true);setError('');
     const base=basePackageRef.current;
     if(!base){problem(new Error('請先載入一個基礎包（原創／原版／區域預覽），再匯入 MOD。'));loading(false);return;}
+    const modsToLoad: ContentPackage[]=[];
     try{
-      if(file.size>4_000_000)throw new Error('MOD 包超過 4 MB。');
-      const bundle=JSON.parse(await file.text());const mod=bundle.package??bundle;
-      if(!validatePackageSchema(mod)||mod.manifest.kind!=='mod')throw new Error('請選擇有效的 MOD 內容包（manifest.kind 必須為 mod）。');
-      if(modPackagesRef.current.some(existing=>existing.manifest.id===mod.manifest.id))
-        throw new Error(`MOD ${mod.manifest.id} 已載入；同一 ID 只能有一份。`);
-      const candidates=[...modPackagesRef.current,mod];
+      for(const file of Array.from(files)){
+        if(file.size>4_000_000)throw new Error(`MOD 包 ${file.name} 超過 4 MB。`);
+        const bundle=JSON.parse(await file.text());const mod=bundle.package??bundle;
+        if(!validatePackageSchema(mod)||mod.manifest.kind!=='mod')throw new Error(`請選擇有效的 MOD 內容包（${file.name} 的 manifest.kind 必須為 mod）。`);
+        if(modPackagesRef.current.some(existing=>existing.manifest.id===mod.manifest.id)||
+           modsToLoad.some(existing=>existing.manifest.id===mod.manifest.id))
+          throw new Error(`MOD ${mod.manifest.id} 已載入或重複；同一 ID 只能有一份。`);
+        modsToLoad.push(mod);
+      }
+      const candidates=[...modPackagesRef.current,...modsToLoad];
       const content=await resolveContent([base,...candidates]);
       modPackagesRef.current=candidates;setModEnabled(false);
       setActiveModIds(candidates.map(existing=>existing.manifest.id));setModDiagnostics([]);
       apply({content,state:createGame(content,42),original:base.manifest.classification==='original-derived'});
-      announce(`MOD ${mod.manifest.id}@${mod.manifest.version} 已載入（相依 ${base.manifest.id}、優先權 ${mod.manifest.priority}）；目前共 ${candidates.length} 個 MOD。存檔會記錄全部版本與雜湊。`);
+      const ids=modsToLoad.map(mod=>mod.manifest.id).join('、');
+      announce(`${modsToLoad.length} 個 MOD 已載入（${ids}）；目前共 ${candidates.length} 個 MOD。存檔會記錄全部版本與雜湊。`);
     }catch(cause){
       if(cause instanceof ContentError){
         setModDiagnostics(cause.diagnostics.map(diagnostic=>`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`));
@@ -453,7 +459,7 @@ export default function App(){
           <section className="side-card"><div className="card-title"><h3>留存江湖</h3><span>SAVE</span></div><div className="save-buttons"><button className="primary" onClick={save} disabled={busy||!session||controlledDemo}>儲存進度</button><button onClick={()=>load()} disabled={busy||!session||controlledDemo}>讀取進度</button></div><div className="text-actions"><button onClick={download} disabled={busy||!session||controlledDemo}>匯出存檔</button><button onClick={()=>saveInput.current?.click()} disabled={busy||!session||controlledDemo}>匯入存檔</button><button onClick={()=>load(true)} disabled={busy||!session||controlledDemo}>上一份備份</button></div><p className="fine-print">{controlledDemo?'受控事件的獨立存讀請使用遊戲畫面中的按鈕。':'存檔留在此瀏覽器。換裝置前可先匯出備份。'}</p></section>
           <details className="side-card content-settings"><summary>內容與測試設定</summary><label className="mod-toggle"><input type="checkbox" checked={modEnabled} disabled={busy||session?.original} onChange={e=>void start(mock,e.target.checked,false)}/><span>啟用原創問候 MOD<small>切換後從入口重新開始。</small></span></label><button className="wide" disabled={busy||!!session?.original||!!session?.state.cursor||!session?.content.maps['mock.wuxia:map/room']||controlledDemo} onClick={()=>{controlledDemoRef.current=true;setGamePanel(null);setControlledLocation(session!.state);setControlledDemo(true);}}>試玩受控事件 · Mock</button><button className="wide" disabled={busy} onClick={()=>originalInput.current?.click()}>匯入本機原版預覽包</button>
 <button className="wide" disabled={busy} onClick={()=>originalEventsInput.current?.click()}>載入原版事件包（local）</button>
-<button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入本機地圖區域預覽</button><button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入完整世界地圖</button><button className="wide" disabled={busy||!basePackageRef.current} onClick={()=>modInput.current?.click()}>匯入 MOD 包（相依當前基礎包）</button>{activeModIds.length>0&&<section className="mod-stack" aria-label="MOD 堆疊"><p className="fine-print">已載入 MOD（依優先權排序；數字越大越後套用）：</p><ul className="mod-stack-list">{session?.content.identities.filter(identity=>identity.kind==='mod').map(identity=><li key={identity.id} className="mod-stack-item"><span className="mod-stack-priority">P{identity.priority}</span><strong>{identity.id}</strong><small>v{identity.version}</small><button className="mod-stack-remove" onClick={()=>removeMod(identity.id)} aria-label={`移除 ${identity.id}`}>✕</button></li>)}</ul><p className="fine-print">存檔記錄全部版本與雜湊；讀檔時內容須完全一致。</p></section>}{modDiagnostics.length>0&&<section className="mod-diagnostics" aria-label="MOD 衝突診斷"><p className="fine-print">MOD 衝突診斷（已退回，可移除衝突後重試）：</p><ul className="mod-diagnostics-list">{modDiagnostics.map((diagnostic,i)=><li key={i}>{diagnostic}</li>)}</ul></section>}<p className="fine-print">選取準備工具產生的 JSON。檔案只在裝置內讀取。</p>
+<button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入本機地圖區域預覽</button><button className="wide" disabled={busy} onClick={()=>regionInput.current?.click()}>匯入完整世界地圖</button><button className="wide" disabled={busy||!basePackageRef.current} onClick={()=>modInput.current?.click()}>匯入 MOD 包（可多選；相依當前基礎包）</button>{activeModIds.length>0&&<section className="mod-stack" aria-label="MOD 堆疊"><p className="fine-print">已載入 MOD（依優先權排序；數字越大越後套用）：</p><ul className="mod-stack-list">{session?.content.identities.filter(identity=>identity.kind==='mod').map(identity=><li key={identity.id} className="mod-stack-item"><span className="mod-stack-priority">P{identity.priority}</span><strong>{identity.id}</strong><small>v{identity.version}</small><button className="mod-stack-remove" onClick={()=>removeMod(identity.id)} aria-label={`移除 ${identity.id}`}>✕</button></li>)}</ul><p className="fine-print">存檔記錄全部版本與雜湊；讀檔時內容須完全一致。</p></section>}{modDiagnostics.length>0&&<section className="mod-diagnostics" aria-label="MOD 衝突診斷"><p className="fine-print">MOD 衝突診斷（已退回，可移除衝突後重試）：</p><ul className="mod-diagnostics-list">{modDiagnostics.map((diagnostic,i)=><li key={i}>{diagnostic}</li>)}</ul></section>}<p className="fine-print">選取準備工具產生的 JSON。檔案只在裝置內讀取。</p>
 {modelOptions.length>0&&<section aria-label="本機模型替換"><label className="fine-print">替換的視覺資產<select aria-label="替換的視覺資產" value={selectedModel} disabled={busy} onChange={e=>setModelId(e.target.value)}>{modelOptions.map(id=><option key={id} value={id}>{id}</option>)}</select></label><button className="wide" disabled={busy} onClick={()=>modelInput.current?.click()}>匯入替換 GLB</button><button className="wide" disabled={busy||!replacementInfo} onClick={()=>{setRegionCells(regionBaseline);setReplacementInfo('');announce('已還原匯入時的模型，遊戲進度與碰撞未變。');}}>還原匯入時的模型</button><p className="fine-print">只替換目前預覽的相同資產；自動對齊原占位尺寸與底部。僅支援靜態、內嵌資源 GLB，最多 4 MB。</p>{replacementInfo&&<p className="fine-print">{replacementInfo}</p>}</section>}
 <div className="content-actions"><button disabled={busy} onClick={()=>void start(mock,modEnabled&&!session?.original,false)}>回到原創場景</button><button disabled={busy||!session} onClick={()=>observed673BundleRef.current?void importOriginal(undefined,observed673BundleRef.current):void start(session?.original?originalPackage:mock,modEnabled,!!session?.original)}>重新開始</button></div></details>
         </aside>
@@ -464,7 +470,7 @@ export default function App(){
     <footer><span>江湖初行 <i>·</i> JY Web Remake</span><span>占位美術／原創測試內容。非原版遊戲完整重製。</span></footer>
     <input ref={originalInput} type="file" accept=".json,application/json" hidden aria-label="選擇原版預覽包" onChange={event=>void importOriginal(event.target.files?.[0])}/>
     <input ref={originalEventsInput} type="file" accept=".json,application/json" hidden aria-label="選擇原版事件包" onChange={event=>void importOriginalEvents(event.target.files?.[0])}/>
-    <input ref={modInput} type="file" accept=".json,application/json" hidden aria-label="選擇 MOD 包" onChange={event=>void importMod(event.target.files?.[0])}/>
+    <input ref={modInput} type="file" accept=".json,application/json" multiple hidden aria-label="選擇 MOD 包（可多选）" onChange={event=>void importMod(event.target.files)}/>
 <input ref={regionInput} type="file" accept=".json,application/json" hidden aria-label="選擇地圖區域預覽包" onChange={event=>void importRegionPreview(event.target.files?.[0])}/>
     <input ref={saveInput} type="file" accept=".json,application/json" hidden aria-label="選擇存檔" onChange={event=>void importSave(event.target.files?.[0])}/>
     <input ref={modelInput} type="file" accept=".glb,model/gltf-binary" hidden aria-label="選擇替換 GLB" onChange={event=>void importReplacement(event.target.files?.[0])}/>

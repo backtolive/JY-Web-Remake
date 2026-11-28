@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createControlledEventState, dispatchControlledEvent,
-  resolveBattle, restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
+  resolveBattle, resolveBattleDetail, restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
 import type { ControlledEventAction, ControlledEventState, ControlledResult, DecisionChange,
   ResolvedControlledEventContent } from '@jy/game-core';
 import './original-events-preview.css';
@@ -276,8 +276,8 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
         const playerHp = attrs?.currentHp ?? 100;
         const playerAttack = attrs?.attack ?? 20;
         const playerDefense = attrs?.aptitude ?? 10;
-        const computed = enemy
-          ? resolveBattle({ hp: playerHp, attack: playerAttack, defense: playerDefense },
+        const detail = enemy
+          ? resolveBattleDetail({ hp: playerHp, attack: playerAttack, defense: playerDefense },
               { hp: enemy.enemyHp, attack: enemy.enemyAttack, defense: enemy.enemyDefense })
           : null;
         return <div className="oe-battle">
@@ -286,10 +286,27 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
             敵人：{enemy.enemyName}（HP {enemy.enemyHp} / 攻 {enemy.enemyAttack} / 防 {enemy.enemyDefense}）
             {' · '}玩家（角色 {hostRole}）：HP {playerHp} / 攻 {playerAttack} / 防 {playerDefense}
           </p> : <p className="oe-note">無敵人資料，使用預設模擬。</p>}
-          {computed && <p className="oe-battle-result">計算結果：<strong>{computed === 'victory' ? '勝利' : '失敗'}</strong>（Community Implementation 公式）</p>}
+          {detail && <>
+            <p className="oe-battle-result">計算結果：<strong>{detail.outcome === 'victory' ? '勝利' : '失敗'}</strong>（{detail.totalRounds} 回合 · Community Implementation 公式）</p>
+            <details className="oe-battle-rounds" open={detail.totalRounds <= 10}>
+              <summary>回合明細（{detail.totalRounds} 回合）</summary>
+              <table className="oe-battle-rounds-table">
+                <thead><tr><th>回合</th><th>玩家傷害</th><th>敵人傷害</th><th>玩家 HP</th><th>敵人 HP</th></tr></thead>
+                <tbody>
+                  {detail.rounds.map(r => <tr key={r.round}>
+                    <th>{r.round}</th>
+                    <td>{r.playerDamage}</td>
+                    <td>{r.enemyDamage}</td>
+                    <td className={r.playerHpAfter === 0 ? 'oe-battle-hp-dead' : ''}>{r.playerHpAfter}</td>
+                    <td className={r.enemyHpAfter === 0 ? 'oe-battle-hp-dead' : ''}>{r.enemyHpAfter}</td>
+                  </tr>)}
+                </tbody>
+              </table>
+            </details>
+          </>}
           <div className="oe-battle-actions">
-            <button className="primary" onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome: computed ?? 'victory' })}>
-              執行戰鬥（{computed === 'victory' ? '勝利' : computed === 'defeat' ? '失敗' : '模擬勝利'}）
+            <button className="primary" onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome: detail?.outcome ?? 'victory' })}>
+              執行戰鬥（{detail?.outcome === 'victory' ? '勝利' : detail?.outcome === 'defeat' ? '失敗' : '模擬勝利'}）
             </button>
             <button onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome: 'escape' })}>撤退</button>
           </div>
