@@ -1,7 +1,7 @@
-// Local-only MOD preview generator. Produces a valid MOD content package that
-// depends on a given base package, patches one dialogue, and adds a new item +
-// dialogue. This demonstrates the MOD foundation (dependency, priority, patch
-// precondition, content addition) without bundling original content.
+// Local-only MOD preview generator. Produces valid MOD content packages that
+// depend on a given base package. By default generates 3 MODs with different
+// priorities and content to demonstrate multi-MOD stacking (priority ordering,
+// conflict detection, content addition).
 //
 // Usage: node tools/extractor/prepare-mod-preview.mjs <base-package.json> [out-dir]
 // The base package must be a kind:"base" ContentPackage (e.g. the Mock fixture
@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
 
-const CONVERTER_VERSION = '0.1.0';
+const CONVERTER_VERSION = '0.2.0';
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -19,7 +19,9 @@ function sha256(bytes) {
 
 function loadBase(file) {
   const raw = readFileSync(file, 'utf8');
-  const base = JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  // Support both direct package files and bundle files (with a `package` field).
+  const base = parsed.package ?? parsed;
   const manifest = base?.manifest;
   if (!manifest || manifest.kind !== 'base') throw new Error('BASE_KIND: base package must have kind "base"');
   if (manifest.dependencies.length) throw new Error('BASE_DEPENDS: base package cannot declare dependencies');
@@ -28,12 +30,12 @@ function loadBase(file) {
   return { base, raw, sha: sha256(Buffer.from(raw, 'utf8')) };
 }
 
-function buildMod(base, baseSha) {
-  const modId = `${base.manifest.id}.mod`;
-  const target = base.dialogues[0];
+/** Build a single MOD package. */
+function buildMod(base, baseSha, opts) {
+  const { id, priority, dialogues, items, events, patches, description } = opts;
   const mod = {
     manifest: {
-      id: modId,
+      id,
       version: '0.1.0',
       schemaVersion: 1,
       runtimeVersion: '0.1.0',
@@ -41,25 +43,72 @@ function buildMod(base, baseSha) {
       classification: base.manifest.classification === 'original-derived' ? 'original-derived' : 'mock',
       license: 'Local MOD preview; derived from a local base package.',
       ruleset: `${base.manifest.ruleset}-mod-v1`,
-      priority: 10,
+      priority,
       dependencies: [{ id: base.manifest.id, version: base.manifest.version }],
     },
-    entry: undefined,
     maps: [],
+    dialogues,
+    events,
+    items,
+    patches,
+  };
+  return { mod, id, baseSha, description };
+}
+
+/** Generate 3 MODs with different priorities and content. */
+function buildModSet(base, baseSha) {
+  const target = base.dialogues[0];
+  const baseId = base.manifest.id;
+
+  const mod1 = buildMod(base, baseSha, {
+    id: `${baseId}.mod-alpha`,
+    priority: 10,
+    description: 'MOD Alpha：劇情增強（patch 對話＋新增物品）',
     dialogues: [
-      { id: `${modId}:talk/bonus`, speaker: 'MOD 引路人', text: '這是一條由 MOD 新增的對話，用來驗證內容加入。' },
+      { id: `${baseId}.mod-alpha:talk/bonus`, speaker: 'MOD 引路人', text: '這是一條由 MOD Alpha 新增的對話，用來驗證內容加入。' },
+    ],
+    items: [
+      { id: `${baseId}.mod-alpha:item/bonus`, name: 'Alpha 獎勵物品', description: '由 MOD Alpha 新增的物品。' },
     ],
     events: [],
-    items: [
-      { id: `${modId}:item/bonus`, name: 'MOD 獎勵物品', description: '由 MOD 新增的物品；驗證 MOD 可加入基礎包沒有定義的內容。' },
+    patches: [
+      { target: target.id, expectedText: target.text, text: `${target.text}（Alpha 已載入）` },
+    ],
+  });
+
+  const mod2 = buildMod(base, baseSha, {
+    id: `${baseId}.mod-beta`,
+    priority: 20,
+    description: 'MOD Beta：新冒險（patch 同一對話→與 Alpha 衝突＋新增事件＋對話）',
+    dialogues: [
+      { id: `${baseId}.mod-beta:talk/quest`, speaker: 'MOD 任務者', text: 'MOD Beta 帶來的新任務對話。' },
+    ],
+    items: [],
+    events: [
+      { id: `${baseId}.mod-beta:event/quest`, steps: [
+        { op: 'say', dialogueId: `${baseId}.mod-beta:talk/quest` },
+        { op: 'end' },
+      ] },
     ],
     patches: [
-      { target: target.id, expectedText: target.text, text: `${target.text}（MOD 已載入）` },
+      // Same target as Alpha → PATCH_CONFLICT when both are loaded.
+      { target: target.id, expectedText: target.text, text: `${target.text}（Beta 已載入）` },
     ],
-  };
-  // entry must be absent for mods; drop the key entirely (JSON omits undefined).
-  delete mod.entry;
-  return { mod, modId, baseSha };
+  });
+
+  const mod3 = buildMod(base, baseSha, {
+    id: `${baseId}.mod-gamma`,
+    priority: 5,
+    description: 'MOD Gamma：低優先權（新增物品，不 patch）',
+    dialogues: [],
+    items: [
+      { id: `${baseId}.mod-gamma:item/trinket`, name: 'Gamma 小飾品', description: '由 MOD Gamma 新增的低優先權物品。' },
+    ],
+    events: [],
+    patches: [],
+  });
+
+  return [mod1, mod2, mod3];
 }
 
 function main() {
@@ -71,35 +120,37 @@ function main() {
   const baseFile = resolve(args[0]);
   const outDir = resolve(args[1] ?? 'assets/generated/mod-preview');
   const { base, raw, sha: baseSha } = loadBase(baseFile);
-  const { mod, modId } = buildMod(base, baseSha);
-  const serialized = JSON.stringify(mod, null, 2);
-  const outSha = sha256(Buffer.from(serialized, 'utf8'));
+  const modSet = buildModSet(base, baseSha);
   mkdirSync(outDir, { recursive: true });
-  const target = resolve(outDir, `mod-${outSha.slice(0, 16)}.local.json`);
-  const bundle = {
-    package: mod,
-    provenance: {
-      converterVersion: CONVERTER_VERSION,
-      confidence: 'Community Implementation',
-      basePackage: { id: base.manifest.id, version: base.manifest.version, sha256: baseSha },
-      sourceFile: baseFile,
-      notes: [
-        `MOD ${modId} 相依基礎包 ${base.manifest.id}@${base.manifest.version}。`,
-        `Patch 基礎對話 ${base.dialogues[0].id}（前置預期文字已鎖定）。`,
-        `新增 1 物品＋1 對話，驗證 MOD 內容加入。`,
-      ],
-    },
-  };
-  writeFileSync(target, JSON.stringify(bundle, null, 2), 'utf8');
+
+  const results = modSet.map(({ mod, id, description }) => {
+    const serialized = JSON.stringify(mod, null, 2);
+    const outSha = sha256(Buffer.from(serialized, 'utf8'));
+    const target = resolve(outDir, `${id.replace(/\./g, '_')}-${outSha.slice(0, 12)}.local.json`);
+    const bundle = {
+      package: mod,
+      provenance: {
+        converterVersion: CONVERTER_VERSION,
+        confidence: 'Community Implementation',
+        basePackage: { id: base.manifest.id, version: base.manifest.version, sha256: baseSha },
+        sourceFile: baseFile,
+        notes: [
+          `${description}`,
+          `相依基礎包 ${base.manifest.id}@${base.manifest.version}。`,
+          `Priority: ${mod.manifest.priority}。`,
+          `Patches: ${mod.patches.length}, Items: ${mod.items.length}, Dialogues: ${mod.dialogues.length}, Events: ${mod.events.length}。`,
+        ],
+      },
+    };
+    writeFileSync(target, JSON.stringify(bundle, null, 2), 'utf8');
+    return { file: target, id, priority: mod.manifest.priority, description };
+  });
+
   console.log(JSON.stringify({
-    destination: target,
-    modId,
+    count: results.length,
     baseId: base.manifest.id,
-    patches: mod.patches.length,
-    items: mod.items.length,
-    dialogues: mod.dialogues.length,
-    bytes: serialized.length,
-  }));
+    mods: results,
+  }, null, 2));
 }
 
 main();
