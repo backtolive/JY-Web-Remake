@@ -35,6 +35,7 @@
 - [x] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）：`App.tsx` 改為 `modPackagesRef`（堆疊）＋`activeModIds`＋`modDiagnostics`；`importMod` 加入堆疊並重新解析，`ContentError` 顯示衝突診斷；新增 `removeMod(id)`；侧欄 MOD 堆疊清單（priority 徽章＋移除）＋衝突診斷區塊；3 個新測試（雙 MOD 排序／PATCH_CONFLICT／DUPLICATE_PACKAGE）。
 - [x] 行囊清單接入 carried-item 決策欄位（顯示實際持有量，非唯讀目錄）：`loadRoleCarriedItems()` 讀 RANGER.GRP 角色表（TakingItem@168、TakingItemAmount@176）入內容包 `roleCarriedItems`（320 角色）；`OriginalEventsPreview` start() 自動 seed carried-item 決策狀態；新增 `HeldItemsPanel`（seed＋事件即時狀態）。
 - [x] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）：`resolveBattle(player, enemy)` 回合制公式（玩家先攻、damage = max(1, atk-def)）入引擎核心；內容包新增 `battles` 欄位（106 encounters，確定佔位屬性）；`OriginalEventsPreview` 戰鬥 UI 改為顯示敵我屬性→計算結果→「執行戰鬥」＋「撤退」；5 個單元測試。
+- [x] 行囊清單顯示所有角色（非僅 hostRole）：`HeldItemsPanel` 改為從 domain allowedKeys 提取所有 role IDs（36/49/58），單一表格顯示全部角色隨身物品。
 - [ ] 戰鬥子系統完整實現（待原版證據）：原版戰鬥為獨立子系統（切換戰鬥場景地圖、敵人初始化配置、敵我回合制、回合內玩家自由決定行動順序）。KDEF opcode 6 只觸發（encounter ID + 3 未知參數），不描述戰鬥過程。需要：① RANGER.GRP 完整結構探測（敵人表/武功表/戰鬥配置表）；② 其他 GRP 檔探測（戰鬥專用資料）；③ 社群 Pascal 源码（battle.pas 回合邏輯/攻擊形狀/方向判定）；④ 攻擊形狀（直線/十字/區域/單體）+ 方向 + 移動規則。目前 `resolveBattle` 為 Community Implementation 佔位，非原版還原。
 - [ ] MOD 生成器支援產出多個 MOD 包。
 

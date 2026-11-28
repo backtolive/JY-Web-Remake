@@ -2,13 +2,13 @@
 
 ## 2026-11-28：戰鬥公式（事件中的戰鬥接入）（最新）
 
-Phase: Phase 3 受控事件＋Phase 7 apps/web 可操作切片。Status: **`resolveBattle` 公式入引擎核心（Community Implementation）；內容包新增 `battles` 欄位（106 敵人）；`OriginalEventsPreview` 戰鬥 UI 改為計算結果＋撤退選項**
-- Completed Tasks: `resolveBattle(player, enemy)` 回合制公式（玩家先攻；damage = max(1, atk - def)；HP 歸零即結算）；`ControlledEventContent` 新增 `battles` 欄位（enemyName/enemyHp/enemyAttack/enemyDefense）；schema 同步；converter `collectBattles()` 從事件步收集 encounterId 並產生確定佔位屬性（hash 派生）；內容包 digest 更新；`OriginalEventsPreview` 戰鬥 UI 改為：顯示敵我屬性 → 計算結果（勝利/失敗）→ 「執行戰鬥」按鈕（套用計算結果）＋「撤退」按鈕；5 個 `resolveBattle` 單元測試（勝/負/最低傷害/同時擊殺/等屬性）。
+Phase: Phase 3 受控事件＋Phase 7 apps/web 可操作切片。Status: **`resolveBattle` 公式入引擎核心（Community Implementation）；內容包新增 `battles` 欄位（106 敵人）；`OriginalEventsPreview` 戰鬥 UI 改為計算結果＋撤退選項；`HeldItemsPanel` 改為顯示所有角色**
+- Completed Tasks: `resolveBattle(player, enemy)` 回合制公式（玩家先攻；damage = max(1, atk - def)；HP 歸零即結算）；`ControlledEventContent` 新增 `battles` 欄位（enemyName/enemyHp/enemyAttack/enemyDefense）；schema 同步；converter `collectBattles()` 從事件步收集 encounterId 並產生確定佔位屬性（hash 派生）；內容包 digest 更新；`OriginalEventsPreview` 戰鬥 UI 改為：顯示敵我屬性 → 計算結果（勝利/失敗）→ 「執行戰鬥」按鈕（套用計算結果）＋「撤退」按鈕；5 個 `resolveBattle` 單元測試（勝/負/最低傷害/同時擊殺/等屬性）；`HeldItemsPanel` 改為顯示所有角色（從 domain allowedKeys 提取 role IDs，不再僅 hostRole）。
 - Files Changed: `controlled-event.ts`、`controlled-event-schema.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`convert_original_events_generic.mjs`、`apps/web/src/original-events-preview.tsx`、`apps/web/src/original-events-preview.css`、`tests/unit/controlled-event.test.mjs`、docs。
 - Tests Executed: 單元 162/162（concurrency=2）；root＋web typecheck；web build。
 - Test Results: 全通過。內容包 digest `b0b0e522efbce106`（106 戰鬥 encounters；確定佔位屬性）。
 - Known Limitations: 敵人屬性為確定佔位（hash 派生，非原版資料）；玩家防禦以 aptitude 代稱（RANGER.GRP 無獨立 defense 欄位）；撤退為手動選項（公式只計算勝利/失敗）；戰鬥無動畫或回合展示（單次結算）。
-- Next Recommended Tasks: MOD 生成器支援產出多個 MOD 包；行囊清單顯示所有角色（非僅 hostRole）；戰鬥回合展示 UI（逐步 HP 變化）。
+- Next Recommended Tasks: MOD 生成器支援產出多個 MOD 包；戰鬥子系統完整實現（待原版證據：RANGER.GRP 探測＋Pascal 源码）；戰鬥回合展示 UI（逐步 HP 變化）。
 
 ## 2026-11-28：行囊清單接入 carried-item 決策欄位（MVP 展示層）
 
