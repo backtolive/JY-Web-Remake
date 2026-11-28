@@ -166,7 +166,16 @@ export const controlledEventContentSchema = {
       enemyHp: { type: 'integer', minimum: 1, maximum: 1_000_000 },
       enemyAttack: { type: 'integer', minimum: 1, maximum: 1_000_000 },
       enemyDefense: { type: 'integer', minimum: 0, maximum: 1_000_000 },
-    }, ['enemyName', 'enemyHp', 'enemyAttack', 'enemyDefense']), maxProperties: 10000 } },
+    }, ['enemyName', 'enemyHp', 'enemyAttack', 'enemyDefense']), maxProperties: 10000 },
+    // Optional: martial arts definitions (RANGER.GRP Section 5: 136B × 93). Read-only
+    // reference for the battle system. Each entry has name, type, damage[10], range[10].
+    // Range values 1-6 are inferred attack shapes (single/adjacent/line/cross/area/large).
+    martialArts: { type: 'object', propertyNames: id, additionalProperties: object({
+      name: { type: 'string', minLength: 1, maxLength: 64 },
+      type: { type: 'integer', minimum: 0, maximum: 1000 },
+      damage: { ...array({ type: 'integer', minimum: 0, maximum: 1_000_000 }, 10) },
+      range: { ...array({ type: 'integer', minimum: 0, maximum: 100 }, 10) },
+    }, ['name', 'type', 'damage', 'range']), maxProperties: 10000 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

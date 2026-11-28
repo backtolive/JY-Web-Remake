@@ -32,7 +32,7 @@ for (let i = 0; i < COUNT; i++) {
   const damage = [];
   const range = [];
   for (let lvl = 0; lvl < 10; lvl++) {
-    damage.push(buf.readInt16LE(off + 44 + lvl * 2));
+    damage.push(buf.readInt16LE(off + 36 + lvl * 2));
     range.push(buf.readInt16LE(off + 64 + lvl * 2));
   }
   const extra1 = buf.readInt16LE(off + 84);

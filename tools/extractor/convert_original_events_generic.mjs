@@ -288,6 +288,28 @@ function loadRoleCarriedItems() {
   return { roles: result, sha256: createHash('sha256').update(buf).digest('hex') };
 }
 
+/** Load martial arts definitions from RANGER.GRP Section 5 (136B × 93, offset 101444).
+ * Each record: ID, name (Big5), type, damage[10], range[10]. */
+function loadMartialArts() {
+  const buf = readFileSync(RANGER_FILE);
+  const START = 101444, REC = 136, COUNT = 93;
+  if (buf.length < START + REC * COUNT) throw new Error('RANGER_MARTIAL_ARTS_TRUNCATED');
+  const big5 = new TextDecoder('big5');
+  const result = {};
+  for (let i = 0; i < COUNT; i++) {
+    const off = START + i * REC;
+    const id = buf.readInt16LE(off);
+    let nameEnd = 2;
+    while (nameEnd < REC && !(buf[off + nameEnd] === 0 && buf[off + nameEnd + 1] === 0)) nameEnd += 2;
+    const name = big5.decode(buf.subarray(off + 2, off + nameEnd));
+    const type = buf.readInt16LE(off + 26);
+    const damage = Array.from({ length: 10 }, (_, lvl) => buf.readInt16LE(off + 36 + lvl * 2));
+    const range = Array.from({ length: 10 }, (_, lvl) => buf.readInt16LE(off + 64 + lvl * 2));
+    result[`${PACKAGE_ID}:martial-art/${id}`] = { name, type, damage, range };
+  }
+  return { arts: result, sha256: createHash('sha256').update(buf).digest('hex') };
+}
+
 /** Decode one 40x40 icon from a map-pic atlas into straight-alpha RGBA. A slot is present
  * only when its IDX range is exactly ICON_SIZE bytes and the header is 40x40; otherwise
  * null (empty slot). RLE per piccache.c: [w][h][xoff][yoff] then per row a length byte, and
@@ -873,6 +895,7 @@ export function buildOriginalEventsContent() {
   const roleMagicData = loadRoleMagicArrays();
   const roleAttrData = loadRoleAttributes();
   const roleCarriedData = loadRoleCarriedItems();
+  const martialArtsData = loadMartialArts();
   const iconAtlas = loadItemIconAtlas();
   const { items, empty: emptyItemRecords } = buildItemDefinitions(itemRecords, new Set(iconAtlas.present));
   const iconAtlasPng = composeIconAtlas(iconAtlas.icons);
@@ -905,7 +928,7 @@ export function buildOriginalEventsContent() {
   const content = {
     schemaVersion: 3, id: PACKAGE_ID, version: VERSION, classification: 'original-derived',
     entry: { mapId: `${PACKAGE_ID}:map/start`, x: 0, y: 0 },
-    decision: { schemaVersion: 1, domains }, dialogues, events, items, battles,
+    decision: { schemaVersion: 1, domains }, dialogues, events, items, battles, martialArts: martialArtsData.arts,
     // USE_ITEM host command target: the menu selection writes this ref before a scene
     // event runs; opcode-4 events branch on it (CurItem in the community Pascal).
     currentItem: { domain: 'original.jy:current-item', key: 'original.jy:item/current' },

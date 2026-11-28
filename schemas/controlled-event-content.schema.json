@@ -1060,6 +1060,55 @@
         "additionalProperties": false
       },
       "maxProperties": 10000
+    },
+    "martialArts": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+        "maxLength": 160
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "type": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "damage": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "maxItems": 10
+          },
+          "range": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "maxItems": 10
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "damage",
+          "range"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 10000
     }
   },
   "required": [

@@ -94,6 +94,10 @@ export interface ControlledEventContent {
   /** Battle encounter data (enemy stats). Read-only reference for the battle formula.
    * Keys are encounter IDs. Enemy stats are Community Implementation placeholders. */
   battles?: Record<string, { enemyName: string; enemyHp: number; enemyAttack: number; enemyDefense: number }>;
+  /** Martial arts definitions (RANGER.GRP Section 5: 136B × 93). Read-only reference for
+   * the battle system. Each entry has name, type, damage[10], range[10]. Range values 1-6
+   * are inferred attack shapes (single/adjacent/line/cross/area/large). */
+  martialArts?: Record<string, { name: string; type: number; damage: number[]; range: number[] }>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
