@@ -1,14 +1,14 @@
 # 進度 — 2026-11-28
 
-## 2026-11-28：RANGER.GRP 武功表提取（戰鬥子系統原版數據）（最新）
+## 2026-11-28：武功表接入內容包（戰鬥子系統原版數據完成）（最新）
 
-Phase: Phase 3 受控事件＋Phase 6 內容種子。Status: **RANGER.GRP Section 5 武功表（136B×93）提取完成；含名稱/類型/傷害(10級)/攻擊範圍(10級)；戰鬥子系統現有原版數據基礎**
-- Completed Tasks: RANGER.GRP 完整結構探測（Header 836B / RoleTable 58,240B / ItemTable 38,000B / LocationNames 4,368B / **MartialArtsTable 12,648B** / Section6 150B）；武功表記錄結構解析（ID/Name/Type/Damage[10]/Range[10]/Extra）；`extract-martial-arts.mjs` 提取器（93 筆，43 種類型，傷害+範圍數據）；RANGER.GRP SHA256 驗證（07b99e3c...8ab 吻合）。
-- Files Changed: `tools/extractor/extract-martial-arts.mjs`（新增）、docs。
-- Tests Executed: 提取器執行驗證（93/93 筆）。
-- Test Results: 全通過。武功表含：普通攻擊/野球拳/武當長拳/羅漢拳/七傷拳/混元掌/寒冰綿掌/鷹爪功/太極/黯然銷魂掌/百花神掌等 93 種武功；傷害值 0-900；攻擊範圍 1-6（推論：1=單體/2=相鄰/3=直線/4=十字/5=區域/6=大區域）。
-- Known Limitations: 攻擊範圍值 1-6 的語意為推論（未與原版引擎比對）；類型欄位（43 種）的語意未確認；Section 6（150B）未解析；敵人表/戰鬥配置表仍未找到（可能在其他 GRP 檔或 DOS 二進位內）。
-- Next Recommended Tasks: ① 武功表接入內容包（schema＋converter）；② 探索其他 GRP 檔找敵人表/戰鬥配置；③ 攻擊範圍語意驗證（DOS 實測或 Pascal 源码）；④ 格子制戰鬥引擎實現。
+Phase: Phase 3 受控事件＋Phase 6 內容種子。Status: **RANGER.GRP 武功表（136B×93）完整接入內容包（schema＋interface＋converter）；內容包現含 93 種武功定義（名稱/類型/傷害[10]/範圍[10]）**
+- Completed Tasks: RANGER.GRP 完整結構探測；武功表記錄結構解析（damage 偏移修正為 byte 36）；`martialArts` 欄位入 schema＋interface＋converter；內容包 digest 更新（eebe8ed79d73518b）；93 種武功入包（普通攻擊/野球拳/武當長拳/七傷拳/太極/黯然銷魂掌/百花神掌等）；攻擊範圍 1-6（推論：單體/相鄰/直線/十字/區域/大區域）；傷害 0-2000。
+- Files Changed: `controlled-event-schema.ts`、`controlled-event.ts`、`schemas/controlled-event-content.schema.json`（重新匯出）、`convert_original_events_generic.mjs`、`extract-martial-arts.mjs`、docs。
+- Tests Executed: 單元 162/162（concurrency=2）；root＋web typecheck；web build。
+- Test Results: 全通過。內容包 digest `eebe8ed79d73518b`（93 武功；野球拳 dmg [3..2000] range [1,1,1,1,1,4,0,0,0,0]；七傷拳 dmg [20..400] range [2,2,3,3,3,4,0,0,0,0]）。
+- Known Limitations: 攻擊範圍 1-6 語意為推論（未與原版引擎比對）；類型欄位（43 種）語意未確認；等級 7-10 的 range 為 0（未使用或語意未知）；敵人表/戰鬥配置表仍未找到。
+- Next Recommended Tasks: ① 探索其他 GRP 檔找敵人表/戰鬥配置；② 攻擊範圍語意驗證（DOS 實測）；③ 格子制戰鬥引擎實現（使用武功表傷害＋範圍數據）。
 
 ## 2026-11-28：MOD 衝突 UX 優化＋多包生成＋Web 多包載入＋戰鬥回合展示＋戰鬥公式＋行囊全角色
 
