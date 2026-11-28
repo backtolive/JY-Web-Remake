@@ -1019,6 +1019,47 @@
         "additionalProperties": false
       },
       "maxProperties": 400
+    },
+    "battles": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*:[a-z0-9][a-z0-9._/-]*$",
+        "maxLength": 160
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "enemyName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "enemyHp": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "enemyAttack": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "enemyDefense": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "enemyName",
+          "enemyHp",
+          "enemyAttack",
+          "enemyDefense"
+        ],
+        "additionalProperties": false
+      },
+      "maxProperties": 10000
     }
   },
   "required": [

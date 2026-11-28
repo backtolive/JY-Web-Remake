@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createControlledEventState, dispatchControlledEvent,
-  restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
+  resolveBattle, restoreControlledEventSave, serializeControlledEventSave } from '@jy/game-core';
 import type { ControlledEventAction, ControlledEventState, ControlledResult, DecisionChange,
   ResolvedControlledEventContent } from '@jy/game-core';
 import './original-events-preview.css';
@@ -269,9 +269,32 @@ export function OriginalEventsPreview({ content, targetEventId, initialState, on
         <button className="primary" onClick={() => act({ type: 'CONTINUE' })}>繼續</button></div>}
       {step?.op === 'choice' && <div className="oe-choices"><p>選擇回應</p>
         {step.options.map(option => <button key={option.id} onClick={() => act({ type: 'CHOOSE', optionId: option.id })}>{option.text}</button>)}</div>}
-      {pending?.command.kind === 'battle' && <div className="oe-battle"><p><b>戰鬥</b>（{pending.command.encounterId.split('/').pop()}）：請選擇模擬結果（尚無戰鬥計算）。</p>
-        {(['victory', 'defeat', 'escape'] as const).map((outcome, i) =>
-          <button key={outcome} onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome })}>{['模擬勝利', '模擬失敗', '模擬撤退'][i]}</button>)}</div>}
+      {pending?.command.kind === 'battle' && (() => {
+        const encounterId = pending.command.encounterId;
+        const enemy = content.data.battles?.[encounterId];
+        const attrs = content.data.roleAttributes?.[hostRole];
+        const playerHp = attrs?.currentHp ?? 100;
+        const playerAttack = attrs?.attack ?? 20;
+        const playerDefense = attrs?.aptitude ?? 10;
+        const computed = enemy
+          ? resolveBattle({ hp: playerHp, attack: playerAttack, defense: playerDefense },
+              { hp: enemy.enemyHp, attack: enemy.enemyAttack, defense: enemy.enemyDefense })
+          : null;
+        return <div className="oe-battle">
+          <p><b>戰鬥</b>（{encounterId.split('/').pop()}）</p>
+          {enemy ? <p className="oe-battle-stats">
+            敵人：{enemy.enemyName}（HP {enemy.enemyHp} / 攻 {enemy.enemyAttack} / 防 {enemy.enemyDefense}）
+            {' · '}玩家（角色 {hostRole}）：HP {playerHp} / 攻 {playerAttack} / 防 {playerDefense}
+          </p> : <p className="oe-note">無敵人資料，使用預設模擬。</p>}
+          {computed && <p className="oe-battle-result">計算結果：<strong>{computed === 'victory' ? '勝利' : '失敗'}</strong>（Community Implementation 公式）</p>}
+          <div className="oe-battle-actions">
+            <button className="primary" onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome: computed ?? 'victory' })}>
+              執行戰鬥（{computed === 'victory' ? '勝利' : computed === 'defeat' ? '失敗' : '模擬勝利'}）
+            </button>
+            <button onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'battle', outcome: 'escape' })}>撤退</button>
+          </div>
+        </div>;
+      })()}
       {pending?.command.kind === 'animation' && <div className="oe-anim"><p>動畫播放中…</p>
         <button onClick={() => resolve({ schemaVersion: 1, requestId: pending.requestId, kind: 'animation', outcome: 'completed' })}>完成</button></div>}
       {pending?.command.kind === 'transition' && <div className="oe-anim"><p>前往 {pending.command.destination.mapId}（{pending.command.destination.x}，{pending.command.destination.y}）</p>

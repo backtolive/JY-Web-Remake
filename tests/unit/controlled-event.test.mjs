@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolveControlledEventContent, createControlledEventState, dispatchControlledEvent,
-  readDecisionValue, restoreControlledEventSave, serializeControlledEventSave } from '../../packages/game-core/src/index.ts';
+  readDecisionValue, resolveBattle, restoreControlledEventSave, serializeControlledEventSave } from '../../packages/game-core/src/index.ts';
 import { controlledCommandSchema, controlledResultSchema, controlledEventContentSchema,
   controlledEventSaveSchema } from '../../packages/game-core/src/controlled-event-schema.ts';
 import { controlledEventSaveKey, loadControlledEvent, saveControlledEvent } from '../../apps/web/src/storage.ts';
@@ -407,4 +407,50 @@ test('Transition resolution writes the scene ID to the declared sceneTransition 
   assert.equal(readDecisionValue(content.data.decision, resolved.state.decision,
     { domain: 'mock:scene', key: 'mock:scene/current' }), 5);
   assert.equal(resolved.state.location.mapId, 'mock:map/5');
+});
+
+// ── resolveBattle (Community Implementation) ──────────────────────────────
+
+test('resolveBattle: player wins when attack is high and enemy hp is low', () => {
+  const result = resolveBattle(
+    { hp: 100, attack: 50, defense: 10 },
+    { hp: 30, attack: 10, defense: 5 },
+  );
+  assert.equal(result, 'victory');
+});
+
+test('resolveBattle: player loses when enemy is much stronger', () => {
+  const result = resolveBattle(
+    { hp: 20, attack: 5, defense: 2 },
+    { hp: 200, attack: 80, defense: 50 },
+  );
+  assert.equal(result, 'defeat');
+});
+
+test('resolveBattle: minimum damage is 1 even when defense exceeds attack', () => {
+  // Player attack 5, enemy defense 100 → damage = max(1, 5-100) = 1
+  // Enemy hp 2 → player needs 2 rounds; enemy attack 3, player defense 100 → damage = 1
+  // Player hp 3 → player survives 3 rounds → victory
+  const result = resolveBattle(
+    { hp: 3, attack: 5, defense: 100 },
+    { hp: 2, attack: 3, defense: 100 },
+  );
+  assert.equal(result, 'victory');
+});
+
+test('resolveBattle: simultaneous kill → player wins (player attacks first)', () => {
+  // Both would die this round, but player attacks first
+  const result = resolveBattle(
+    { hp: 10, attack: 50, defense: 0 },
+    { hp: 10, attack: 50, defense: 0 },
+  );
+  assert.equal(result, 'victory');
+});
+
+test('resolveBattle: equal stats → player wins (attacker advantage)', () => {
+  const result = resolveBattle(
+    { hp: 100, attack: 20, defense: 10 },
+    { hp: 100, attack: 20, defense: 10 },
+  );
+  assert.equal(result, 'victory');
 });

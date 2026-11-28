@@ -91,6 +91,9 @@ export interface ControlledEventContent {
   /** Per-role carried items (RANGER.GRP TakingItem/TakingItemAmount). Read-only seed for the
    * inventory panel. 4 item IDs + 4 amounts (4th defaults to 0). Keys are role ID strings. */
   roleCarriedItems?: Record<string, { items: number[]; amounts: number[] }>;
+  /** Battle encounter data (enemy stats). Read-only reference for the battle formula.
+   * Keys are encounter IDs. Enemy stats are Community Implementation placeholders. */
+  battles?: Record<string, { enemyName: string; enemyHp: number; enemyAttack: number; enemyDefense: number }>;
 }
 export interface ResolvedControlledEventContent {
   identity: { id: string; version: string; sha256: string }; data: ControlledEventContent;
@@ -455,6 +458,22 @@ export function dispatchControlledEvent(content: ResolvedControlledEventContent,
   }
   validateControlledEventState(content, state);
   return { state, notices };
+}
+/** Simple battle formula (Community Implementation). Simulates rounds until one side's HP
+ * reaches 0. Player damage = max(1, playerAttack - enemyDefense); enemy damage =
+ * max(1, enemyAttack - playerDefense). Returns 'victory' if the player wins, 'defeat'
+ * otherwise. Escape is not computed here (the host UI offers it as a manual option). */
+export function resolveBattle(player: { hp: number; attack: number; defense: number },
+  enemy: { hp: number; attack: number; defense: number }): 'victory' | 'defeat' {
+  let playerHp = player.hp, enemyHp = enemy.hp;
+  const playerDamage = Math.max(1, player.attack - enemy.defense);
+  const enemyDamage = Math.max(1, enemy.attack - player.defense);
+  while (playerHp > 0 && enemyHp > 0) {
+    enemyHp -= playerDamage;
+    if (enemyHp <= 0) break;
+    playerHp -= enemyDamage;
+  }
+  return enemyHp <= 0 ? 'victory' : 'defeat';
 }
 export function serializeControlledEventSave(content: ResolvedControlledEventContent, state: ControlledEventState): string {
   validateControlledEventState(content, state);

@@ -843,6 +843,29 @@ function convertEvent(event, bundle) {
   return { steps, diagnostics, usedTalks };
 }
 
+/** Collect all battle encounter IDs from the converted events and create a battles map with
+ * placeholder enemy stats (Community Implementation). The original battle data is not yet
+ * extracted, so enemy stats are deterministic placeholders derived from the encounter ID. */
+function collectBattles(events) {
+  const battles = {};
+  for (const event of Object.values(events)) {
+    for (const step of event.steps) {
+      if (step.op !== 'invoke' || step.command.kind !== 'battle') continue;
+      const encounterId = step.command.encounterId;
+      if (battles[encounterId]) continue;
+      // Deterministic placeholder stats from the encounter ID hash (Community Implementation).
+      const hash = [...encounterId].reduce((sum, char) => (sum + char.charCodeAt(0)) % 997, 0);
+      battles[encounterId] = {
+        enemyName: `敵人 ${encounterId.split('/').pop()}`,
+        enemyHp: 50 + (hash % 100),
+        enemyAttack: 15 + (hash % 20),
+        enemyDefense: 5 + (hash % 15),
+      };
+    }
+  }
+  return battles;
+}
+
 export function buildOriginalEventsContent() {
   const bundle = loadCorpus();
   const { records: itemRecords, sha256: rangerSha256 } = loadItemRecords();
@@ -878,10 +901,11 @@ export function buildOriginalEventsContent() {
       dialogues[dialogueId] = { speaker: `Portrait ${sayInstruction?.args[1] ?? 0}`, text: talkText(talk) };
     }
   }
+  const battles = collectBattles(events);
   const content = {
     schemaVersion: 3, id: PACKAGE_ID, version: VERSION, classification: 'original-derived',
     entry: { mapId: `${PACKAGE_ID}:map/start`, x: 0, y: 0 },
-    decision: { schemaVersion: 1, domains }, dialogues, events, items,
+    decision: { schemaVersion: 1, domains }, dialogues, events, items, battles,
     // USE_ITEM host command target: the menu selection writes this ref before a scene
     // event runs; opcode-4 events branch on it (CurItem in the community Pascal).
     currentItem: { domain: 'original.jy:current-item', key: 'original.jy:item/current' },

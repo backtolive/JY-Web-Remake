@@ -157,7 +157,16 @@ export const controlledEventContentSchema = {
       additionalProperties: object({
         items: { ...array({ type: 'integer', minimum: -1, maximum: 1_000_000 }, 4) },
         amounts: { ...array({ type: 'integer', minimum: 0, maximum: 1_000_000 }, 4) },
-      }, ['items', 'amounts']), maxProperties: 400 } },
+      }, ['items', 'amounts']), maxProperties: 400 },
+    // Optional: battle encounter data (enemy stats). Read-only reference for the battle
+    // formula. Keys are encounter IDs. Enemy stats are Community Implementation placeholders
+    // until original battle data is extracted.
+    battles: { type: 'object', propertyNames: id, additionalProperties: object({
+      enemyName: { type: 'string', minLength: 1, maxLength: 128 },
+      enemyHp: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+      enemyAttack: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+      enemyDefense: { type: 'integer', minimum: 0, maximum: 1_000_000 },
+    }, ['enemyName', 'enemyHp', 'enemyAttack', 'enemyDefense']), maxProperties: 10000 } },
     ['schemaVersion', 'id', 'version', 'classification', 'entry', 'decision', 'dialogues', 'events']),
 };
 const request = object({ schemaVersion: { const: 1 }, requestId: { type: 'string', minLength: 1, maxLength: 256 },

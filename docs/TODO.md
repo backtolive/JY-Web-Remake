@@ -34,7 +34,7 @@
 - [x] 角色屬性面板（HP/MP/Level）與完整行囊 UI（原版 200 物品互動式介面）：`loadRoleAttributes()` 讀 RANGER.GRP 角色表（社群 TRole 偏移）入內容包 `roleAttributes`（320 角色）；`OriginalEventsPreview` 新增 `RoleAttributePanel`（種子值＋事件即時狀態）與 `ItemCatalog`（200 項 icon＋名稱＋分類）。
 - [x] 多 MOD 堆疊 UI（依 priority 排序＋衝突診斷顯示）：`App.tsx` 改為 `modPackagesRef`（堆疊）＋`activeModIds`＋`modDiagnostics`；`importMod` 加入堆疊並重新解析，`ContentError` 顯示衝突診斷；新增 `removeMod(id)`；侧欄 MOD 堆疊清單（priority 徽章＋移除）＋衝突診斷區塊；3 個新測試（雙 MOD 排序／PATCH_CONFLICT／DUPLICATE_PACKAGE）。
 - [x] 行囊清單接入 carried-item 決策欄位（顯示實際持有量，非唯讀目錄）：`loadRoleCarriedItems()` 讀 RANGER.GRP 角色表（TakingItem@168、TakingItemAmount@176）入內容包 `roleCarriedItems`（320 角色）；`OriginalEventsPreview` start() 自動 seed carried-item 決策狀態；新增 `HeldItemsPanel`（seed＋事件即時狀態）。
-- [ ] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）。
+- [x] 戰鬥公式與事件中的戰鬥接入（MVP 可先以模擬結果）：`resolveBattle(player, enemy)` 回合制公式（玩家先攻、damage = max(1, atk-def)）入引擎核心；內容包新增 `battles` 欄位（106 encounters，確定佔位屬性）；`OriginalEventsPreview` 戰鬥 UI 改為顯示敵我屬性→計算結果→「執行戰鬥」＋「撤退」；5 個單元測試。
 - [ ] MOD 生成器支援產出多個 MOD 包。
 
 ## 2026-11-19：opcode 3 新參數形狀的事件 581 比對
